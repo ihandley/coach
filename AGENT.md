@@ -110,16 +110,26 @@ If there is a conflict between chat context and repo data, trust the repo.
 
 All tasks fall into one of these categories:
 
-- ingest (job intake)
-- normalize (structure job data)
-- evaluate (fit analysis)
-- prioritize (ranking/filtering)
-- tailor (resume customization)
-- draft (cover letter generation)
-- export (document generation)
-- track (job lifecycle updates)
+- ingest
+- normalize
+- evaluate
+- prioritize
+- tailor
+- draft
+- export
+- track
 
 Always identify the category before acting.
+
+---
+
+## Session Start Rule
+
+At the beginning of each session:
+
+- Follow the `.ai/README.md` Session Start Protocol
+- Ensure branch and draft PR exist before implementation
+- Do not begin coding until session state is initialized
 
 ---
 
@@ -243,9 +253,12 @@ At the end of work:
 This system is designed to be **repeatable and reliable**.
 
 When in doubt, choose:
+
 - clarity over cleverness
 - structure over improvisation
 - safety over speed
+
+---
 
 ## Canonical Sources
 

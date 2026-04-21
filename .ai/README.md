@@ -1,64 +1,158 @@
-# AI Project Context
+# AI Context
 
-This folder stores durable, AI-readable project context so new ChatGPT sessions can pick up work faster and with less drift.
+This directory contains the working context for the Job Coach system.
 
-## Recommended workflow
+It is designed to make each session:
+- deterministic
+- resumable
+- workflow-driven
 
-1. Keep `project.md` accurate.
-2. Update `current.md` at the end of each session.
-3. Create one stage file per phase in `stages/`.
-4. Create one issue file per task in `issues/`.
-5. Use `scripts/ai-context.sh` to compose a prompt bundle for a new session.
+This is not memory for conversation.  
+This is **state for execution**.
 
-## Core files
+---
 
-- `project.md` - stable project summary and goals
-- `current.md` - current working state and next step
-- `architecture.md` - codebase structure and system design
-- `roadmap.md` - planned, active, completed work
-- `decisions.md` - important technical decisions and rationale
+## How to Start a Session
 
-## Naming suggestions
+1. Follow `AGENT.md`.
+2. Read:
+   - `.ai/project.md`
+   - `.ai/current.md`
+   - `.ai/stage.md` (if present)
+   - the active issue file in `.ai/issues/`
+3. Identify:
+   - current task
+   - workflow category
+   - affected files
+4. Do not assume missing context.  
+   If something is unclear, state it explicitly.
 
-- Stages: `01-repo-setup.md`, `08-phone-verification.md`
-- Issues: `issue-008-phone-verification.md`
+---
 
-## At the start of each session
+## Session Start Protocol
 
-Follow AGENT.md strictly.
+Before writing any code:
 
-Use these files as source of truth:
-- .ai/project.md
-- .ai/current.md
-- relevant stage file
+1. Define session name:
+   - format: `issue-<n>-<short-task>`
+2. Create or verify branch:
+   - format: `feature/issue-<n>-<slug>`
+3. Create a draft PR immediately.
+4. Update `.ai/current.md`:
+   - session name
+   - branch
+   - PR link
+   - current task
+   - next step
+5. Confirm constraints:
+   - step-by-step
+   - TDD
+6. Do not begin implementation until branch and PR exist.
 
-Use the active GitHub issue as the task contract.
+---
 
-Current execution context:
-- branch: <branch-name>
-- current task: <what you are doing>
-- next step: <immediate next step>
-- constraints: step-by-step, TDD
+## Directory Structure
 
-Do not assume work is complete unless stated in these sources.
-Prefer existing workflows and patterns in the repo.
+- `.ai/project.md` → project overview and goals
+- `.ai/current.md` → current working state
+- `.ai/stage.md` → current stage definition (optional)
+- `.ai/issues/` → normalized issue files
+- `.ai/notes/` → optional scratch notes
 
-## At the end of each session
+---
 
-## Session Handoff
-Branch: feature/phone-verification-gate
+## Source of Truth
 
-Completed:
-- Added phone_verified field
-- Added initial schema migration
-- Added first auth gating tests
+Always prefer:
+1. Repository data files
+2. Structured issue files
+3. Existing code
+4. Chat context (last)
 
-Current status:
-- Tests for middleware behavior still need to be written
-- UI flow not implemented yet
+If there is a conflict, trust the repository.
 
-Next step:
-- Write failing tests for marketplace route protection
+---
 
-Open question:
-- Middleware vs server component guard
+## Workflow Model
+
+All work must map to one of:
+
+- ingest
+- normalize
+- evaluate
+- prioritize
+- tailor
+- draft
+- export
+- track
+
+Identify the workflow before acting.
+
+---
+
+## Execution Style
+
+- Step-by-step
+- Small changes
+- Test first (TDD)
+- Deterministic outputs
+- No hidden assumptions
+
+---
+
+## Implementation Rules
+
+- Do not invent schema fields
+- Do not overwrite data without intent
+- Do not refactor broadly
+- Prefer existing patterns
+- Keep changes minimal and scoped
+
+---
+
+## Testing Requirements
+
+- Write failing test first
+- Implement minimal code to pass
+- Avoid testing external systems directly
+- Mock boundaries (network, AI, DB)
+
+---
+
+## Error Handling
+
+If something is missing:
+
+- state what is missing
+- propose the smallest next step
+- do not guess
+
+---
+
+## End of Session
+
+At the end of work:
+
+1. Summarize what changed
+2. Confirm tests passing
+3. Update `.ai/current.md`:
+   - current task
+   - next step
+4. Identify next TDD slice
+5. Ensure PR reflects current state
+
+---
+
+## Principle
+
+This system is designed to be:
+
+- repeatable
+- reliable
+- inspectable
+
+When in doubt:
+
+- choose structure over improvisation
+- choose safety over speed
+- choose clarity over cleverness
