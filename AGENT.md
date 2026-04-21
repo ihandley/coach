@@ -57,178 +57,93 @@ Prefer:
 
 ### 3. Determinism over creativity
 
-- Outputs should be consistent and predictable
-- Avoid stylistic variation unless requested
-- Prefer explicit structure over prose
-
----
-
-### 4. Small, controlled changes
-
-- Do not refactor broadly unless asked
-- Do not reorganize files without instruction
-- Do not introduce new abstractions casually
-
----
-
-### 5. No hidden assumptions
-
-- If something is missing, say it is missing
-- Do not infer critical data silently
-- Ask or flag uncertainty when needed
-
----
-
-## Repository Conventions
-
-### File Roles
-
-- `/data/` → canonical job + resume data
-- `/skills/` → reusable job-coach operations
-- `/instructions/` → system prompts and behavioral rules
-- `/scripts/` → automation and utilities
-- `/ai/` → AI memory and working context (if present)
-
-Respect these boundaries.
-
----
-
-### Canonical Sources
-
-When available, these are authoritative:
-
-- resume data file(s)
-- job tracker data
-- normalized job records
-- generated outputs
-
-If there is a conflict between chat context and repo data, trust the repo.
+- Prefer predictable outputs over clever outputs
+- Avoid variability unless explicitly required
+- Ensure outputs are testable and reproducible
 
 ---
 
 ## Workflow Model
 
-All tasks fall into one of these categories:
+The system is organized into stages.
 
-- ingest
-- normalize
-- evaluate
-- prioritize
-- tailor
-- draft
-- export
-- track
+Each stage:
+- has a clear objective
+- produces structured outputs
+- feeds the next stage
 
-Always identify the category before acting.
-
----
-
-## Session Start Rule
-
-At the beginning of each session:
-
-- Follow the `.ai/README.md` Session Start Protocol
-- Ensure branch and draft PR exist before implementation
-- Do not begin coding until session state is initialized
+AI must:
+- understand the current stage
+- complete only the current stage’s responsibilities
+- not jump ahead or mix stages
 
 ---
 
-## Implementation Rules
+## Issue-Based Execution Workflow
 
-### When writing code
+All implementation work is scoped to a GitHub issue.
 
-- follow existing patterns in the repo
-- prefer consistency over cleverness
-- use existing utilities before creating new ones
-- keep changes minimal and scoped
-- ensure outputs match existing formats
+### Source of Truth
 
----
+Use these in order:
 
-### When modifying data
+1. GitHub issue for requirements and acceptance criteria
+2. Active issue branch for implementation context
+3. Pushed commit history for progress checkpoints
+4. Draft PR for handoff and review context
+5. Durable repo docs such as `AGENT.md`, `.ai/project.md`, and architecture docs
 
-- preserve existing records
-- avoid overwriting fields without intent
-- maintain schema compatibility
-- validate assumptions before writing changes
+Do not rely on manual session-state files for active progress tracking.
 
 ---
 
-### When adding features
+### Session Start Rule
 
-- align with existing workflow model
-- do not bypass structured steps
-- ensure new functionality composes with existing flows
+Before implementing any issue work:
 
----
+1. Run `./scripts/session-start.sh <issue_number>`
+2. Confirm the active branch matches the issue
+3. Confirm the draft PR exists or was reused
+4. Begin the next small, testable block of work
 
-## AI Behavior Expectations
-
-### Do
-
-- read relevant files before making changes
-- explain what you are doing and why
-- work step-by-step for multi-step tasks
-- produce outputs that can be reused later
-- keep responses actionable
+Do not begin coding until the issue branch and draft PR exist.
 
 ---
 
-### Do Not
+### Checkpoint Rule
 
-- invent user experience, history, or qualifications
-- fabricate job details
-- generate generic filler content
-- bypass defined workflows
-- make destructive changes silently
+Implementation work must proceed in small, testable blocks.
 
----
+At the end of each meaningful block:
 
-## Output Guidelines
-
-- be concise and direct
-- prefer structured output where applicable
-- use clear sections and labels
-- avoid unnecessary verbosity
-- do not use em dashes
-- use plain ASCII punctuation
+- stop
+- summarize what changed
+- provide exact `git add`, `git commit`, and `git push` commands
+- treat the pushed commit as the checkpoint
 
 ---
 
-## Step-by-Step Execution Mode
+### Handoff Rule
 
-For implementation work:
+When stopping work:
 
-1. Identify the task
-2. Identify affected files
-3. Explain the approach
-4. Provide exact changes
-5. Keep steps small and testable
-6. Confirm expected outcome
-7. State the next step
+- ensure the latest meaningful checkpoint is committed and pushed
+- use the draft PR as the handoff and review surface
+- summarize remaining work in the PR if needed
 
 ---
 
-## Error Handling
+### Commit Format
 
-If something is unclear or missing:
+Use commit messages in this format:
 
-- explicitly state what is missing
-- suggest the smallest next step
-- do not guess critical information
+`issue-<n>: <checkpoint description>`
 
----
+Examples:
 
-## Change Safety
-
-Before making changes, consider:
-
-- will this break existing workflows?
-- will this corrupt data?
-- is this reversible?
-- is this consistent with the system?
-
-If not, stop and clarify.
+- `issue-3: add failing URL validation test`
+- `issue-3: implement minimal URL validation`
+- `issue-3: define import service contract`
 
 ---
 
@@ -236,47 +151,49 @@ If not, stop and clarify.
 
 At the start of work:
 
-- identify the current task
-- identify relevant files
-- identify workflow category
+- identify the GitHub issue
+- identify the active branch
+- identify the workflow category
+- identify the next small, testable block
+
+At the end of each work block:
+
+- summarize what changed
+- provide exact commit and push commands
+- state the next step
 
 At the end of work:
 
-- summarize changes
+- confirm the latest checkpoint was committed and pushed
 - note any open questions
 - suggest the next step
 
 ---
 
-## Final Rule
+## Constraints
 
-This system is designed to be **repeatable and reliable**.
-
-When in doubt, choose:
-
-- clarity over cleverness
-- structure over improvisation
-- safety over speed
-
----
-
-## Canonical Sources
-
-- Primary repository: https://github.com/ihandley/coach
-- resume data file(s)
-- job tracker data
-- normalized job records
-- generated outputs
+- Use step-by-step execution
+- Prefer TDD when appropriate
+- Do not assume work is complete unless explicitly stated
+- Call out uncertainty explicitly
+- Do not skip validation or error handling
+- Do not introduce breaking schema changes without instruction
 
 ---
 
-## Session Startup Workflow
+## Expectations
 
-Before implementing any issue work, start the session with the session bootstrap script.
+AI should behave like a disciplined senior engineer:
 
-### Required startup command
+- precise
+- structured
+- incremental
+- test-driven
+- context-aware
 
-Run:
+Avoid:
 
-```bash
-./scripts/session-start.sh <issue_number> [session_name]
+- large unstructured outputs
+- skipping steps
+- implicit assumptions
+- mixing unrelated concerns
