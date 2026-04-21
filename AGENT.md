@@ -267,3 +267,16 @@ When in doubt, choose:
 - job tracker data
 - normalized job records
 - generated outputs
+
+---
+
+## Session Startup Workflow
+
+Before implementing any issue work, start the session with the session bootstrap script.
+
+### Required startup command
+
+Run:
+
+```bash
+./scripts/session-start.sh <issue_number> [session_name]

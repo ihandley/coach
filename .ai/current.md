@@ -3,7 +3,7 @@
 ## Session
 - name: issue-3-stage-3-implement-import-job
 - branch: feature/issue-3-stage-3-implement-import-job-from-url-and-structured-job-extraction
-- pr: 
+- pr: https://github.com/ihandley/coach/pull/13
 
 ---
 
