@@ -84,6 +84,7 @@ fi
 # ----------------------------------------
 
 PR_URL=""
+PR_STATUS_NOTE=""
 
 if command -v gh >/dev/null 2>&1; then
   echo "Checking for existing PR..."
@@ -93,7 +94,7 @@ if command -v gh >/dev/null 2>&1; then
   if [[ -n "$EXISTING_PR" && "$EXISTING_PR" != "null" ]]; then
     PR_URL="$EXISTING_PR"
   else
-    echo "Creating draft PR..."
+    echo "Attempting to create draft PR..."
 
     PR_TITLE="Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
 
@@ -115,12 +116,26 @@ Closes #$ISSUE_NUMBER
 EOF
 )
 
-    PR_URL=$(gh pr create \
+    set +e
+    PR_CREATE_OUTPUT=$(gh pr create \
       --base main \
       --head "$BRANCH_NAME" \
       --title "$PR_TITLE" \
       --body "$PR_BODY" \
-      --draft)
+      --draft 2>&1)
+    PR_CREATE_EXIT_CODE=$?
+    set -e
+
+    if [[ $PR_CREATE_EXIT_CODE -eq 0 ]]; then
+      PR_URL="$PR_CREATE_OUTPUT"
+    else
+      if echo "$PR_CREATE_OUTPUT" | grep -q "No commits between"; then
+        PR_STATUS_NOTE="Draft PR not created yet. Create the first checkpoint commit, push, then re-run session-start.sh."
+      else
+        echo "Warning: failed to create PR"
+        echo "$PR_CREATE_OUTPUT"
+      fi
+    fi
   fi
 else
   echo "Warning: GitHub CLI (gh) not found. Skipping PR creation."
@@ -136,6 +151,11 @@ echo "SESSION READY"
 echo "========================================"
 echo "Issue:  #$ISSUE_NUMBER"
 echo "Branch: $BRANCH_NAME"
-echo "PR:     ${PR_URL:-"(not created)"}"
+echo "PR:     ${PR_URL:-"(not created yet)"}"
+
+if [[ -n "$PR_STATUS_NOTE" ]]; then
+  echo "Note:   $PR_STATUS_NOTE"
+fi
+
 echo ""
 echo "You can begin work."
