@@ -1,19 +1,16 @@
 # Current Working State
 
-## Active Stage
-Stage 1 - Foundation and database schema
-
 ## Active Issue
-.ai/issues/0001-stage-1-create-the-job-coach-application-foundation-and-database-schema.md
+.ai/issues/0003-stage-3-implement-import-job-from-url-and-structured-job-extraction.md
 
 ## Branch
-feature/stage-1-foundation
+feature/issue-3-import-from-job
 
 ## Current Task
-Inspect repo structure and decide target app/package layout
+Select the first task of issue 3
 
 ## Next Step
-Create failing tests and scaffold db/package structure
+Define the first TDD slice for issue 3
 
 ## Constraints
 - Step-by-step

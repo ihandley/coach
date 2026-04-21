@@ -1,0 +1,13 @@
+{
+  "name": "job-coach-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@coach/core": "workspace:*",
+    "@coach/db": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
