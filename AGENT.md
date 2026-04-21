@@ -246,3 +246,11 @@ When in doubt, choose:
 - clarity over cleverness
 - structure over improvisation
 - safety over speed
+
+## Canonical Sources
+
+- Primary repository: https://github.com/ihandley/coach
+- resume data file(s)
+- job tracker data
+- normalized job records
+- generated outputs
