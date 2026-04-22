@@ -26,6 +26,9 @@ importers:
 
   apps/job-coach-web:
     dependencies:
+      '@coach/ai':
+        specifier: workspace:^
+        version: link:../../packages/ai
       '@coach/core':
         specifier: workspace:*
         version: link:../../packages/core
