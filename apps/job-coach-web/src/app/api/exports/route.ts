@@ -1,23 +1,7 @@
 import { createExport } from "@coach/core";
+import { createExportsServer } from "../../../server/exports";
 
-const exportDocument = createExport({
-    exportResume: async () => ({
-        fileName: "resume.docx",
-        mimeType:
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        buffer: new ArrayBuffer(0),
-    }),
-    exportCoverLetter: async () => ({
-        fileName: "cover-letter.pdf",
-        mimeType: "application/pdf",
-        buffer: new ArrayBuffer(0),
-    }),
-    exportApplicationPacket: async () => ({
-        fileName: "application-packet.pdf",
-        mimeType: "application/pdf",
-        buffer: new ArrayBuffer(0),
-    }),
-});
+const { exportDocument } = createExportsServer();
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
