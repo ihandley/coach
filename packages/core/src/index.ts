@@ -11,3 +11,4 @@ export * from "./resumes/create-baseline-resume-review";
 export * from "./resumes/review-current-resume-profile";
 export * from "./resumes/types";
 export * from "./jobs/repository-backed-job-importer";
+export * from "./resumes/get-resume-profile";
