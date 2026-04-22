@@ -244,6 +244,36 @@ describe("JobTracker.getJobById", () => {
   });
 });
 
+describe("InMemoryJobRepository.findJobBySourceUrl", () => {
+  it("returns an existing job when source URL matches exactly", async () => {
+    const repository = new InMemoryJobRepository();
+
+    const created = await repository.createJob({
+      company: "Acme",
+      title: "Backend Engineer",
+      sourceUrl: "https://example.com/jobs/123",
+      sourceText: "Posting 1",
+      status: "saved",
+    });
+
+    const found = await repository.findJobBySourceUrl(
+      "https://example.com/jobs/123",
+    );
+
+    expect(found).toEqual(created);
+  });
+
+  it("returns null when no job exists for the source URL", async () => {
+    const repository = new InMemoryJobRepository();
+
+    const found = await repository.findJobBySourceUrl(
+      "https://example.com/jobs/missing",
+    );
+
+    expect(found).toBeNull();
+  });
+});
+
 describe("JobTracker.listJobs", () => {
   it("lists all jobs", async () => {
     const tracker = new JobTracker(new InMemoryJobRepository());

@@ -123,117 +123,85 @@ If there is a conflict between chat context and repo data, trust the repo.
 
 ## Workflow Model
 
-All tasks fall into one of these categories:
+The system is organized into stages.
 
-- ingest (job intake)
-- normalize (structure job data)
-- evaluate (fit analysis)
-- prioritize (ranking/filtering)
-- tailor (resume customization)
-- draft (cover letter generation)
-- export (document generation)
-- track (job lifecycle updates)
+Each stage:
+- has a clear objective
+- produces structured outputs
+- feeds the next stage
 
-Always identify the category before acting.
-
----
-
-## Implementation Rules
-
-### When writing code
-
-- follow existing patterns in the repo
-- prefer consistency over cleverness
-- use existing utilities before creating new ones
-- keep changes minimal and scoped
-- ensure outputs match existing formats
+AI must:
+- understand the current stage
+- complete only the current stage’s responsibilities
+- not jump ahead or mix stages
 
 ---
 
-### When modifying data
+## Issue-Based Execution Workflow
 
-- preserve existing records
-- avoid overwriting fields without intent
-- maintain schema compatibility
-- validate assumptions before writing changes
+All implementation work is scoped to a GitHub issue.
 
----
+### Source of Truth
 
-### When adding features
+Use these in order:
 
-- align with existing workflow model
-- do not bypass structured steps
-- ensure new functionality composes with existing flows
+1. GitHub issue for requirements and acceptance criteria
+2. Active issue branch for implementation context
+3. Pushed commit history for progress checkpoints
+4. Draft PR for handoff and review context
+5. Durable repo docs such as `AGENT.md`, `.ai/project.md`, and architecture docs
 
----
-
-## AI Behavior Expectations
-
-### Do
-
-- read relevant files before making changes
-- explain what you are doing and why
-- work step-by-step for multi-step tasks
-- produce outputs that can be reused later
-- keep responses actionable
+Do not rely on manual session-state files for active progress tracking.
 
 ---
 
-### Do Not
+### Session Start Rule
 
-- invent user experience, history, or qualifications
-- fabricate job details
-- generate generic filler content
-- bypass defined workflows
-- make destructive changes silently
+Before implementing any issue work:
 
----
+1. Run `./scripts/session-start.sh <issue_number>`
+2. Confirm the active branch matches the issue
+3. Confirm the draft PR exists or was reused
+4. Begin the next small, testable block of work
 
-## Output Guidelines
-
-- be concise and direct
-- prefer structured output where applicable
-- use clear sections and labels
-- avoid unnecessary verbosity
-- do not use em dashes
-- use plain ASCII punctuation
+Do not begin coding until the issue branch and draft PR exist.
 
 ---
 
-## Step-by-Step Execution Mode
+### Checkpoint Rule
 
-For implementation work:
+Implementation work must proceed in small, testable blocks.
 
-1. Identify the task
-2. Identify affected files
-3. Explain the approach
-4. Provide exact changes
-5. Keep steps small and testable
-6. Confirm expected outcome
-7. State the next step
+At the end of each meaningful block:
 
----
-
-## Error Handling
-
-If something is unclear or missing:
-
-- explicitly state what is missing
-- suggest the smallest next step
-- do not guess critical information
+- stop
+- summarize what changed
+- provide exact `git add`, `git commit`, and `git push` commands
+- treat the pushed commit as the checkpoint
 
 ---
 
-## Change Safety
+### Handoff Rule
 
-Before making changes, consider:
+When stopping work:
 
-- will this break existing workflows?
-- will this corrupt data?
-- is this reversible?
-- is this consistent with the system?
+- ensure the latest meaningful checkpoint is committed and pushed
+- use the draft PR as the handoff and review surface
+- summarize remaining work in the PR if needed
 
-If not, stop and clarify.
+---
+
+### Commit Format
+
+Use commit messages in this format:
+
+`issue-<n>: <checkpoint description>`
+
+Examples:
+
+- `issue-3: add failing URL validation test`
+- `issue-3: implement minimal URL validation`
+- `issue-3: define import service contract`
 
 ---
 
@@ -241,31 +209,49 @@ If not, stop and clarify.
 
 At the start of work:
 
-- identify the current task
-- identify relevant files
-- identify workflow category
+- identify the GitHub issue
+- identify the active branch
+- identify the workflow category
+- identify the next small, testable block
+
+At the end of each work block:
+
+- summarize what changed
+- provide exact commit and push commands
+- state the next step
 
 At the end of work:
 
-- summarize changes
+- confirm the latest checkpoint was committed and pushed
 - note any open questions
 - suggest the next step
 
 ---
 
-## Final Rule
+## Constraints
 
-This system is designed to be **repeatable and reliable**.
+- Use step-by-step execution
+- Prefer TDD when appropriate
+- Do not assume work is complete unless explicitly stated
+- Call out uncertainty explicitly
+- Do not skip validation or error handling
+- Do not introduce breaking schema changes without instruction
 
-When in doubt, choose:
-- clarity over cleverness
-- structure over improvisation
-- safety over speed
+---
 
-## Canonical Sources
+## Expectations
 
-- Primary repository: https://github.com/ihandley/coach
-- resume data file(s)
-- job tracker data
-- normalized job records
-- generated outputs
+AI should behave like a disciplined senior engineer:
+
+- precise
+- structured
+- incremental
+- test-driven
+- context-aware
+
+Avoid:
+
+- large unstructured outputs
+- skipping steps
+- implicit assumptions
+- mixing unrelated concerns

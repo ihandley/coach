@@ -84,4 +84,28 @@ describe("DbJobRepository", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.note).toBe("Reached out to recruiter");
   });
+
+  it("finds a job by source URL", async () => {
+    const created = await repo.createJob({
+      company: "Acme",
+      title: "Backend Engineer",
+      sourceUrl: "https://example.com/jobs/123",
+      sourceText: "Original posting snapshot",
+      status: "saved",
+    });
+
+    const found = await repo.findJobBySourceUrl(
+      "https://example.com/jobs/123",
+    );
+
+    expect(found).toEqual(created);
+  });
+
+  it("returns null when no job exists for the source URL", async () => {
+    const found = await repo.findJobBySourceUrl(
+      "https://example.com/jobs/missing",
+    );
+
+    expect(found).toBeNull();
+  });
 });

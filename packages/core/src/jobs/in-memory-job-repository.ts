@@ -63,6 +63,16 @@ export class InMemoryJobRepository implements JobRepository {
     return this.jobs.get(jobId) ?? null;
   }
 
+  async findJobBySourceUrl(sourceUrl: string): Promise<JobRecord | null> {
+    for (const job of this.jobs.values()) {
+      if (job.sourceUrl === sourceUrl) {
+        return job;
+      }
+    }
+
+    return null;
+  }
+
   async listJobs(input?: ListJobsInput): Promise<JobRecord[]> {
     let jobs = Array.from(this.jobs.values());
 

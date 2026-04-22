@@ -55,12 +55,19 @@ importers:
         specifier: ^29.0.2
         version: 29.0.2
 
-  packages/ai: {}
+  packages/ai:
+    dependencies:
+      '@coach/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/core: {}
 
   packages/db:
     dependencies:
+      '@coach/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@coach/core':
         specifier: workspace:*
         version: link:../core

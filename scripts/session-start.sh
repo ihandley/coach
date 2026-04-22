@@ -15,11 +15,6 @@ if [[ -z "$ISSUE_NUMBER" ]]; then
   exit 1
 fi
 
-if ! [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]]; then
-  echo "Error: issue number must be numeric"
-  exit 1
-fi
-
 # ----------------------------------------
 # Ensure git repo
 # ----------------------------------------
@@ -30,30 +25,29 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 # ----------------------------------------
-# Ensure origin/main is available
+# Sync main
 # ----------------------------------------
 
-echo "Fetching origin..."
+echo "Syncing main..."
+git checkout main >/dev/null 2>&1 || true
 git fetch origin
-
-if ! git show-ref --verify --quiet refs/remotes/origin/main; then
-  echo "Error: origin/main not found"
-  exit 1
-fi
+git pull --ff-only origin main
 
 # ----------------------------------------
-# Resolve issue file (optional, for slug/title)
+# Resolve issue file (optional, for slug)
 # ----------------------------------------
 
 ISSUE_FILE=$(ls .ai/issues 2>/dev/null | grep "^$(printf "%04d" "$ISSUE_NUMBER")-" || true)
 
 if [[ -n "$ISSUE_FILE" ]]; then
-  ISSUE_TITLE=$(echo "$ISSUE_FILE" | sed -E "s/^[0-9]+-//" | sed -E "s/\.md$//")
+  SLUG=$(echo "$ISSUE_FILE" | sed -E "s/^[0-9]+-//" | sed -E "s/\.md$//")
 else
-  ISSUE_TITLE="issue-$ISSUE_NUMBER"
+  SLUG="issue-$ISSUE_NUMBER"
 fi
 
-SLUG=$(echo "$ISSUE_TITLE" | tr '_' '-' | tr '[:upper:]' '[:lower:]')
+# normalize slug for branch
+SLUG=$(echo "$SLUG" | tr '_' '-' | tr '[:upper:]' '[:lower:]')
+
 BRANCH_NAME="feature/issue-$ISSUE_NUMBER-$SLUG"
 
 # ----------------------------------------
@@ -65,22 +59,17 @@ echo "Preparing branch: $BRANCH_NAME"
 if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
   git checkout "$BRANCH_NAME"
 else
-  git checkout -b "$BRANCH_NAME" origin/main
+  git checkout -b "$BRANCH_NAME"
 fi
 
 # ----------------------------------------
-# Push branch if needed
+# Push branch (ensure remote exists)
 # ----------------------------------------
 
-if ! git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
-  echo "Pushing new branch to origin..."
-  git push -u origin "$BRANCH_NAME"
-else
-  git branch --set-upstream-to="origin/$BRANCH_NAME" "$BRANCH_NAME" >/dev/null 2>&1 || true
-fi
+git push -u origin "$BRANCH_NAME" >/dev/null 2>&1 || true
 
 # ----------------------------------------
-# Create or reuse draft PR
+# Ensure GitHub CLI
 # ----------------------------------------
 
 PR_URL=""
@@ -96,7 +85,7 @@ if command -v gh >/dev/null 2>&1; then
   else
     echo "Attempting to create draft PR..."
 
-    PR_TITLE="Issue #$ISSUE_NUMBER: $ISSUE_TITLE"
+    PR_TITLE="Issue #$ISSUE_NUMBER: $SLUG"
 
     PR_BODY=$(cat <<EOF
 ## Summary
