@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { InMemoryJobRepository } from "../jobs/in-memory-job-repository";
 import { createInMemoryJobEvaluationRepository } from "./in-memory-job-evaluation-repository";
-import { createInMemoryResumeProfileRepository } from "./in-memory-resume-profile-repository";
+import { createInMemoryResumeProfileRepository } from "../resumes/in-memory-resume-profile-repository";
 import { createJobFitScorer } from "./job-fit-scorer";
 
 describe("createJobFitScorer", () => {
@@ -67,6 +67,7 @@ describe("createJobFitScorer", () => {
 
         const resumeProfile = await resumeProfiles.createResumeProfile({
             name: "Baseline Resume",
+            currentVersionId: "resume-version-1",
         });
 
         const scorer = createJobFitScorer({
@@ -131,6 +132,7 @@ describe("createJobFitScorer", () => {
 
         const resumeProfile = await resumeProfiles.createResumeProfile({
             name: "Baseline Resume",
+            currentVersionId: "resume-version-1",
         });
 
         let callCount = 0;
@@ -209,6 +211,7 @@ describe("createJobFitScorer", () => {
 
         const resumeProfile = await resumeProfiles.createResumeProfile({
             name: "Baseline Resume",
+            currentVersionId: "resume-version-1",
         });
 
         const scorer = createJobFitScorer({
@@ -260,6 +263,7 @@ describe("createJobFitScorer", () => {
 
         const resumeProfile = await resumeProfiles.createResumeProfile({
             name: "Baseline Resume",
+            currentVersionId: "resume-version-1",
         });
 
         const scorer = createJobFitScorer({
@@ -326,6 +330,7 @@ describe("createJobFitScorer", () => {
 
         const resumeProfile = await resumeProfiles.createResumeProfile({
             name: "Baseline Resume",
+            currentVersionId: "resume-version-1",
         });
 
         const scorer = createJobFitScorer({

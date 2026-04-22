@@ -1,4 +1,8 @@
-import { DbJobEvaluationRepository, DbResumeProfileRepository, createDbJobFitScorer } from "@coach/db";
+import {
+    DbJobEvaluationRepository,
+    createDbResumeProfileRepository,
+    createDbJobFitScorer,
+} from "@coach/db";
 
 import { createEvaluationActions } from "./evaluation-actions";
 import { createEvaluationEntry } from "./evaluation-entry";
@@ -89,7 +93,7 @@ export function createEvaluationProductionEntry({
     fallbackOnInvalidEvaluationResult = false,
 }: CreateEvaluationProductionEntryDeps) {
     const evaluations = new DbJobEvaluationRepository(db);
-    const resumeProfiles = new DbResumeProfileRepository(db);
+    const resumeProfiles = createDbResumeProfileRepository({ db });
 
     const scorer = createDbJobFitScorer({
         jobs,

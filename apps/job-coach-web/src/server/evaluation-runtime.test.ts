@@ -85,6 +85,7 @@ describe("createEvaluationRuntime", () => {
 
         const resumeProfile = await resumeProfiles.createResumeProfile({
             name: "Baseline Resume",
+            currentVersionId: "resume-version-1",
         });
 
         const runtime = createEvaluationRuntime({

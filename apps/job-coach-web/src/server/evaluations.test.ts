@@ -25,6 +25,7 @@ describe("createEvaluationServer", () => {
 
         const resumeProfile = await resumeProfiles.createResumeProfile({
             name: "Baseline Resume",
+            currentVersionId: "resume-version-1",
         });
 
         const server = createEvaluationServer({
@@ -47,7 +48,8 @@ describe("createEvaluationServer", () => {
                     },
                 });
             },
-            listEvaluationsByJobAndResumeProfile: evaluations.listByJobAndResumeProfile,
+            listEvaluationsByJobAndResumeProfile:
+                evaluations.listByJobAndResumeProfile,
         });
 
         const evaluation = await server.scoreJobFit({
@@ -96,7 +98,8 @@ describe("createEvaluationServer", () => {
             scoreJobFit: async () => {
                 throw new Error("not used in this test");
             },
-            listEvaluationsByJobAndResumeProfile: evaluations.listByJobAndResumeProfile,
+            listEvaluationsByJobAndResumeProfile:
+                evaluations.listByJobAndResumeProfile,
         });
 
         await expect(
@@ -118,7 +121,8 @@ describe("createEvaluationServer", () => {
             scoreJobFit: async () => {
                 throw new Error("not used in this test");
             },
-            listEvaluationsByJobAndResumeProfile: evaluations.listByJobAndResumeProfile,
+            listEvaluationsByJobAndResumeProfile:
+                evaluations.listByJobAndResumeProfile,
         });
 
         await expect(
