@@ -1,104 +1,115 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const createResumeProfile = vi.fn();
+const { createResumeProfileMock } = vi.hoisted(() => {
+    return {
+        createResumeProfileMock: vi.fn(),
+    };
+});
 
 vi.mock("@coach/db", async () => {
-    const actual = await vi.importActual<object>("@coach/db");
+    const actual = await vi.importActual<typeof import("@coach/db")>("@coach/db");
 
     return {
         ...actual,
-        createDbCreateResumeProfile: () => createResumeProfile,
+        createDbCreateResumeProfile: () => createResumeProfileMock,
     };
 });
 
 describe("POST /api/resume-profiles", () => {
-    it("creates a baseline resume profile and initial version", async () => {
-        createResumeProfile.mockResolvedValue({
+    beforeEach(() => {
+        createResumeProfileMock.mockReset();
+    });
+
+    it("creates a resume profile", async () => {
+        const normalizedResume = {
+            basics: {
+                fullName: "Ian Handley",
+                headline: "Senior Software Engineer",
+                summary: "Software engineer.",
+            },
+            skills: ["TypeScript"],
+            experience: [],
+            education: [],
+        };
+
+        const source = {
+            kind: "manual",
+            label: "Baseline Resume",
+        };
+
+        createResumeProfileMock.mockResolvedValue({
             profile: {
-                id: "profile-1",
-                name: "Baseline Resume",
-                currentVersionId: "version-1",
+                id: "profile-123",
+                name: "Primary Resume",
+                currentVersionId: "version-123",
             },
             version: {
-                id: "version-1",
-                profileId: "profile-1",
+                id: "version-123",
+                profileId: "profile-123",
                 versionNumber: 1,
-                source: {
-                    kind: "manual",
-                    label: "baseline-resume",
-                },
-                normalizedResume: {
-                    basics: {
-                        fullName: "Ian Handley",
-                        headline: "Software Engineer",
-                        summary: "Builds reliable product systems",
-                    },
-                    skills: ["TypeScript", "React"],
-                    experience: [],
-                    education: [],
-                },
+                kind: "baseline",
+                source,
+                normalizedResume,
             },
         });
 
         const { POST } = await import("./route");
 
-        const response = await POST(
-            new Request("http://localhost/api/resume-profiles", {
-                method: "POST",
-                body: JSON.stringify({
-                    name: "Baseline Resume",
-                    source: {
-                        kind: "manual",
-                        label: "baseline-resume",
-                    },
-                    normalizedResume: {
-                        basics: {
-                            fullName: "Ian Handley",
-                            headline: "Software Engineer",
-                            summary: "Builds reliable product systems",
-                        },
-                        skills: ["TypeScript", "React"],
-                        experience: [],
-                        education: [],
-                    },
-                }),
-                headers: {
-                    "content-type": "application/json",
-                },
+        const request = new Request("http://localhost/api/resume-profiles", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "Primary Resume",
+                source,
+                normalizedResume,
             }),
-        );
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        const response = await POST(request);
 
         expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toMatchObject({
+        expect(createResumeProfileMock).toHaveBeenCalledWith({
+            name: "Primary Resume",
+            source,
+            normalizedResume,
+        });
+        expect(await response.json()).toEqual({
             profile: {
-                id: "profile-1",
-                name: "Baseline Resume",
+                id: "profile-123",
+                name: "Primary Resume",
+                currentVersionId: "version-123",
             },
             version: {
-                id: "version-1",
+                id: "version-123",
+                profileId: "profile-123",
                 versionNumber: 1,
+                kind: "baseline",
+                source,
+                normalizedResume,
             },
         });
     });
 
-    it("returns 400 when the request body is invalid", async () => {
-    const { POST } = await import("./route");
+    it("returns 400 for invalid input", async () => {
+        const { POST } = await import("./route");
 
-    const response = await POST(
-        new Request("http://localhost/api/resume-profiles", {
+        const request = new Request("http://localhost/api/resume-profiles", {
             method: "POST",
             body: JSON.stringify({
-                name: "",
+                name: 123,
             }),
             headers: {
-                "content-type": "application/json",
+                "Content-Type": "application/json",
             },
-        }),
-    );
+        });
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-        error: "INVALID_RESUME_PROFILE_INPUT",
+        const response = await POST(request);
+
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({
+            error: "INVALID_RESUME_PROFILE_INPUT",
+        });
     });
-});
 });
