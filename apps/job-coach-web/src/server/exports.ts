@@ -1,4 +1,8 @@
 import { createExport, createExportService } from "@coach/core";
+import {
+    createDbGetResumeProfile,
+    createDbResumeVersionRepository,
+} from "@coach/db";
 import { renderResumeDocx } from "./resume-docx-renderer";
 
 export function createExportsServer(dependencies?: {

@@ -21,7 +21,7 @@ describe("POST /api/exports", () => {
             fileName: "resume.docx",
             mimeType:
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            buffer: new ArrayBuffer(3),
+            buffer: new Uint8Array([1, 2, 3]).buffer,
         });
 
         const { POST } = await import("./route");
@@ -45,6 +45,10 @@ describe("POST /api/exports", () => {
         expect(response.headers.get("content-disposition")).toBe(
             'attachment; filename="resume.docx"',
         );
+
+        const bytes = await response.arrayBuffer();
+        expect(bytes.byteLength).toBeGreaterThan(0);
+
         expect(createExportMock).toHaveBeenCalledWith({
             documentType: "resume",
             format: "docx",
