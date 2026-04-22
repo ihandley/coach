@@ -27,6 +27,7 @@ describe("JobImporter.importJobFromUrl", () => {
         };
 
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage,
             extractJob,
             saveImportedJob,
@@ -39,6 +40,7 @@ describe("JobImporter.importJobFromUrl", () => {
 
     it("rejects a non-http URL", async () => {
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage: async (_url: string) => {
                 throw new Error("fetchPage should not be called for invalid URLs");
             },
@@ -65,6 +67,7 @@ describe("JobImporter.importJobFromUrl", () => {
         const calls: string[] = [];
 
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage: async (url: string) => {
                 calls.push(url);
                 return {
@@ -107,6 +110,7 @@ describe("JobImporter.importJobFromUrl", () => {
         let receivedByExtractor: unknown;
 
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage: async (_url: string) => fetchedPage,
             extractJob: async (input: { url: string; html: string }) => {
                 receivedByExtractor = input;
@@ -150,6 +154,7 @@ describe("JobImporter.importJobFromUrl", () => {
         };
 
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage: async (url: string) => {
                 return { url, html: "<html></html>" };
             },
@@ -178,6 +183,7 @@ describe("JobImporter.importJobFromUrl", () => {
 
     it("returns a typed saved job result", async () => {
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage: async (url: string) => {
                 return { url, html: "<html></html>" };
             },
@@ -218,6 +224,7 @@ describe("JobImporter.importJobFromUrl", () => {
         let saveCalled = false;
 
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage: async (url: string) => {
                 return { url, html: "<html></html>" };
             },
@@ -254,6 +261,7 @@ describe("JobImporter.importJobFromUrl", () => {
         let receivedBySave: unknown;
 
         const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (_url: string) => null,
             fetchPage: async (url: string) => {
                 return { url, html: "<html></html>" };
             },
@@ -296,5 +304,60 @@ describe("JobImporter.importJobFromUrl", () => {
             location: "Remote",
             compensationText: "$150k-$180k",
         });
+    });
+
+    it("returns an existing imported job when the source URL was already imported", async () => {
+        const existingJob = {
+            id: "job-existing",
+            company: "Acme",
+            title: "Backend Engineer",
+            rawDescription: "Build APIs",
+            sourceUrl: "https://example.com/jobs/123",
+        };
+
+        let fetchCalled = false;
+        let extractCalled = false;
+        let saveCalled = false;
+
+        const importer = new JobImporter({
+            findImportedJobBySourceUrl: async (url: string) => {
+                return url === "https://example.com/jobs/123" ? existingJob : null;
+            },
+            fetchPage: async (url: string) => {
+                fetchCalled = true;
+                return { url, html: "<html></html>" };
+            },
+            extractJob: async (_input: { url: string; html: string }) => {
+                extractCalled = true;
+                return {
+                    company: "Acme",
+                    title: "Backend Engineer",
+                    rawDescription: "Build APIs",
+                };
+            },
+            saveImportedJob: async (
+                input: {
+                    company: string;
+                    title: string;
+                    rawDescription: string;
+                },
+            ) => {
+                saveCalled = true;
+                return {
+                    id: "job-123",
+                    sourceUrl: "https://example.com/jobs/123",
+                    ...input,
+                };
+            },
+        });
+
+        const result = await importer.importJobFromUrl(
+            "https://example.com/jobs/123",
+        );
+
+        expect(result).toEqual(existingJob);
+        expect(fetchCalled).toBe(false);
+        expect(extractCalled).toBe(false);
+        expect(saveCalled).toBe(false);
     });
 });
