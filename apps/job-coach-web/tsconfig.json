@@ -6,7 +6,9 @@
     "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
+    "skipLibCheck": true,
     "types": [
+      "node",
       "vitest/globals",
       "@testing-library/jest-dom"
     ]

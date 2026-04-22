@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@coach/ai": "workspace:^",
     "@coach/core": "workspace:*",
     "@coach/db": "workspace:*",
     "react": "^19.2.5",
@@ -15,6 +16,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "jsdom": "^29.0.2"
