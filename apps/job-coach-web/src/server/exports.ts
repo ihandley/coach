@@ -1,16 +1,36 @@
 import { createExport, createExportService } from "@coach/core";
+import { renderResumeDocx } from "./resume-docx-renderer";
 
 export function createExportsServer() {
     const exportService = createExportService({
         renderers: {
-            renderResume: async ({ format }) => ({
-                fileName: format === "docx" ? "resume.docx" : "resume.pdf",
-                mimeType:
-                    format === "docx"
-                        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        : "application/pdf",
-                buffer: new ArrayBuffer(0),
-            }),
+            renderResume: async ({ format, data }) => {
+                if (format === "docx") {
+                    return renderResumeDocx({
+                        resumeProfileId: data.resumeProfileId,
+                        resumeVersionId: data.resumeVersionId,
+                        content: {
+                            name: "Jane Doe",
+                            headline: "Senior Software Engineer",
+                            summary: "Builds reliable product systems.",
+                            experience: [
+                                {
+                                    company: "Acme",
+                                    title: "Engineer",
+                                    bullets: ["Built APIs", "Improved reliability"],
+                                },
+                            ],
+                        },
+                    });
+                }
+
+                return {
+                    fileName: "resume.pdf",
+                    mimeType: "application/pdf",
+                    buffer: new ArrayBuffer(0),
+                };
+            },
+
             renderCoverLetter: async ({ format }) => ({
                 fileName: format === "docx" ? "cover-letter.docx" : "cover-letter.pdf",
                 mimeType:
@@ -19,6 +39,7 @@ export function createExportsServer() {
                         : "application/pdf",
                 buffer: new ArrayBuffer(0),
             }),
+
             renderApplicationPacket: async ({ format }) => ({
                 fileName:
                     format === "docx"

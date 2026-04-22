@@ -87,13 +87,15 @@ export async function renderResumeDocx(input: {
 
     const buffer = await Packer.toBuffer(doc);
 
+    const output = new Uint8Array(buffer);
+
     return {
         fileName: "resume.docx",
         mimeType:
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        buffer: buffer.buffer.slice(
-            buffer.byteOffset,
-            buffer.byteOffset + buffer.byteLength,
-        ),
+        buffer: output.buffer.slice(
+            output.byteOffset,
+            output.byteOffset + output.byteLength,
+        ) as ArrayBuffer,
     };
 }
