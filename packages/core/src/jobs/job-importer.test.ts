@@ -3,6 +3,7 @@ import {
     JobImporter,
     InvalidExtractedJobDataError,
     InvalidJobImportUrlError,
+    type SavedImportedJob,
 } from "./job-importer";
 
 describe("JobImporter.importJobFromUrl", () => {
@@ -205,7 +206,7 @@ describe("JobImporter.importJobFromUrl", () => {
             "https://example.com/jobs/123",
         );
 
-        expectTypeOf(result).toEqualTypeOf<{
+        expectTypeOf(result).toMatchTypeOf<{
             id: string;
             company: string;
             title: string;
@@ -247,5 +248,53 @@ describe("JobImporter.importJobFromUrl", () => {
         ).rejects.toThrow(InvalidExtractedJobDataError);
 
         expect(saveCalled).toBe(false);
+    });
+
+    it("allows partial extracted job data as long as minimum required fields exist", async () => {
+        let receivedBySave: unknown;
+
+        const importer = new JobImporter({
+            fetchPage: async (url: string) => {
+                return { url, html: "<html></html>" };
+            },
+            extractJob: async () => {
+                return {
+                    company: "Acme",
+                    title: "Backend Engineer",
+                    rawDescription: "Build APIs",
+                    location: "Remote",
+                    compensationText: "$150k-$180k",
+                };
+            },
+            saveImportedJob: async (input) => {
+                receivedBySave = input;
+
+                return {
+                    id: "job-123",
+                    ...input,
+                } as SavedImportedJob;
+            },
+        });
+
+        const result = await importer.importJobFromUrl(
+            "https://example.com/jobs/123",
+        );
+
+        expect(receivedBySave).toEqual({
+            company: "Acme",
+            title: "Backend Engineer",
+            rawDescription: "Build APIs",
+            location: "Remote",
+            compensationText: "$150k-$180k",
+        });
+
+        expect(result).toEqual({
+            id: "job-123",
+            company: "Acme",
+            title: "Backend Engineer",
+            rawDescription: "Build APIs",
+            location: "Remote",
+            compensationText: "$150k-$180k",
+        });
     });
 });

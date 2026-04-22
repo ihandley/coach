@@ -7,14 +7,14 @@ export type ExtractedJobData = {
     company: string;
     title: string;
     rawDescription: string;
-};
+} & Record<string, unknown>;
 
 export type SavedImportedJob = {
     id: string;
     company: string;
     title: string;
     rawDescription: string;
-};
+} & Record<string, unknown>;
 
 type FetchPage = (url: string) => Promise<FetchedJobPage>;
 type ExtractJob = (input: FetchedJobPage) => Promise<unknown>;
@@ -68,23 +68,19 @@ function isValidHttpUrl(value: string): boolean {
 }
 
 function validateExtractedJobData(value: unknown): ExtractedJobData {
-    if (!value || typeof value !== "object") {
-        throw new InvalidExtractedJobDataError();
-    }
+  if (!value || typeof value !== "object") {
+    throw new InvalidExtractedJobDataError();
+  }
 
-    const candidate = value as Record<string, unknown>;
+  const candidate = value as Record<string, unknown>;
 
-    if (
-        typeof candidate.company !== "string" ||
-        typeof candidate.title !== "string" ||
-        typeof candidate.rawDescription !== "string"
-    ) {
-        throw new InvalidExtractedJobDataError();
-    }
+  if (
+    typeof candidate.company !== "string" ||
+    typeof candidate.title !== "string" ||
+    typeof candidate.rawDescription !== "string"
+  ) {
+    throw new InvalidExtractedJobDataError();
+  }
 
-    return {
-        company: candidate.company,
-        title: candidate.title,
-        rawDescription: candidate.rawDescription,
-    };
+  return candidate as ExtractedJobData;
 }
