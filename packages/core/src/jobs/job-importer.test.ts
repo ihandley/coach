@@ -64,7 +64,7 @@ describe("JobImporter.importJobFromUrl", () => {
 
         expect(calls).toEqual(["https://example.com/jobs/123"]);
     });
-    
+
     it("passes fetched page content into extractJob", async () => {
         const fetchedPage = {
             url: "https://example.com/jobs/123",
@@ -87,5 +87,40 @@ describe("JobImporter.importJobFromUrl", () => {
         await importer.importJobFromUrl("https://example.com/jobs/123");
 
         expect(receivedByExtractor).toEqual(fetchedPage);
+    });
+
+    it("passes extracted job data into saveImportedJob and returns the saved job", async () => {
+        const extractedJob = {
+            company: "Acme",
+            title: "Backend Engineer",
+            rawDescription: "Build APIs",
+        };
+
+        let receivedBySave: unknown;
+
+        const savedJob = {
+            id: "job-123",
+            ...extractedJob,
+        };
+
+        const importer = new JobImporter({
+            fetchPage: async () => {
+                return { html: "<html></html>" };
+            },
+            extractJob: async () => {
+                return extractedJob;
+            },
+            saveImportedJob: async (input: unknown) => {
+                receivedBySave = input;
+                return savedJob;
+            },
+        });
+
+        const result = await importer.importJobFromUrl(
+            "https://example.com/jobs/123",
+        );
+
+        expect(receivedBySave).toEqual(extractedJob);
+        expect(result).toEqual(savedJob);
     });
 });
