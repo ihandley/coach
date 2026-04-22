@@ -1,4 +1,5 @@
 import type { CreateJobInput, ExtractJob, FetchPage } from "@coach/core";
+import { fetchJobPageAsDependency, extractJobStub } from "@coach/ai";
 import { createDbJobImporter, createDbJobTracker } from "@coach/db";
 
 export async function listJobs() {
@@ -19,13 +20,13 @@ export async function createJob(input: CreateJobInput) {
 
 export async function importJobFromUrl(
   url: string,
-  dependencies: {
-    fetchPage: FetchPage;
-    extractJob: ExtractJob;
+  dependencies?: {
+    fetchPage?: FetchPage;
+    extractJob?: ExtractJob;
   },
 ) {
   return createDbJobImporter({
-    fetchPage: dependencies.fetchPage,
-    extractJob: dependencies.extractJob,
+    fetchPage: dependencies?.fetchPage ?? fetchJobPageAsDependency,
+    extractJob: dependencies?.extractJob ?? extractJobStub,
   }).importJobFromUrl(url);
 }
