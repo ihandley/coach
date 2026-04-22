@@ -24,6 +24,8 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+REPO_URL=$(git remote get-url origin 2>/dev/null | sed -E 's/git@github.com:/https:\/\/github.com\//' | sed -E 's/\.git$//')
+
 # ----------------------------------------
 # Sync main
 # ----------------------------------------
@@ -43,6 +45,11 @@ if [[ -n "$ISSUE_FILE" ]]; then
   SLUG=$(echo "$ISSUE_FILE" | sed -E "s/^[0-9]+-//" | sed -E "s/\.md$//")
 else
   SLUG="issue-$ISSUE_NUMBER"
+fi
+
+ISSUE_PATH=""
+if [[ -n "$ISSUE_FILE" ]]; then
+  ISSUE_PATH=".ai/issues/$ISSUE_FILE"
 fi
 
 # normalize slug for branch
@@ -138,13 +145,27 @@ echo ""
 echo "========================================"
 echo "SESSION READY"
 echo "========================================"
+echo "Repo:   ${REPO_URL:-"(unknown)"}"
 echo "Issue:  #$ISSUE_NUMBER"
 echo "Branch: $BRANCH_NAME"
 echo "PR:     ${PR_URL:-"(not created yet)"}"
+
+if [[ -n "$ISSUE_PATH" ]]; then
+  echo "Issue File: $ISSUE_PATH"
+fi
 
 if [[ -n "$PR_STATUS_NOTE" ]]; then
   echo "Note:   $PR_STATUS_NOTE"
 fi
 
 echo ""
+
+if [[ -n "$ISSUE_PATH" && -f "$ISSUE_PATH" ]]; then
+  echo "----------------------------------------"
+  echo "ISSUE CONTENT"
+  echo "----------------------------------------"
+  sed -n '1,200p' "$ISSUE_PATH"
+  echo ""
+fi
+
 echo "You can begin work."
