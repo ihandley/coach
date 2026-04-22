@@ -12,3 +12,6 @@ export * from "./resumes/review-current-resume-profile";
 export * from "./resumes/types";
 export * from "./jobs/repository-backed-job-importer";
 export * from "./resumes/get-resume-profile";
+export * from "./resumes/create-tailored-resume";
+export * from "./resumes/create-tailored-resume";
+export * from "./resumes/generate-tailoring-suggestions";
