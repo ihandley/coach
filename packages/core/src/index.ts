@@ -18,3 +18,4 @@ export * from "./cover-letters/in-memory-cover-letter-draft-repository";
 export * from "./application-questions/create-application-answer";
 export * from "./exports/types";
 export * from "./exports/create-export";
+export * from "./resumes/generate-tailoring-suggestions";

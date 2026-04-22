@@ -6,3 +6,4 @@ export * from "./resume-profiles";
 export * from "./resume-versions";
 export * from "./cover-letter-drafts/create-db-create-cover-letter-draft";
 export * from "./resume-versions";
+export * from "./resume-versions/create-db-generate-tailoring-suggestions";
