@@ -1,6 +1,26 @@
-type FetchPage = (url: string) => Promise<unknown>;
-type ExtractJob = (input: unknown) => Promise<unknown>;
-type SaveImportedJob = (input: unknown) => Promise<unknown>;
+export type FetchedJobPage = {
+  url: string;
+  html: string;
+};
+
+export type ExtractedJobData = {
+  company: string;
+  title: string;
+  rawDescription: string;
+};
+
+export type SavedImportedJob = {
+  id: string;
+  company: string;
+  title: string;
+  rawDescription: string;
+};
+
+type FetchPage = (url: string) => Promise<FetchedJobPage>;
+type ExtractJob = (input: FetchedJobPage) => Promise<ExtractedJobData>;
+type SaveImportedJob = (
+  input: ExtractedJobData,
+) => Promise<SavedImportedJob>;
 
 export class InvalidJobImportUrlError extends Error {
   constructor(url: string) {
@@ -18,7 +38,7 @@ export type JobImporterDependencies = {
 export class JobImporter {
   constructor(private readonly dependencies: JobImporterDependencies) {}
 
-  async importJobFromUrl(url: string): Promise<unknown> {
+  async importJobFromUrl(url: string): Promise<SavedImportedJob> {
     if (!isValidHttpUrl(url)) {
       throw new InvalidJobImportUrlError(url);
     }
