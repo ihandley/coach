@@ -80,4 +80,25 @@ describe("POST /api/resume-profiles", () => {
             },
         });
     });
+
+    it("returns 400 when the request body is invalid", async () => {
+    const { POST } = await import("./route");
+
+    const response = await POST(
+        new Request("http://localhost/api/resume-profiles", {
+            method: "POST",
+            body: JSON.stringify({
+                name: "",
+            }),
+            headers: {
+                "content-type": "application/json",
+            },
+        }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+        error: "INVALID_RESUME_PROFILE_INPUT",
+    });
+});
 });
