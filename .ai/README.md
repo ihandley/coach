@@ -1,64 +1,160 @@
-# AI Project Context
+# AI Context
 
-This folder stores durable, AI-readable project context so new ChatGPT sessions can pick up work faster and with less drift.
+This directory contains durable working context for the Job Coach system.
 
-## Recommended workflow
+It is designed to make the repository:
 
-1. Keep `project.md` accurate.
-2. Update `current.md` at the end of each session.
-3. Create one stage file per phase in `stages/`.
-4. Create one issue file per task in `issues/`.
-5. Use `scripts/ai-context.sh` to compose a prompt bundle for a new session.
+- structured
+- repeatable
+- inspectable
 
-## Core files
+This is not the primary source of active implementation state.
 
-- `project.md` - stable project summary and goals
-- `current.md` - current working state and next step
-- `architecture.md` - codebase structure and system design
-- `roadmap.md` - planned, active, completed work
-- `decisions.md` - important technical decisions and rationale
+For active implementation work, use GitHub as the source of truth:
 
-## Naming suggestions
+- GitHub issue = scope
+- issue branch = active workspace
+- pushed commit history = checkpoints
+- draft PR = handoff and review surface
 
-- Stages: `01-repo-setup.md`, `08-phone-verification.md`
-- Issues: `issue-008-phone-verification.md`
+---
 
-## At the start of each session
+## How to Start a Session
 
-Follow AGENT.md strictly.
+1. Follow `AGENT.md`.
+2. Run:
 
-Use these files as source of truth:
-- .ai/project.md
-- .ai/current.md
-- relevant stage file
+```bash
+./scripts/session-start.sh <issue_number>
+```
 
-Use the active GitHub issue as the task contract.
+3. Confirm:
+   - the active branch matches the issue
+   - the draft PR exists or will be created after the first checkpoint commit
+4. Identify:
+   - current issue scope
+   - workflow category
+   - next small, testable block
 
-Current execution context:
-- branch: <branch-name>
-- current task: <what you are doing>
-- next step: <immediate next step>
-- constraints: step-by-step, TDD
+Do not rely on manual session-state files for active progress tracking.
 
-Do not assume work is complete unless stated in these sources.
-Prefer existing workflows and patterns in the repo.
+---
 
-## At the end of each session
+## Session Model
 
-## Session Handoff
-Branch: feature/phone-verification-gate
+This repo uses an issue-based workflow.
 
-Completed:
-- Added phone_verified field
-- Added initial schema migration
-- Added first auth gating tests
+- GitHub issue = requirements and acceptance criteria
+- Branch = active implementation context
+- Commit history = progress checkpoints
+- Draft PR = handoff and review surface
 
-Current status:
-- Tests for middleware behavior still need to be written
-- UI flow not implemented yet
+If there is a conflict between repo docs and active GitHub work state, use this order:
 
-Next step:
-- Write failing tests for marketplace route protection
+1. GitHub issue
+2. active branch
+3. pushed commit history
+4. draft PR
+5. durable repo docs
 
-Open question:
-- Middleware vs server component guard
+---
+
+## Directory Structure
+
+- `.ai/project.md` → project overview and goals
+- `.ai/architecture.md` → architecture notes
+- `.ai/decisions.md` → important decisions and consequences
+- `.ai/roadmap.md` → planned work
+- `.ai/issues/` → optional local mirror of issue definitions
+- `.ai/notes/` → optional scratch notes
+
+These files are durable reference material, not the primary execution log.
+
+---
+
+## Workflow Model
+
+All work should map to one of:
+
+- ingest
+- normalize
+- evaluate
+- prioritize
+- tailor
+- draft
+- export
+- track
+
+Identify the workflow before acting.
+
+---
+
+## Execution Style
+
+- Step-by-step
+- Small changes
+- Prefer TDD when appropriate
+- Deterministic outputs
+- No hidden assumptions
+
+---
+
+## Implementation Rules
+
+- Do not invent schema fields
+- Do not overwrite data without intent
+- Do not refactor broadly without instruction
+- Prefer existing patterns
+- Keep changes minimal and scoped
+
+---
+
+## Testing Requirements
+
+- Start with a small, testable slice
+- Prefer failing test first when appropriate
+- Avoid testing external systems directly
+- Mock boundaries such as network, AI, and DB where practical
+
+---
+
+## Checkpoints
+
+At the end of each meaningful work block:
+
+1. Summarize what changed.
+2. Commit with:
+
+```text
+issue-<n>: <checkpoint description>
+```
+
+3. Push the branch.
+
+The pushed commit is the checkpoint.
+
+---
+
+## Handoff
+
+When stopping work:
+
+1. Ensure the latest meaningful checkpoint is committed and pushed.
+2. Use the draft PR as the handoff surface.
+3. Note the next step in PR context if needed.
+
+---
+
+## Principle
+
+This system is designed to be:
+
+- repeatable
+- reliable
+- inspectable
+
+When in doubt:
+
+- choose structure over improvisation
+- choose safety over speed
+- choose clarity over cleverness
