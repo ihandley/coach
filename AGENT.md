@@ -79,6 +79,21 @@ Prefer:
 
 ---
 
+## Session State
+
+Do not rely on `.ai/current.md` or any manual session-state file for active progress tracking.
+
+Active state must be derived from:
+
+- GitHub issue
+- active branch
+- pushed commit history
+- draft PR
+
+If `.ai/current.md` exists, treat it as informational only, not authoritative.
+
+---
+
 ## Repository Conventions
 
 ### File Roles
