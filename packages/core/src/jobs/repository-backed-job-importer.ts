@@ -1,17 +1,10 @@
 import type { JobRepository } from "./job-repository";
 import {
     JobImporter,
-    type FetchedJobPage,
+    type ExtractJob,
+    type FetchPage,
     type SavedImportedJob,
 } from "./job-importer";
-
-type ExtractJob = (input: FetchedJobPage) => Promise<{
-    company: string;
-    title: string;
-    rawDescription: string;
-} & Record<string, unknown>>;
-
-type FetchPage = (url: string) => Promise<FetchedJobPage>;
 
 export type RepositoryBackedJobImporterDependencies = {
     repository: JobRepository;

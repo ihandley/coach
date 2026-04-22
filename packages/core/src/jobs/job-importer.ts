@@ -16,13 +16,15 @@ export type SavedImportedJob = {
   rawDescription: string;
 } & Record<string, unknown>;
 
-type FindImportedJobBySourceUrl = (
+export type FindImportedJobBySourceUrl = (
   url: string,
 ) => Promise<SavedImportedJob | null>;
 
-type FetchPage = (url: string) => Promise<FetchedJobPage>;
-type ExtractJob = (input: FetchedJobPage) => Promise<unknown>;
-type SaveImportedJob = (
+export type FetchPage = (url: string) => Promise<FetchedJobPage>;
+
+export type ExtractJob = (input: FetchedJobPage) => Promise<unknown>;
+
+export type SaveImportedJob = (
   input: ExtractedJobData,
 ) => Promise<SavedImportedJob>;
 
@@ -48,7 +50,7 @@ export type JobImporterDependencies = {
 };
 
 export class JobImporter {
-  constructor(private readonly dependencies: JobImporterDependencies) {}
+  constructor(private readonly dependencies: JobImporterDependencies) { }
 
   async importJobFromUrl(url: string): Promise<SavedImportedJob> {
     if (!isValidHttpUrl(url)) {

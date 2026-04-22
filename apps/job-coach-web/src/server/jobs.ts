@@ -1,16 +1,5 @@
-import type { CreateJobInput } from "@coach/core";
+import type { CreateJobInput, ExtractJob, FetchPage } from "@coach/core";
 import { createDbJobImporter, createDbJobTracker } from "@coach/db";
-
-type FetchPage = (url: string) => Promise<{
-  url: string;
-  html: string;
-}>;
-
-type ExtractJob = (input: { url: string; html: string }) => Promise<{
-  company: string;
-  title: string;
-  rawDescription: string;
-} & Record<string, unknown>>;
 
 export async function listJobs() {
   return createDbJobTracker().listJobs();
