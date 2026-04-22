@@ -1,25 +1,49 @@
 import { createExport, createExportService } from "@coach/core";
 import { renderResumeDocx } from "./resume-docx-renderer";
 
-export function createExportsServer() {
+export function createExportsServer(dependencies?: {
+    resumeProfiles?: {
+        getResumeProfileById(resumeProfileId: string): Promise<any>;
+    };
+    resumeVersions?: {
+        getResumeVersionById(resumeVersionId: string): Promise<any>;
+    };
+    renderResumeDocx?: typeof renderResumeDocx;
+}) {
+    const resumeProfiles = dependencies?.resumeProfiles ?? {
+        async getResumeProfileById() {
+            throw new Error("RESUME_PROFILE_REPOSITORY_NOT_CONFIGURED");
+        },
+    };
+
+    const resumeVersions = dependencies?.resumeVersions ?? {
+        async getResumeVersionById() {
+            throw new Error("RESUME_VERSION_REPOSITORY_NOT_CONFIGURED");
+        },
+    };
+
+    const renderResumeDocxImpl =
+        dependencies?.renderResumeDocx ?? renderResumeDocx;
+
     const exportService = createExportService({
         renderers: {
             renderResume: async ({ format, data }) => {
                 if (format === "docx") {
-                    return renderResumeDocx({
+                    const profile = await resumeProfiles.getResumeProfileById(
+                        data.resumeProfileId,
+                    );
+                    const version = await resumeVersions.getResumeVersionById(
+                        data.resumeVersionId,
+                    );
+
+                    return renderResumeDocxImpl({
                         resumeProfileId: data.resumeProfileId,
                         resumeVersionId: data.resumeVersionId,
                         content: {
-                            name: "Jane Doe",
-                            headline: "Senior Software Engineer",
-                            summary: "Builds reliable product systems.",
-                            experience: [
-                                {
-                                    company: "Acme",
-                                    title: "Engineer",
-                                    bullets: ["Built APIs", "Improved reliability"],
-                                },
-                            ],
+                            name: profile.name,
+                            headline: version.normalizedResume?.headline,
+                            summary: version.normalizedResume?.summary,
+                            experience: version.normalizedResume?.experience ?? [],
                         },
                     });
                 }
