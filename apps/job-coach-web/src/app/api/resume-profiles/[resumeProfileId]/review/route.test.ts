@@ -45,4 +45,26 @@ describe("GET /api/resume-profiles/[resumeProfileId]/review", () => {
             },
         });
     });
+
+    it("returns 404 when the resume profile does not exist", async () => {
+        reviewCurrentResumeProfile.mockRejectedValue(
+            new Error("RESUME_PROFILE_NOT_FOUND"),
+        );
+
+        const { GET } = await import("./route");
+
+        const response = await GET(
+            new Request("http://localhost/api/resume-profiles/missing/review"),
+            {
+                params: Promise.resolve({
+                    resumeProfileId: "missing",
+                }),
+            },
+        );
+
+        expect(response.status).toBe(404);
+        await expect(response.json()).resolves.toMatchObject({
+            error: "RESUME_PROFILE_NOT_FOUND",
+        });
+    });
 });

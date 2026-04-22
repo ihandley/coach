@@ -14,9 +14,20 @@ export async function GET(
 ) {
     const { resumeProfileId } = await context.params;
 
-    const result = await reviewCurrentResumeProfile({
-        resumeProfileId,
-    });
+    try {
+        const result = await reviewCurrentResumeProfile({
+            resumeProfileId,
+        });
 
-    return Response.json(result);
+        return Response.json(result);
+    } catch (error) {
+        if (error instanceof Error && error.message === "RESUME_PROFILE_NOT_FOUND") {
+            return Response.json(
+                { error: "RESUME_PROFILE_NOT_FOUND" },
+                { status: 404 },
+            );
+        }
+
+        throw error;
+    }
 }
