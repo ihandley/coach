@@ -1,81 +1,80 @@
 # AI Context
 
-This directory contains the working context for the Job Coach system.
+This directory contains durable working context for the Job Coach system.
 
-It is designed to make each session:
-- deterministic
-- resumable
-- workflow-driven
+It is designed to make the repository:
 
-This is not memory for conversation.  
-This is **state for execution**.
+- structured
+- repeatable
+- inspectable
+
+This is not the primary source of active implementation state.
+
+For active implementation work, use GitHub as the source of truth:
+
+- GitHub issue = scope
+- issue branch = active workspace
+- pushed commit history = checkpoints
+- draft PR = handoff and review surface
 
 ---
 
 ## How to Start a Session
 
 1. Follow `AGENT.md`.
-2. Read:
-   - `.ai/project.md`
-   - `.ai/current.md`
-   - `.ai/stage.md` (if present)
-   - the active issue file in `.ai/issues/`
-3. Identify:
-   - current task
+2. Run:
+
+```bash
+./scripts/session-start.sh <issue_number>
+```
+
+3. Confirm:
+   - the active branch matches the issue
+   - the draft PR exists or will be created after the first checkpoint commit
+4. Identify:
+   - current issue scope
    - workflow category
-   - affected files
-4. Do not assume missing context.  
-   If something is unclear, state it explicitly.
+   - next small, testable block
+
+Do not rely on manual session-state files for active progress tracking.
 
 ---
 
-## Session Start Protocol
+## Session Model
 
-Before writing any code:
+This repo uses an issue-based workflow.
 
-1. Define session name:
-   - format: `issue-<n>-<short-task>`
-2. Create or verify branch:
-   - format: `feature/issue-<n>-<slug>`
-3. Create a draft PR immediately.
-4. Update `.ai/current.md`:
-   - session name
-   - branch
-   - PR link
-   - current task
-   - next step
-5. Confirm constraints:
-   - step-by-step
-   - TDD
-6. Do not begin implementation until branch and PR exist.
+- GitHub issue = requirements and acceptance criteria
+- Branch = active implementation context
+- Commit history = progress checkpoints
+- Draft PR = handoff and review surface
+
+If there is a conflict between repo docs and active GitHub work state, use this order:
+
+1. GitHub issue
+2. active branch
+3. pushed commit history
+4. draft PR
+5. durable repo docs
 
 ---
 
 ## Directory Structure
 
 - `.ai/project.md` → project overview and goals
-- `.ai/current.md` → current working state
-- `.ai/stage.md` → current stage definition (optional)
-- `.ai/issues/` → normalized issue files
+- `.ai/architecture.md` → architecture notes
+- `.ai/decisions.md` → important decisions and consequences
+- `.ai/roadmap.md` → planned work
+- `.ai/issues/` → optional local mirror of issue definitions
 - `.ai/notes/` → optional scratch notes
 
----
-
-## Source of Truth
-
-Always prefer:
-1. Repository data files
-2. Structured issue files
-3. Existing code
-4. Chat context (last)
-
-If there is a conflict, trust the repository.
+These files are durable reference material, not the primary execution log.
 
 ---
 
 ## Workflow Model
 
-All work must map to one of:
+All work should map to one of:
 
 - ingest
 - normalize
@@ -94,7 +93,7 @@ Identify the workflow before acting.
 
 - Step-by-step
 - Small changes
-- Test first (TDD)
+- Prefer TDD when appropriate
 - Deterministic outputs
 - No hidden assumptions
 
@@ -104,7 +103,7 @@ Identify the workflow before acting.
 
 - Do not invent schema fields
 - Do not overwrite data without intent
-- Do not refactor broadly
+- Do not refactor broadly without instruction
 - Prefer existing patterns
 - Keep changes minimal and scoped
 
@@ -112,34 +111,37 @@ Identify the workflow before acting.
 
 ## Testing Requirements
 
-- Write failing test first
-- Implement minimal code to pass
+- Start with a small, testable slice
+- Prefer failing test first when appropriate
 - Avoid testing external systems directly
-- Mock boundaries (network, AI, DB)
+- Mock boundaries such as network, AI, and DB where practical
 
 ---
 
-## Error Handling
+## Checkpoints
 
-If something is missing:
+At the end of each meaningful work block:
 
-- state what is missing
-- propose the smallest next step
-- do not guess
+1. Summarize what changed.
+2. Commit with:
+
+```text
+issue-<n>: <checkpoint description>
+```
+
+3. Push the branch.
+
+The pushed commit is the checkpoint.
 
 ---
 
-## End of Session
+## Handoff
 
-At the end of work:
+When stopping work:
 
-1. Summarize what changed
-2. Confirm tests passing
-3. Update `.ai/current.md`:
-   - current task
-   - next step
-4. Identify next TDD slice
-5. Ensure PR reflects current state
+1. Ensure the latest meaningful checkpoint is committed and pushed.
+2. Use the draft PR as the handoff surface.
+3. Note the next step in PR context if needed.
 
 ---
 

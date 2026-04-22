@@ -57,9 +57,67 @@ Prefer:
 
 ### 3. Determinism over creativity
 
-- Prefer predictable outputs over clever outputs
-- Avoid variability unless explicitly required
-- Ensure outputs are testable and reproducible
+- Outputs should be consistent and predictable
+- Avoid stylistic variation unless requested
+- Prefer explicit structure over prose
+
+---
+
+### 4. Small, controlled changes
+
+- Do not refactor broadly unless asked
+- Do not reorganize files without instruction
+- Do not introduce new abstractions casually
+
+---
+
+### 5. No hidden assumptions
+
+- If something is missing, say it is missing
+- Do not infer critical data silently
+- Ask or flag uncertainty when needed
+
+---
+
+## Session State
+
+Do not rely on `.ai/current.md` or any manual session-state file for active progress tracking.
+
+Active state must be derived from:
+
+- GitHub issue
+- active branch
+- pushed commit history
+- draft PR
+
+If `.ai/current.md` exists, treat it as informational only, not authoritative.
+
+---
+
+## Repository Conventions
+
+### File Roles
+
+- `/data/` → canonical job + resume data
+- `/skills/` → reusable job-coach operations
+- `/instructions/` → system prompts and behavioral rules
+- `/scripts/` → automation and utilities
+- `/ai/` → AI memory and working context (if present)
+
+Respect these boundaries.
+
+---
+
+### Canonical Sources
+
+When available, these are authoritative:
+
+- resume data file(s)
+- job tracker data
+- normalized job records
+- generated outputs
+
+If there is a conflict between chat context and repo data, trust the repo.
 
 ---
 

@@ -1,2 +1,5 @@
 export * from "./jobs";
-export * from "./jobs/repository-backed-job-importer";
+export * from "./evaluations/types";
+export * from "./evaluations/job-fit-scorer";
+export * from "./evaluations/in-memory-job-evaluation-repository";
+export * from "./evaluations/in-memory-resume-profile-repository";
