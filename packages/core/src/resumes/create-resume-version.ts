@@ -20,6 +20,7 @@ type ResumeVersionRepository = {
         versionNumber: number;
         source: ResumeSource;
         normalizedResume: NormalizedResume;
+        kind: "baseline";
     }): Promise<ResumeVersion>;
     listResumeVersionsByProfileId(resumeProfileId: string): Promise<ResumeVersion[]>;
 };
@@ -56,6 +57,7 @@ export function createCreateResumeVersion({
             versionNumber: nextVersionNumber,
             source: input.source,
             normalizedResume: input.normalizedResume,
+            kind: "baseline",
         });
 
         await resumeProfiles.updateResumeProfileCurrentVersion({

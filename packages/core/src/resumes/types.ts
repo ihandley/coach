@@ -24,12 +24,37 @@ export type ResumeProfile = {
     currentVersionId: string;
 };
 
+export type ResumeVersionKind = "baseline" | "tailored";
+
+export type TailoringSuggestion = {
+    id: string;
+    sectionTarget: string;
+    originalContent: string;
+    suggestedContent: string;
+    rationale: string;
+    relatedJobRequirements: string[];
+    priority: "low" | "medium" | "high";
+    confidence: "low" | "medium" | "high";
+};
+
+export type ResumeVersionLineage = {
+    sourceResumeVersionId?: string;
+    sourceJobId?: string;
+};
+
 export type ResumeVersion = {
     id: string;
     profileId: string;
     versionNumber: number;
+    kind: ResumeVersionKind;
     source: ResumeSource;
     normalizedResume: NormalizedResume;
+    lineage?: ResumeVersionLineage;
+};
+
+export type TailoredResume = {
+    version: ResumeVersion;
+    suggestions: TailoringSuggestion[];
 };
 
 export type BaselineResumeReview = {

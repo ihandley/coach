@@ -4,39 +4,48 @@ import type {
     ResumeVersion,
 } from "./types";
 
-type CreateResumeVersionInput = {
-    id?: string;
-    profileId: string;
-    versionNumber: number;
-    source: ResumeSource;
-    normalizedResume: NormalizedResume;
-};
-
 export function createInMemoryResumeVersionRepository() {
-    const resumeVersions = new Map<string, ResumeVersion>();
+    const versions: ResumeVersion[] = [];
 
     return {
-        async createResumeVersion(input: CreateResumeVersionInput) {
+        async createResumeVersion(input: {
+            id?: string;
+            profileId: string;
+            versionNumber: number;
+            kind: "baseline" | "tailored";
+            source: ResumeSource;
+            normalizedResume: NormalizedResume;
+            lineage?: ResumeVersion["lineage"];
+        }): Promise<ResumeVersion> {
             const version: ResumeVersion = {
                 id: input.id ?? crypto.randomUUID(),
                 profileId: input.profileId,
                 versionNumber: input.versionNumber,
+                kind: input.kind,
                 source: input.source,
                 normalizedResume: input.normalizedResume,
+                lineage: input.lineage,
             };
 
-            resumeVersions.set(version.id, version);
+            versions.push(version);
+
             return version;
         },
 
-        async getResumeVersionById(resumeVersionId: string) {
-            return resumeVersions.get(resumeVersionId) ?? null;
+        async listResumeVersionsByProfileId(
+            profileId: string,
+        ): Promise<ResumeVersion[]> {
+            return versions
+                .filter((version) => version.profileId === profileId)
+                .sort((a, b) => a.versionNumber - b.versionNumber);
         },
 
-        async listResumeVersionsByProfileId(resumeProfileId: string) {
-            return Array.from(resumeVersions.values())
-                .filter((version) => version.profileId === resumeProfileId)
-                .sort((a, b) => a.versionNumber - b.versionNumber);
+        async getResumeVersionById(
+            resumeVersionId: string,
+        ): Promise<ResumeVersion | null> {
+            return (
+                versions.find((version) => version.id === resumeVersionId) ?? null
+            );
         },
     };
 }
