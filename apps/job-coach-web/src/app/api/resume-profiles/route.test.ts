@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { POST } from "./route";
 
 const createResumeProfile = vi.fn();
 
@@ -40,8 +41,6 @@ describe("POST /api/resume-profiles", () => {
             },
         });
 
-        const { POST } = await import("./route");
-
         const response = await POST(
             new Request("http://localhost/api/resume-profiles", {
                 method: "POST",
@@ -82,23 +81,22 @@ describe("POST /api/resume-profiles", () => {
     });
 
     it("returns 400 when the request body is invalid", async () => {
-    const { POST } = await import("./route");
 
-    const response = await POST(
-        new Request("http://localhost/api/resume-profiles", {
-            method: "POST",
-            body: JSON.stringify({
-                name: "",
+        const response = await POST(
+            new Request("http://localhost/api/resume-profiles", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: "",
+                }),
+                headers: {
+                    "content-type": "application/json",
+                },
             }),
-            headers: {
-                "content-type": "application/json",
-            },
-        }),
-    );
+        );
 
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-        error: "INVALID_RESUME_PROFILE_INPUT",
+        expect(response.status).toBe(400);
+        await expect(response.json()).resolves.toMatchObject({
+            error: "INVALID_RESUME_PROFILE_INPUT",
+        });
     });
-});
 });
