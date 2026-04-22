@@ -1,9 +1,11 @@
 import { createExport, createExportService } from "@coach/core";
 import {
-    createDbGetResumeProfile,
+    createDbResumeProfileRepository,
     createDbResumeVersionRepository,
 } from "@coach/db";
+import { createServerClient } from "@coach/db";
 import { renderResumeDocx } from "./resume-docx-renderer";
+import { renderResumePdf } from "./resume-pdf-renderer";
 
 export function createExportsServer(dependencies?: {
     resumeProfiles?: {
@@ -13,50 +15,57 @@ export function createExportsServer(dependencies?: {
         getResumeVersionById(resumeVersionId: string): Promise<any>;
     };
     renderResumeDocx?: typeof renderResumeDocx;
+    renderResumePdf?: typeof renderResumePdf;
 }) {
-    const resumeProfiles = dependencies?.resumeProfiles ?? {
-        async getResumeProfileById() {
-            throw new Error("RESUME_PROFILE_REPOSITORY_NOT_CONFIGURED");
-        },
-    };
+    const db =
+        dependencies?.resumeProfiles && dependencies?.resumeVersions
+            ? null
+            : createServerClient();
 
-    const resumeVersions = dependencies?.resumeVersions ?? {
-        async getResumeVersionById() {
-            throw new Error("RESUME_VERSION_REPOSITORY_NOT_CONFIGURED");
-        },
-    };
+    const resumeProfiles =
+        dependencies?.resumeProfiles ??
+        createDbResumeProfileRepository({ db: db! });
+
+    const resumeVersions =
+        dependencies?.resumeVersions ??
+        createDbResumeVersionRepository({ db: db! });
 
     const renderResumeDocxImpl =
         dependencies?.renderResumeDocx ?? renderResumeDocx;
 
+    const renderResumePdfImpl =
+        dependencies?.renderResumePdf ?? renderResumePdf;
+
     const exportService = createExportService({
         renderers: {
             renderResume: async ({ format, data }) => {
-                if (format === "docx") {
-                    const profile = await resumeProfiles.getResumeProfileById(
-                        data.resumeProfileId,
-                    );
-                    const version = await resumeVersions.getResumeVersionById(
-                        data.resumeVersionId,
-                    );
+                const profile = await resumeProfiles.getResumeProfileById(
+                    data.resumeProfileId,
+                );
+                const version = await resumeVersions.getResumeVersionById(
+                    data.resumeVersionId,
+                );
 
+                const content = {
+                    name: profile?.name ?? "Resume",
+                    headline: version?.normalizedResume?.headline,
+                    summary: version?.normalizedResume?.summary,
+                    experience: version?.normalizedResume?.experience ?? [],
+                };
+
+                if (format === "docx") {
                     return renderResumeDocxImpl({
                         resumeProfileId: data.resumeProfileId,
                         resumeVersionId: data.resumeVersionId,
-                        content: {
-                            name: profile.name,
-                            headline: version.normalizedResume?.headline,
-                            summary: version.normalizedResume?.summary,
-                            experience: version.normalizedResume?.experience ?? [],
-                        },
+                        content,
                     });
                 }
 
-                return {
-                    fileName: "resume.pdf",
-                    mimeType: "application/pdf",
-                    buffer: new ArrayBuffer(0),
-                };
+                return renderResumePdfImpl({
+                    resumeProfileId: data.resumeProfileId,
+                    resumeVersionId: data.resumeVersionId,
+                    content,
+                });
             },
 
             renderCoverLetter: async ({ format }) => ({
