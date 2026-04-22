@@ -15,3 +15,4 @@ export * from "./resumes/get-resume-profile";
 export * from "./cover-letters/create-cover-letter-draft";
 export * from "./cover-letters/types";
 export * from "./cover-letters/in-memory-cover-letter-draft-repository";
+export * from "./application-questions/create-application-answer";
