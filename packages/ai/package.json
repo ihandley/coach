@@ -1,5 +1,16 @@
 {
   "name": "@coach/ai",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@coach/core": "workspace:*"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
 }

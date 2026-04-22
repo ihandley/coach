@@ -33,12 +33,19 @@ importers:
         specifier: workspace:*
         version: link:../../packages/db
 
-  packages/ai: {}
+  packages/ai:
+    dependencies:
+      '@coach/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/core: {}
 
   packages/db:
     dependencies:
+      '@coach/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@coach/core':
         specifier: workspace:*
         version: link:../core

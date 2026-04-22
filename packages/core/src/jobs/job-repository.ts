@@ -14,4 +14,5 @@ export interface JobRepository {
   updateJobStatus(input: UpdateJobStatusInput): Promise<JobRecord>;
   addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord>;
   listApplicationEvents(jobId: string): Promise<ApplicationEventRecord[]>;
+  findJobBySourceUrl(sourceUrl: string): Promise<JobRecord | null>;
 }
