@@ -1,5 +1,3 @@
-import { workflowsServer } from "../../../server/workflows-server";
-
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
 }
@@ -18,6 +16,7 @@ function isFormat(value: unknown): value is "pdf" | "docx" {
 }
 
 export async function GET() {
+    const { workflowsServer } = await import("../../../server/workflows-server");
     const runs = await workflowsServer.listWorkflowRuns();
 
     return Response.json(runs, { status: 200 });
@@ -29,6 +28,8 @@ export async function POST(request: Request) {
     if (!body || !isWorkflowType(body.workflowType)) {
         return Response.json({ error: "INVALID_WORKFLOW_INPUT" }, { status: 400 });
     }
+
+    const { workflowsServer } = await import("../../../server/workflows-server");
 
     try {
         if (body.workflowType === "import-job-and-score-fit") {
