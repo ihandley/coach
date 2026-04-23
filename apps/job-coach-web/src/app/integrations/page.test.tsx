@@ -55,12 +55,29 @@ describe("IntegrationsPage", () => {
         expect(screen.getByText("Loading...")).toBeInTheDocument();
     });
 
-    it("starts the Gmail connect action", async () => {
-        const connectIntegration = vi.fn();
+    it("refreshes integration state after connecting Gmail", async () => {
+        let account: {
+            id: string;
+            provider: "gmail";
+            isConnected: boolean;
+            createdAt: string;
+            updatedAt: string;
+        } | null = null;
+
+        const getIntegrationAccount = vi.fn(async () => account);
+        const connectIntegration = vi.fn(async () => {
+            account = {
+                id: "int-1",
+                provider: "gmail",
+                isConnected: true,
+                createdAt: "2026-04-23T10:00:00.000Z",
+                updatedAt: "2026-04-23T10:00:00.000Z",
+            };
+        });
 
         render(
             <IntegrationsPage
-                getIntegrationAccount={async () => null}
+                getIntegrationAccount={getIntegrationAccount}
                 connectIntegration={connectIntegration}
             />,
         );
@@ -69,6 +86,6 @@ describe("IntegrationsPage", () => {
             await screen.findByRole("button", { name: "Connect Gmail" }),
         );
 
-        expect(connectIntegration).toHaveBeenCalledWith("gmail");
+        expect(await screen.findByText("Connected")).toBeInTheDocument();
     });
 });

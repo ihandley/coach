@@ -34,8 +34,13 @@ export default function IntegrationsPage({
     const [integrationAccount, setIntegrationAccount] =
         useState<IntegrationAccount | null | undefined>(undefined);
 
+    async function refreshIntegrationAccount() {
+        const nextAccount = await getIntegrationAccount();
+        setIntegrationAccount(nextAccount);
+    }
+
     useEffect(() => {
-        getIntegrationAccount().then(setIntegrationAccount);
+        void refreshIntegrationAccount();
     }, [getIntegrationAccount]);
 
     if (integrationAccount === undefined) {
@@ -57,8 +62,9 @@ export default function IntegrationsPage({
                 {!integrationAccount?.isConnected ? (
                     <button
                         type="button"
-                        onClick={() => {
-                            void connectIntegration("gmail");
+                        onClick={async () => {
+                            await connectIntegration("gmail");
+                            await refreshIntegrationAccount();
                         }}
                     >
                         Connect Gmail
