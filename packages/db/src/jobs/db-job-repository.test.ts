@@ -3,8 +3,15 @@ import { DbJobRepository } from "./db-job-repository";
 import { createServerClient } from "../supabase/create-server-client";
 import { loadEnvFromKeychain } from "../env/load-env";
 
-describe("DbJobRepository", () => {
-  loadEnvFromKeychain();
+loadEnvFromKeychain();
+
+const hasSupabaseEnv = Boolean(
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
+
+const describeIntegration = hasSupabaseEnv ? describe : describe.skip;
+
+describeIntegration("DbJobRepository", () => {
   const repo = new DbJobRepository(createServerClient());
 
   beforeEach(async () => {
