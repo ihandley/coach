@@ -8,9 +8,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable
 
 if TYPE_CHECKING:
     from supabase import Client
@@ -300,21 +298,24 @@ def find_resume_versions_for_profile(
 def create_resume_profile(
     supabase: Client,
     name: str,
-    current_version_id: str,
+    current_version_id: str | None,
 ) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "name": name,
+        "current_version_id": current_version_id,
+    }
+
     result = (
         supabase.table("resume_profiles")
-        .insert(
-            {
-                "name": name,
-                "current_version_id": current_version_id,
-            }
-        )
-        .select("id,name,current_version_id")
-        .single()
+        .insert(payload, returning="representation")
         .execute()
     )
-    return result.data
+
+    rows = result.data or []
+    if not rows:
+        raise RuntimeError("Failed to create resume profile")
+
+    return rows[0]
 
 
 def update_resume_profile_current_version(
@@ -324,13 +325,19 @@ def update_resume_profile_current_version(
 ) -> dict[str, Any]:
     result = (
         supabase.table("resume_profiles")
-        .update({"current_version_id": current_version_id})
+        .update(
+            {"current_version_id": current_version_id},
+            returning="representation",
+        )
         .eq("id", profile_id)
-        .select("id,name,current_version_id")
-        .single()
         .execute()
     )
-    return result.data
+
+    rows = result.data or []
+    if not rows:
+        raise RuntimeError("Failed to update resume profile current version")
+
+    return rows[0]
 
 
 def create_resume_version(
@@ -353,15 +360,17 @@ def create_resume_version(
                 "normalized_resume": normalized_resume,
                 "source_resume_version_id": None,
                 "source_job_id": None,
-            }
+            },
+            returning="representation",
         )
-        .select(
-            "id,profile_id,version_number,kind,source_kind,source_label,normalized_resume"
-        )
-        .single()
         .execute()
     )
-    return result.data
+
+    rows = result.data or []
+    if not rows:
+        raise RuntimeError("Failed to create resume version")
+
+    return rows[0]
 
 
 def find_job_by_source_url(
@@ -415,13 +424,17 @@ def create_job(
                 "source_url": source_url,
                 "source_text": source_text,
                 "status": status,
-            }
+            },
+            returning="representation",
         )
-        .select("id,company,title,source_url,status")
-        .single()
         .execute()
     )
-    return result.data
+
+    rows = result.data or []
+    if not rows:
+        raise RuntimeError("Failed to create job")
+
+    return rows[0]
 
 
 def create_application_event(
@@ -437,13 +450,17 @@ def create_application_event(
                 "job_id": job_id,
                 "type": event_type,
                 "note": note,
-            }
+            },
+            returning="representation",
         )
-        .select("id,job_id,type,note,created_at")
-        .single()
         .execute()
     )
-    return result.data
+
+    rows = result.data or []
+    if not rows:
+        raise RuntimeError("Failed to create application event")
+
+    return rows[0]
 
 
 def print_json(label: str, value: Any) -> None:
@@ -505,26 +522,25 @@ def ensure_baseline_resume(
             "resumeVersionId": created_version["id"],
         }
 
+    created_profile = create_resume_profile(
+        supabase=supabase,
+        name=config.resume_profile_name,
+        current_version_id=None,
+    )
+
     created_version = create_resume_version(
         supabase=supabase,
-        profile_id="00000000-0000-0000-0000-000000000000",  # temporary placeholder
+        profile_id=created_profile["id"],
         version_number=1,
         source_kind="legacy_import",
         source_label=config.resume_source_label,
         normalized_resume=normalized_resume,
     )
 
-    created_profile = create_resume_profile(
+    update_resume_profile_current_version(
         supabase=supabase,
-        name=config.resume_profile_name,
+        profile_id=created_profile["id"],
         current_version_id=created_version["id"],
-    )
-
-    (
-        supabase.table("resume_versions")
-        .update({"profile_id": created_profile["id"]})
-        .eq("id", created_version["id"])
-        .execute()
     )
 
     return {
