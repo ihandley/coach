@@ -12,7 +12,7 @@ const hasSupabaseEnv = Boolean(
 const describeIntegration = hasSupabaseEnv ? describe : describe.skip;
 
 describeIntegration("DbJobRepository", () => {
-  const repo = new DbJobRepository(createServerClient());
+  const createRepo = () => new DbJobRepository(createServerClient());
 
   beforeEach(async () => {
     const supabase = createServerClient();
@@ -33,6 +33,8 @@ describeIntegration("DbJobRepository", () => {
   });
 
   it("creates and fetches a job", async () => {
+    const repo = createRepo();
+
     const created = await repo.createJob({
       company: "Acme",
       title: "Backend Engineer",
@@ -47,6 +49,8 @@ describeIntegration("DbJobRepository", () => {
   });
 
   it("lists jobs ordered by updatedAt desc", async () => {
+    const repo = createRepo();
+
     await repo.createJob({
       company: "First Co",
       title: "Engineer I",
@@ -71,6 +75,8 @@ describeIntegration("DbJobRepository", () => {
   });
 
   it("adds and lists application events", async () => {
+    const repo = createRepo();
+
     const created = await repo.createJob({
       company: "Acme",
       title: "Backend Engineer",
@@ -93,6 +99,8 @@ describeIntegration("DbJobRepository", () => {
   });
 
   it("finds a job by source URL", async () => {
+    const repo = createRepo();
+
     const created = await repo.createJob({
       company: "Acme",
       title: "Backend Engineer",
@@ -109,6 +117,8 @@ describeIntegration("DbJobRepository", () => {
   });
 
   it("returns null when no job exists for the source URL", async () => {
+    const repo = createRepo();
+
     const found = await repo.findJobBySourceUrl(
       "https://example.com/jobs/missing",
     );
