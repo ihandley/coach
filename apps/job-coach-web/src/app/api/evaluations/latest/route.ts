@@ -1,15 +1,16 @@
 import { evaluationsServer } from "../../../../server/evaluations/server";
 
-type Deps = {
-    server?: {
-        getLatestEvaluation(input: {
-            jobId: string;
-            resumeProfileId: string;
-        }): Promise<unknown | null>;
-    };
+type EvaluationServer = {
+    getLatestEvaluation(input: {
+        jobId: string;
+        resumeProfileId: string;
+    }): Promise<unknown | null>;
 };
 
-export async function GET(request: Request, deps?: Deps) {
+export async function handleGetLatestEvaluation(
+    request: Request,
+    server: EvaluationServer = evaluationsServer,
+) {
     try {
         const url = new URL(request.url);
         const jobId = url.searchParams.get("jobId");
@@ -25,8 +26,6 @@ export async function GET(request: Request, deps?: Deps) {
                 status: 400,
             });
         }
-
-        const server = deps?.server ?? evaluationsServer;
 
         const result = await server.getLatestEvaluation({
             jobId,
@@ -50,4 +49,8 @@ export async function GET(request: Request, deps?: Deps) {
             status: 500,
         });
     }
+}
+
+export async function GET(request: Request) {
+    return handleGetLatestEvaluation(request);
 }

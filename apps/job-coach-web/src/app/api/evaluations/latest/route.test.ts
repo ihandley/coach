@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GET } from "./route";
+import { handleGetLatestEvaluation } from "./route";
 
 describe("GET /api/evaluations/latest", () => {
     it("returns the latest evaluation", async () => {
@@ -8,23 +8,21 @@ describe("GET /api/evaluations/latest", () => {
             "http://localhost/api/evaluations/latest?jobId=job-1&resumeProfileId=resume-1",
         );
 
-        const response = await GET(request, {
-            server: {
-                getLatestEvaluation: async () => ({
-                    id: "evaluation-1",
-                    jobId: "job-1",
-                    resumeProfileId: "resume-1",
-                    score: 82,
-                    recommendation: "good-fit",
-                    reasoning: {
-                        strengths: ["Strong TypeScript alignment"],
-                        gaps: [],
-                        riskFactors: [],
-                        summary: "Solid match",
-                    },
-                    createdAt: new Date().toISOString(),
-                }),
-            },
+        const response = await handleGetLatestEvaluation(request, {
+            getLatestEvaluation: async () => ({
+                id: "evaluation-1",
+                jobId: "job-1",
+                resumeProfileId: "resume-1",
+                score: 82,
+                recommendation: "good-fit",
+                reasoning: {
+                    strengths: ["Strong TypeScript alignment"],
+                    gaps: [],
+                    riskFactors: [],
+                    summary: "Solid match",
+                },
+                createdAt: new Date().toISOString(),
+            }),
         });
 
         expect(response.status).toBe(200);
@@ -39,10 +37,8 @@ describe("GET /api/evaluations/latest", () => {
     it("returns 400 when query params are missing", async () => {
         const request = new Request("http://localhost/api/evaluations/latest");
 
-        const response = await GET(request, {
-            server: {
-                getLatestEvaluation: async () => null,
-            },
+        const response = await handleGetLatestEvaluation(request, {
+            getLatestEvaluation: async () => null,
         });
 
         expect(response.status).toBe(400);
@@ -53,10 +49,8 @@ describe("GET /api/evaluations/latest", () => {
             "http://localhost/api/evaluations/latest?jobId=job-1&resumeProfileId=resume-1",
         );
 
-        const response = await GET(request, {
-            server: {
-                getLatestEvaluation: async () => null,
-            },
+        const response = await handleGetLatestEvaluation(request, {
+            getLatestEvaluation: async () => null,
         });
 
         expect(response.status).toBe(404);
