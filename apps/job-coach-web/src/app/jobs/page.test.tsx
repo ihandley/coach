@@ -9,7 +9,18 @@ afterEach(() => {
 
 describe("JobsPage", () => {
     it("shows a loading state while jobs are being fetched", () => {
-        const getJobs = vi.fn(() => new Promise(() => {}));
+        const getJobs = vi.fn(
+            () =>
+                new Promise<
+                    Array<{
+                        id: string;
+                        company: string;
+                        title: string;
+                        status: string;
+                        updatedAt: string;
+                    }>
+                >(() => {}),
+        );
 
         render(<JobsPage getJobs={getJobs} />);
 
