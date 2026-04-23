@@ -30,7 +30,7 @@ describe("GET /api/integrations/[provider]", () => {
 
         const response = await GET(
             new Request("http://localhost/api/integrations/gmail"),
-            { params: { provider: "gmail" } },
+            { params: Promise.resolve({ provider: "gmail" }) },
         );
 
         expect(response.status).toBe(200);
@@ -47,7 +47,7 @@ describe("GET /api/integrations/[provider]", () => {
 
         const response = await GET(
             new Request("http://localhost/api/integrations/gmail"),
-            { params: { provider: "gmail" } },
+            { params: Promise.resolve({ provider: "gmail" }) },
         );
 
         expect(response.status).toBe(200);
@@ -59,7 +59,7 @@ describe("GET /api/integrations/[provider]", () => {
 
         const response = await GET(
             new Request("http://localhost/api/integrations/not-real"),
-            { params: { provider: "not-real" } },
+            { params: Promise.resolve({ provider: "not-real" }) },
         );
 
         expect(response.status).toBe(400);

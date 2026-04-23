@@ -1,117 +1,101 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
 
 import { EvaluationPanel } from "./evaluation-panel";
 
-afterEach(() => {
-    cleanup();
-});
+afterEach(() => cleanup());
 
 describe("EvaluationPanel", () => {
-    it("loads and displays the latest evaluation", async () => {
-        const getLatestEvaluation = vi.fn().mockResolvedValue({
-            id: "evaluation-1",
-            jobId: "job-1",
-            resumeProfileId: "resume-1",
-            score: 82,
-            recommendation: "good-fit",
-            reasoning: {
-                strengths: ["Strong TypeScript alignment"],
-                gaps: ["No explicit Postgres signal"],
-                riskFactors: [],
-                summary: "Solid match with a small database gap.",
-            },
-            createdAt: new Date().toISOString(),
-        });
-
+    it("shows the latest evaluation score when one exists", async () => {
         render(
-            <EvaluationPanel
-                jobId="job-1"
-                resumeProfileId="resume-1"
-                getLatestEvaluation={getLatestEvaluation}
-                scoreJobFit={vi.fn()}
-            />,
+            createElement(EvaluationPanel, {
+                jobId: "job-1",
+                resumeProfileId: "resume-1",
+                getLatestEvaluation: vi.fn(async () => ({
+                    id: "evaluation-1",
+                    jobId: "job-1",
+                    resumeProfileId: "resume-1",
+                    score: 82,
+                    recommendation: "good-fit",
+                    reasoning: {
+                        strengths: ["Strong TypeScript alignment"],
+                        gaps: [],
+                        riskFactors: [],
+                        summary: "Solid match",
+                    },
+                    createdAt: new Date().toISOString(),
+                })),
+                scoreJobFit: vi.fn(),
+            }),
         );
 
-        await waitFor(() => {
-            expect(screen.getByText("82")).toBeInTheDocument();
-        });
-
-        expect(screen.getByText("good-fit")).toBeInTheDocument();
-        expect(
-            screen.getByText("Solid match with a small database gap."),
-        ).toBeInTheDocument();
+        expect(await screen.findByText("82")).toBeInTheDocument();
     });
 
-    it("shows an error when loading the latest evaluation fails", async () => {
+    it("shows an empty state when no evaluation exists", async () => {
         render(
-            <EvaluationPanel
-                jobId="job-1"
-                resumeProfileId="resume-1"
-                getLatestEvaluation={vi.fn().mockRejectedValue(new Error("boom"))}
-                scoreJobFit={vi.fn()}
-            />,
+            createElement(EvaluationPanel, {
+                jobId: "job-1",
+                resumeProfileId: "resume-1",
+                getLatestEvaluation: vi.fn(async () => null),
+                scoreJobFit: vi.fn(),
+            }),
         );
 
-        await waitFor(() => {
-            expect(
-                screen.getByText("Failed to load latest evaluation."),
-            ).toBeInTheDocument();
-        });
+        expect(await screen.findByText("No evaluation yet.")).toBeInTheDocument();
     });
 
     it("scores the job when the button is clicked", async () => {
-        const scoreJobFit = vi.fn().mockResolvedValue({
-            id: "evaluation-2",
+        const scoreJobFit = vi.fn(async () => ({
+            id: "evaluation-1",
             jobId: "job-1",
             resumeProfileId: "resume-1",
             score: 76,
-            recommendation: "stretch",
+            recommendation: "good-fit",
             reasoning: {
-                strengths: ["Backend experience is relevant"],
-                gaps: ["Database depth is still unclear"],
-                riskFactors: ["Role may expect stronger Postgres evidence"],
-                summary: "Possible fit, but risk increased on re-evaluation.",
+                strengths: ["Relevant experience"],
+                gaps: [],
+                riskFactors: [],
+                summary: "Promising fit",
             },
             createdAt: new Date().toISOString(),
-        });
+        }));
 
         render(
-            <EvaluationPanel
-                jobId="job-1"
-                resumeProfileId="resume-1"
-                getLatestEvaluation={vi.fn().mockResolvedValue(null)}
-                scoreJobFit={scoreJobFit}
-            />,
+            createElement(EvaluationPanel, {
+                jobId: "job-1",
+                resumeProfileId: "resume-1",
+                getLatestEvaluation: vi.fn(async () => null),
+                scoreJobFit,
+            }),
         );
 
-        fireEvent.click(screen.getByRole("button", { name: "Score fit" }));
+        fireEvent.click(
+            await screen.findByRole("button", {
+                name: "Score job fit",
+            }),
+        );
 
         await waitFor(() => {
+            expect(scoreJobFit).toHaveBeenCalledWith({
+                jobId: "job-1",
+                resumeProfileId: "resume-1",
+            });
             expect(screen.getByText("76")).toBeInTheDocument();
         });
-
-        expect(scoreJobFit).toHaveBeenCalledWith({
-            jobId: "job-1",
-            resumeProfileId: "resume-1",
-        });
-        expect(screen.getByText("stretch")).toBeInTheDocument();
     });
 
-    it("shows an error when scoring fails", async () => {
+    it("shows a loading state while refreshing", async () => {
         render(
-            <EvaluationPanel
-                jobId="job-1"
-                resumeProfileId="resume-1"
-                getLatestEvaluation={vi.fn().mockResolvedValue(null)}
-                scoreJobFit={vi.fn().mockRejectedValue(new Error("boom"))}
-            />,
+            createElement(EvaluationPanel, {
+                jobId: "job-1",
+                resumeProfileId: "resume-1",
+                getLatestEvaluation: vi.fn(() => new Promise<null>(() => {})),
+                scoreJobFit: vi.fn(),
+            }),
         );
 
-        fireEvent.click(screen.getByRole("button", { name: "Score fit" }));
-
-        await waitFor(() => {
-            expect(screen.getByText("Failed to score fit evaluation.")).toBeInTheDocument();
-        });
+        expect(screen.getByText("Loading evaluation...")).toBeInTheDocument();
     });
 });

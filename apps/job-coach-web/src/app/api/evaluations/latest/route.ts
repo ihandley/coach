@@ -1,16 +1,6 @@
 import { evaluationsServer } from "../../../../server/evaluations/server";
 
-type EvaluationServer = {
-    getLatestEvaluation(input: {
-        jobId: string;
-        resumeProfileId: string;
-    }): Promise<unknown | null>;
-};
-
-export async function handleGetLatestEvaluation(
-    request: Request,
-    server: EvaluationServer = evaluationsServer,
-) {
+export async function GET(request: Request) {
     try {
         const url = new URL(request.url);
         const jobId = url.searchParams.get("jobId");
@@ -27,7 +17,7 @@ export async function handleGetLatestEvaluation(
             });
         }
 
-        const result = await server.getLatestEvaluation({
+        const result = await evaluationsServer.getLatestEvaluation({
             jobId,
             resumeProfileId,
         });
@@ -49,8 +39,4 @@ export async function handleGetLatestEvaluation(
             status: 500,
         });
     }
-}
-
-export async function GET(request: Request) {
-    return handleGetLatestEvaluation(request);
 }

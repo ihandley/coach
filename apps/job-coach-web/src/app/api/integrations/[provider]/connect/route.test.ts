@@ -1,64 +1,28 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const upsertIntegrationAccount = vi.fn();
-
-vi.mock("@coach/db", async () => {
-    const actual = await vi.importActual<object>("@coach/db");
-
-    return {
-        ...actual,
-        createDbUpsertIntegrationAccount: () => upsertIntegrationAccount,
-    };
-});
-
-beforeEach(() => {
-    upsertIntegrationAccount.mockReset();
-    vi.resetModules();
-});
+import { describe, expect, it, vi } from "vitest";
+import { handleConnectIntegration } from "./route-impl";
 
 describe("POST /api/integrations/[provider]/connect", () => {
-    it("marks the supported integration as connected", async () => {
-        upsertIntegrationAccount.mockResolvedValue({
-            id: "int-1",
-            provider: "gmail",
-            isConnected: true,
-            createdAt: "2026-04-23T10:00:00.000Z",
-            updatedAt: "2026-04-23T10:00:00.000Z",
-        });
+  it("connects gmail", async () => {
+    const connectIntegration = vi.fn(async () => {});
 
-        const { POST } = await import("./route");
+    const response = await handleConnectIntegration(
+      "gmail",
+      connectIntegration,
+    );
 
-        const response = await POST(
-            new Request("http://localhost/api/integrations/gmail/connect", {
-                method: "POST",
-            }),
-            { params: { provider: "gmail" } },
-        );
+    expect(response.status).toBe(204);
+    expect(connectIntegration).toHaveBeenCalledWith("gmail");
+  });
 
-        expect(upsertIntegrationAccount).toHaveBeenCalledWith({
-            provider: "gmail",
-            isConnected: true,
-        });
-        expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toMatchObject({
-            provider: "gmail",
-            isConnected: true,
-        });
-    });
+  it("returns 404 for unsupported providers", async () => {
+    const connectIntegration = vi.fn(async () => {});
 
-    it("returns 400 for unsupported providers", async () => {
-        const { POST } = await import("./route");
+    const response = await handleConnectIntegration(
+      "notion",
+      connectIntegration,
+    );
 
-        const response = await POST(
-            new Request("http://localhost/api/integrations/not-real/connect", {
-                method: "POST",
-            }),
-            { params: { provider: "not-real" } },
-        );
-
-        expect(response.status).toBe(400);
-        await expect(response.json()).resolves.toMatchObject({
-            error: "UNSUPPORTED_INTEGRATION_PROVIDER",
-        });
-    });
+    expect(response.status).toBe(404);
+    expect(connectIntegration).not.toHaveBeenCalled();
+  });
 });

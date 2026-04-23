@@ -32,7 +32,7 @@ describe("POST /api/integrations/[provider]/sync", () => {
             new Request("http://localhost/api/integrations/gmail/sync", {
                 method: "POST",
             }),
-            { params: { provider: "gmail" } },
+            { params: Promise.resolve({ provider: "gmail" }) },
         );
 
         expect(response.status).toBe(200);
@@ -51,7 +51,7 @@ describe("POST /api/integrations/[provider]/sync", () => {
             new Request("http://localhost/api/integrations/gmail/sync", {
                 method: "POST",
             }),
-            { params: { provider: "gmail" } },
+            { params: Promise.resolve({ provider: "gmail" }) },
         );
 
         expect(response.status).toBe(409);
@@ -67,7 +67,7 @@ describe("POST /api/integrations/[provider]/sync", () => {
             new Request("http://localhost/api/integrations/not-real/sync", {
                 method: "POST",
             }),
-            { params: { provider: "not-real" } },
+            { params: Promise.resolve({ provider: "not-real" }) },
         );
 
         expect(response.status).toBe(400);

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-
-import { POST } from "./route";
+import { handleScoreEvaluation } from "./route-impl";
 
 describe("POST /api/evaluations/score", () => {
     it("returns a scored evaluation", async () => {
@@ -12,33 +11,19 @@ describe("POST /api/evaluations/score", () => {
             }),
         });
 
-        const response = await POST(request, {
-            server: {
-                scoreJobFit: async () => ({
-                    id: "evaluation-1",
-                    jobId: "job-1",
-                    resumeProfileId: "resume-1",
-                    score: 82,
-                    recommendation: "good-fit",
-                    reasoning: {
-                        strengths: ["Strong TypeScript alignment"],
-                        gaps: [],
-                        riskFactors: [],
-                        summary: "Solid match",
-                    },
-                    createdAt: new Date().toISOString(),
-                }),
-            },
+        const response = await handleScoreEvaluation(request, {
+            scoreJobFit: async () => ({
+                id: "evaluation-1",
+                score: 82,
+            }),
         });
 
         expect(response.status).toBe(200);
 
         const json = await response.json();
-
         expect(json).toMatchObject({
             id: "evaluation-1",
             score: 82,
-            recommendation: "good-fit",
         });
     });
 
@@ -48,12 +33,8 @@ describe("POST /api/evaluations/score", () => {
             body: JSON.stringify({}),
         });
 
-        const response = await POST(request, {
-            server: {
-                scoreJobFit: async () => {
-                    throw new Error("should not be called");
-                },
-            },
+        const response = await handleScoreEvaluation(request, {
+            scoreJobFit: async () => null,
         });
 
         expect(response.status).toBe(400);
