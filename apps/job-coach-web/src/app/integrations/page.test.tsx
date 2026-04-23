@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import IntegrationsPage from "./page";
 
@@ -10,6 +10,7 @@ describe("IntegrationsPage", () => {
         render(
             <IntegrationsPage
                 getIntegrationAccount={async () => null}
+                connectIntegration={vi.fn()}
             />,
         );
 
@@ -33,6 +34,7 @@ describe("IntegrationsPage", () => {
                     createdAt: "2026-04-23T10:00:00.000Z",
                     updatedAt: "2026-04-23T10:00:00.000Z",
                 })}
+                connectIntegration={vi.fn()}
             />,
         );
 
@@ -46,9 +48,27 @@ describe("IntegrationsPage", () => {
         render(
             <IntegrationsPage
                 getIntegrationAccount={async () => new Promise(() => {})}
+                connectIntegration={vi.fn()}
             />,
         );
 
         expect(screen.getByText("Loading...")).toBeInTheDocument();
+    });
+
+    it("starts the Gmail connect action", async () => {
+        const connectIntegration = vi.fn();
+
+        render(
+            <IntegrationsPage
+                getIntegrationAccount={async () => null}
+                connectIntegration={connectIntegration}
+            />,
+        );
+
+        fireEvent.click(
+            await screen.findByRole("button", { name: "Connect Gmail" }),
+        );
+
+        expect(connectIntegration).toHaveBeenCalledWith("gmail");
     });
 });

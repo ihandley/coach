@@ -18,10 +18,18 @@ async function defaultGetIntegrationAccount(): Promise<IntegrationAccount | null
     return response.json();
 }
 
+async function defaultConnectIntegration(provider: "gmail") {
+    await fetch(`/api/integrations/${provider}/connect`, {
+        method: "POST",
+    });
+}
+
 export default function IntegrationsPage({
     getIntegrationAccount = defaultGetIntegrationAccount,
+    connectIntegration = defaultConnectIntegration,
 }: {
     getIntegrationAccount?: () => Promise<IntegrationAccount | null>;
+    connectIntegration?: (provider: "gmail") => Promise<void> | void;
 }) {
     const [integrationAccount, setIntegrationAccount] =
         useState<IntegrationAccount | null | undefined>(undefined);
@@ -47,7 +55,14 @@ export default function IntegrationsPage({
                 <h2>Gmail</h2>
                 <p>{integrationAccount?.isConnected ? "Connected" : "Disconnected"}</p>
                 {!integrationAccount?.isConnected ? (
-                    <button type="button">Connect Gmail</button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            void connectIntegration("gmail");
+                        }}
+                    >
+                        Connect Gmail
+                    </button>
                 ) : null}
             </section>
         </div>
