@@ -1,8 +1,10 @@
 import { createDbUpsertIntegrationAccount } from "@coach/db";
+
+import { dbAdapter } from "../../../../../server/db-adapter";
 import { handleConnectIntegration } from "./route-impl";
 
 const upsertIntegrationAccount = createDbUpsertIntegrationAccount({
-    db: {} as never,
+    db: dbAdapter,
 });
 
 export async function POST(

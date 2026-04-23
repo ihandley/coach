@@ -1,7 +1,8 @@
 import { createDbCreateResumeProfile } from "@coach/db";
+import { db } from "../../../server/db";
 
 const createResumeProfile = createDbCreateResumeProfile({
-    db: {} as never,
+    db,
 });
 
 function isNonEmptyString(value: unknown): value is string {
