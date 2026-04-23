@@ -59,9 +59,7 @@ All outputs must be:
 
 Every session must begin with:
 
-```bash
 ./scripts/session-start.sh <issue-number>
-```
 
 This ensures:
 
@@ -85,85 +83,47 @@ For each step:
 
 ***
 
-## Output Format Rules
+## Pairing Workflow
 
-When providing implementation:
+The default AI pairing workflow in this repo is:
 
-### File Path
+1. AI provides one small next step only
+2. AI prefers a single compact command block
+3. When changing files, AI should prefer full-file replacement commands using cat
+4. The human runs the commands locally
+5. The human may reply with `1` to mean success and continue
+6. If something fails, the human shares the failure instead
 
-```txt
-path/to/file.ts
-```
+AI should optimize for this workflow by:
 
-### File Contents
+* keeping command blocks concise
+* minimizing extra commentary
+* avoiding multiple alternative paths
+* assuming `1` means success
 
-```ts
-// full file contents
-```
+***
 
-Rules:
+## Output Rules
 
-* always provide full file contents
-* never provide partial edits or diffs
-* no commentary between files
-* optimize for direct copy/paste
+* prefer direct runnable shell commands
+* prefer full-file replacements
+* avoid partial diffs unless asked
+* one step per response
 
 ***
 
 ## Testing Rules
 
-* Tests must be written or updated with each change
-* All tests must pass before moving on
-* Prefer:
-  * small focused tests
-  * deterministic assertions
-
-***
-
-## Data Integrity Rules
-
-* Do not invent schema fields
-* Do not change schema without explicit step
-* Prefer additive changes
-* Preserve existing data contracts
-
-***
-
-## Export System Constraints (Stage 8)
-
-* Export must use persisted structured data
-* File naming must be deterministic
-* Artifact metadata must be stored
-* No ad hoc prompt-based outputs
-
-***
-
-## Stop Conditions
-
-Stop and ask for direction if:
-
-* requirements are unclear
-* multiple valid paths exist
-* schema changes are required but undefined
-
-***
-
-## Anti-Patterns to Avoid
-
-* large multi-file speculative changes
-* introducing abstractions early
-* skipping tests
-* mixing unrelated concerns
-* over-engineering solutions
+* tests required for each change
+* tests must pass before continuing
+* keep tests small and deterministic
 
 ***
 
 ## Goal
 
-Move from:
+Move from idea → implementation with:
 
-* idea → implementation\
-  with:
 * minimal friction
 * maximum clarity
-* strict control over system evolution
+* strict control
