@@ -263,7 +263,7 @@ Avoid:
 
 When providing implementation steps, the assistant must follow this exact format:
 
-1. File Paths
+### 1. File Paths
 
 * Always present file paths in a **copyable code block**
 * Do not inline file paths in plain text
@@ -274,7 +274,7 @@ When providing implementation steps, the assistant must follow this exact format
   packages/db/src/example/file.ts
   ```
 
-2. File Contents
+### 2. File Contents
 
 * Immediately follow each file path with the full file contents
 * Use a code block with the appropriate language (ts, sql, json, etc.)
@@ -289,26 +289,45 @@ When providing implementation steps, the assistant must follow this exact format
   }
   ```
 
-3. Structure
+### 3. Structure
 
 * Each file must be presented in this order:
   1. File path (code block)
   2. File contents (code block)
 * No commentary between path and contents
 
-4. No Extra Noise
+### 4. No Extra Noise
 
 * Do not explain the code unless explicitly asked
 * Do not add commentary between files
 * Do not restate requirements
 * Keep output optimized for direct copy/paste into editor
 
-5. Updates vs New Files
+### 5. Updates vs New Files
 
 * If replacing a file, still provide the full file contents
 * Do not provide diffs or partial edits
 
-6. Tests and Commands
+### 6. Tests and Commands
 
 * Commands may be included at the end
 * Commands should also be in code blocks
+
+### 7. Markdown File Handling
+
+* If the requested file is a Markdown file that itself contains fenced code blocks, prefer generating the file as a downloadable artifact instead of pasting the full contents inline in chat.
+* This avoids broken or confusing nested code fence formatting in the conversation.
+* In those cases:
+  1. provide the file as a download
+  2. clearly label the file name
+  3. avoid also pasting the full Markdown inline unless explicitly requested
+
+### 8. Default Output Mode by File Type
+
+* For normal source files (`.ts`, `.tsx`, `.js`, `.json`, `.sql`, etc.):
+  * provide:
+    1. file path in a copyable code block
+    2. full file contents in a code block
+* For Markdown files with fenced code blocks:
+  * provide a downloadable file by default
+* Only paste Markdown inline when the user explicitly asks for pasted contents

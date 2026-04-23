@@ -230,10 +230,34 @@ export function createExportsServer(dependencies?: {
 
     return {
         exportDocument: createExport({
-            exportResume: (input) => exportService.exportResume(input),
-            exportCoverLetter: (input) => exportService.exportCoverLetter(input),
-            exportApplicationPacket: (input) =>
-                exportService.exportApplicationPacket(input),
+            exportResume: ({ format, resumeProfileId, resumeVersionId }) =>
+                exportService.exportResume({
+                    format,
+                    resumeProfileId,
+                    resumeVersionId: resumeVersionId!,
+                }),
+            exportCoverLetter: ({
+                format,
+                resumeProfileId,
+                coverLetterDraftId,
+            }) =>
+                exportService.exportCoverLetter({
+                    format,
+                    resumeProfileId,
+                    coverLetterDraftId: coverLetterDraftId!,
+                }),
+            exportApplicationPacket: ({
+                format,
+                resumeProfileId,
+                resumeVersionId,
+                coverLetterDraftId,
+            }) =>
+                exportService.exportApplicationPacket({
+                    format,
+                    resumeProfileId,
+                    resumeVersionId: resumeVersionId!,
+                    coverLetterDraftId: coverLetterDraftId!,
+                }),
         }),
     };
 }
