@@ -21,3 +21,7 @@ export * from "./exports/create-export";
 export * from "./resumes/generate-tailoring-suggestions";
 export * from "./exports/renderers";
 export * from "./exports/create-export-service";
+export * from "./workflows/types";
+export * from "./workflows/in-memory-workflow-run-repository";
+export * from "./workflows/run-workflow";
+export * from "./workflows/workflow-queue";
