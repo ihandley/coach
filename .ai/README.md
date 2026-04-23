@@ -1,160 +1,169 @@
-# AI Context
+# AI Workflow README
 
-This directory contains durable working context for the Job Coach system.
+This directory defines how AI sessions operate for the Job Coach project.
 
-It is designed to make the repository:
+The goal is to enforce:
 
-- structured
-- repeatable
-- inspectable
+* deterministic progress
+* structured workflows
+* consistent outputs
+* minimal cognitive overhead during development
 
-This is not the primary source of active implementation state.
+***
 
-For active implementation work, use GitHub as the source of truth:
+## Core Principles
 
-- GitHub issue = scope
-- issue branch = active workspace
-- pushed commit history = checkpoints
-- draft PR = handoff and review surface
+### 1. Workflow First
 
----
+All work must follow:
 
-## How to Start a Session
+* the current GitHub issue
+* the staged implementation plan
+* step-by-step execution
 
-1. Follow `AGENT.md`.
-2. Run:
+Do not:
+
+* skip ahead
+* introduce unrelated improvements
+* refactor outside the current stage
+
+***
+
+### 2. Single-Step Execution
+
+Each interaction should:
+
+* complete exactly one meaningful step
+* leave the system in a working state
+* keep tests passing
+
+Avoid:
+
+* batching large changes
+* mixing concerns
+* partial implementations
+
+***
+
+### 3. Deterministic Outputs
+
+All outputs must be:
+
+* reproducible
+* testable
+* based on structured data (not prompt-only generation)
+
+***
+
+## Session Start Protocol
+
+Every session must begin with:
 
 ```bash
-./scripts/session-start.sh <issue_number>
+./scripts/session-start.sh <issue-number>
 ```
 
-3. Confirm:
-   - the active branch matches the issue
-   - the draft PR exists or will be created after the first checkpoint commit
-4. Identify:
-   - current issue scope
-   - workflow category
-   - next small, testable block
+This ensures:
 
-Do not rely on manual session-state files for active progress tracking.
+* branch is created or checked out
+* main is up to date
+* PR is created or linked
+* issue context is loaded into `.ai/issues`
 
----
+***
 
-## Session Model
+## Working Loop
 
-This repo uses an issue-based workflow.
+For each step:
 
-- GitHub issue = requirements and acceptance criteria
-- Branch = active implementation context
-- Commit history = progress checkpoints
-- Draft PR = handoff and review surface
+1. Understand current state
+2. Identify the smallest next change
+3. Implement exactly one slice
+4. Run tests
+5. Fix failures
+6. Stop
 
-If there is a conflict between repo docs and active GitHub work state, use this order:
+***
 
-1. GitHub issue
-2. active branch
-3. pushed commit history
-4. draft PR
-5. durable repo docs
+## Output Format Rules
 
----
+When providing implementation:
 
-## Directory Structure
+### File Path
 
-- `.ai/project.md` → project overview and goals
-- `.ai/architecture.md` → architecture notes
-- `.ai/decisions.md` → important decisions and consequences
-- `.ai/roadmap.md` → planned work
-- `.ai/issues/` → optional local mirror of issue definitions
-- `.ai/notes/` → optional scratch notes
-
-These files are durable reference material, not the primary execution log.
-
----
-
-## Workflow Model
-
-All work should map to one of:
-
-- ingest
-- normalize
-- evaluate
-- prioritize
-- tailor
-- draft
-- export
-- track
-
-Identify the workflow before acting.
-
----
-
-## Execution Style
-
-- Step-by-step
-- Small changes
-- Prefer TDD when appropriate
-- Deterministic outputs
-- No hidden assumptions
-
----
-
-## Implementation Rules
-
-- Do not invent schema fields
-- Do not overwrite data without intent
-- Do not refactor broadly without instruction
-- Prefer existing patterns
-- Keep changes minimal and scoped
-
----
-
-## Testing Requirements
-
-- Start with a small, testable slice
-- Prefer failing test first when appropriate
-- Avoid testing external systems directly
-- Mock boundaries such as network, AI, and DB where practical
-
----
-
-## Checkpoints
-
-At the end of each meaningful work block:
-
-1. Summarize what changed.
-2. Commit with:
-
-```text
-issue-<n>: <checkpoint description>
+```txt
+path/to/file.ts
 ```
 
-3. Push the branch.
+### File Contents
 
-The pushed commit is the checkpoint.
+```ts
+// full file contents
+```
 
----
+Rules:
 
-## Handoff
+* always provide full file contents
+* never provide partial edits or diffs
+* no commentary between files
+* optimize for direct copy/paste
 
-When stopping work:
+***
 
-1. Ensure the latest meaningful checkpoint is committed and pushed.
-2. Use the draft PR as the handoff surface.
-3. Note the next step in PR context if needed.
+## Testing Rules
 
----
+* Tests must be written or updated with each change
+* All tests must pass before moving on
+* Prefer:
+  * small focused tests
+  * deterministic assertions
 
-## Principle
+***
 
-This system is designed to be:
+## Data Integrity Rules
 
-- repeatable
-- reliable
-- inspectable
+* Do not invent schema fields
+* Do not change schema without explicit step
+* Prefer additive changes
+* Preserve existing data contracts
 
-When in doubt:
+***
 
-- choose structure over improvisation
-- choose safety over speed
-- choose clarity over cleverness
+## Export System Constraints (Stage 8)
+
+* Export must use persisted structured data
+* File naming must be deterministic
+* Artifact metadata must be stored
+* No ad hoc prompt-based outputs
+
+***
+
+## Stop Conditions
+
+Stop and ask for direction if:
+
+* requirements are unclear
+* multiple valid paths exist
+* schema changes are required but undefined
+
+***
+
+## Anti-Patterns to Avoid
+
+* large multi-file speculative changes
+* introducing abstractions early
+* skipping tests
+* mixing unrelated concerns
+* over-engineering solutions
+
+***
+
+## Goal
+
+Move from:
+
+* idea → implementation\
+  with:
+* minimal friction
+* maximum clarity
+* strict control over system evolution

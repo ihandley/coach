@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { renderResumePdf } from "./resume-pdf-renderer";
+import { renderApplicationPacketPdf } from "./application-packet-pdf-renderer";
 
-describe("renderResumePdf", () => {
+describe("renderApplicationPacketPdf", () => {
     it("returns a pdf export result", async () => {
-        const result = await renderResumePdf({
-            resumeProfileId: "rp1",
-            resumeVersionId: "rv1",
-            content: {
+        const result = await renderApplicationPacketPdf({
+            coverLetter: {
+                content: "Dear Hiring Manager,\n\nThanks for your time.",
+            },
+            resume: {
                 name: "Jane Doe",
                 headline: "Software Engineer",
                 summary: "Builds useful software.",
@@ -20,7 +21,7 @@ describe("renderResumePdf", () => {
             },
         });
 
-        expect(result.fileName).toBe("resume.pdf");
+        expect(result.fileName).toBe("application-packet.pdf");
         expect(result.mimeType).toBe("application/pdf");
         expect(result.buffer.byteLength).toBeGreaterThan(100);
 
