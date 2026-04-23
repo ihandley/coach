@@ -5,11 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
-from urllib import error, request
+from typing import Any, Iterable
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from supabase import Client
 
 VALID_JOB_STATUSES = {
     "saved",
@@ -26,7 +30,6 @@ VALID_JOB_STATUSES = {
 
 @dataclass
 class ImportConfig:
-    coach_repo_root: Path
     opencode_repo_root: Path
     dry_run: bool
     resume_profile_name: str
@@ -52,7 +55,7 @@ def load_jobs(path: Path) -> list[dict[str, Any]]:
     if isinstance(payload, list):
         return payload
 
-    if payload in ("", None, {}):
+    if payload in (None, "", {}):
         return []
 
     raise ValueError(f"Unsupported jobs payload shape in {path}")
@@ -65,6 +68,21 @@ def load_resume(path: Path) -> dict[str, Any]:
         raise ValueError(f"Unsupported resume payload shape in {path}")
 
     return payload
+
+
+def require_env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(f"Missing environment variable: {name}")
+    return value
+
+
+def create_supabase() -> "Client":
+    from supabase import create_client
+
+    url = require_env("SUPABASE_URL")
+    key = require_env("SUPABASE_SERVICE_ROLE_KEY")
+    return create_client(url, key)
 
 
 def map_legacy_status(value: str | None) -> str:
@@ -85,7 +103,6 @@ def map_legacy_status(value: str | None) -> str:
     }
 
     mapped = mapping.get(normalized, "saved")
-
     if mapped not in VALID_JOB_STATUSES:
         raise ValueError(f"Mapped invalid job status: {mapped}")
 
@@ -229,12 +246,14 @@ def dedupe_jobs(*job_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
     for jobs in job_lists:
         for job in jobs:
-            url_key = create_legacy_source_url(job).lower()
+            source_url = create_legacy_source_url(job)
             company = str(job.get("company") or "").strip().lower()
             title = str(job.get("title") or "").strip().lower()
             fallback_key = f"{company}::{title}"
 
-            key = url_key if not url_key.startswith("legacy://") else fallback_key
+            key = source_url.lower()
+            if key.startswith("legacy://"):
+                key = fallback_key
 
             if key in seen:
                 continue
@@ -245,9 +264,279 @@ def dedupe_jobs(*job_lists: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return merged
 
 
-def make_resume_import_payload(
-    config: ImportConfig,
+def find_resume_profile_by_name(
+    supabase: Client,
+    name: str,
+) -> dict[str, Any] | None:
+    result = (
+        supabase.table("resume_profiles")
+        .select("id,name,current_version_id")
+        .eq("name", name)
+        .limit(1)
+        .execute()
+    )
+
+    rows = result.data or []
+    return rows[0] if rows else None
+
+
+def find_resume_versions_for_profile(
+    supabase: Client,
+    profile_id: str,
+) -> list[dict[str, Any]]:
+    result = (
+        supabase.table("resume_versions")
+        .select(
+            "id,profile_id,version_number,kind,source_kind,source_label,normalized_resume"
+        )
+        .eq("profile_id", profile_id)
+        .order("version_number")
+        .execute()
+    )
+
+    return result.data or []
+
+
+def create_resume_profile(
+    supabase: Client,
+    name: str,
+    current_version_id: str,
+) -> dict[str, Any]:
+    result = (
+        supabase.table("resume_profiles")
+        .insert(
+            {
+                "name": name,
+                "current_version_id": current_version_id,
+            }
+        )
+        .select("id,name,current_version_id")
+        .single()
+        .execute()
+    )
+    return result.data
+
+
+def update_resume_profile_current_version(
+    supabase: Client,
+    profile_id: str,
+    current_version_id: str,
+) -> dict[str, Any]:
+    result = (
+        supabase.table("resume_profiles")
+        .update({"current_version_id": current_version_id})
+        .eq("id", profile_id)
+        .select("id,name,current_version_id")
+        .single()
+        .execute()
+    )
+    return result.data
+
+
+def create_resume_version(
+    supabase: Client,
+    profile_id: str,
+    version_number: int,
+    source_kind: str,
+    source_label: str,
+    normalized_resume: dict[str, Any],
+) -> dict[str, Any]:
+    result = (
+        supabase.table("resume_versions")
+        .insert(
+            {
+                "profile_id": profile_id,
+                "version_number": version_number,
+                "kind": "baseline",
+                "source_kind": source_kind,
+                "source_label": source_label,
+                "normalized_resume": normalized_resume,
+                "source_resume_version_id": None,
+                "source_job_id": None,
+            }
+        )
+        .select(
+            "id,profile_id,version_number,kind,source_kind,source_label,normalized_resume"
+        )
+        .single()
+        .execute()
+    )
+    return result.data
+
+
+def find_job_by_source_url(
+    supabase: Client,
+    source_url: str,
+) -> dict[str, Any] | None:
+    result = (
+        supabase.table("jobs")
+        .select("id,company,title,source_url")
+        .eq("source_url", source_url)
+        .limit(1)
+        .execute()
+    )
+
+    rows = result.data or []
+    return rows[0] if rows else None
+
+
+def find_job_by_company_title(
+    supabase: Client,
+    company: str,
+    title: str,
+) -> dict[str, Any] | None:
+    result = (
+        supabase.table("jobs")
+        .select("id,company,title,source_url")
+        .eq("company", company)
+        .eq("title", title)
+        .limit(1)
+        .execute()
+    )
+
+    rows = result.data or []
+    return rows[0] if rows else None
+
+
+def create_job(
+    supabase: Client,
+    company: str,
+    title: str,
+    source_url: str,
+    source_text: str,
+    status: str,
+) -> dict[str, Any]:
+    result = (
+        supabase.table("jobs")
+        .insert(
+            {
+                "company": company,
+                "title": title,
+                "source_url": source_url,
+                "source_text": source_text,
+                "status": status,
+            }
+        )
+        .select("id,company,title,source_url,status")
+        .single()
+        .execute()
+    )
+    return result.data
+
+
+def create_application_event(
+    supabase: Client,
+    job_id: str,
+    event_type: str,
+    note: str,
+) -> dict[str, Any]:
+    result = (
+        supabase.table("application_events")
+        .insert(
+            {
+                "job_id": job_id,
+                "type": event_type,
+                "note": note,
+            }
+        )
+        .select("id,job_id,type,note,created_at")
+        .single()
+        .execute()
+    )
+    return result.data
+
+
+def print_json(label: str, value: Any) -> None:
+    print(f"\n{label}:")
+    print(json.dumps(value, indent=2))
+
+
+def ensure_baseline_resume(
+    supabase: Client,
     legacy_resume: dict[str, Any],
+    config: ImportConfig,
+) -> dict[str, Any]:
+    normalized_resume = map_resume_to_normalized_resume(legacy_resume)
+    existing_profile = find_resume_profile_by_name(supabase, config.resume_profile_name)
+
+    if existing_profile:
+        versions = find_resume_versions_for_profile(supabase, existing_profile["id"])
+        matching_version = next(
+            (
+                version
+                for version in versions
+                if version["kind"] == "baseline"
+                and version["source_kind"] == "legacy_import"
+                and version["source_label"] == config.resume_source_label
+            ),
+            None,
+        )
+
+        if matching_version:
+            return {
+                "action": "reused",
+                "resumeProfileId": existing_profile["id"],
+                "resumeVersionId": matching_version["id"],
+            }
+
+        next_version_number = max(
+            (int(version["version_number"]) for version in versions),
+            default=0,
+        ) + 1
+
+        created_version = create_resume_version(
+            supabase=supabase,
+            profile_id=existing_profile["id"],
+            version_number=next_version_number,
+            source_kind="legacy_import",
+            source_label=config.resume_source_label,
+            normalized_resume=normalized_resume,
+        )
+
+        update_resume_profile_current_version(
+            supabase=supabase,
+            profile_id=existing_profile["id"],
+            current_version_id=created_version["id"],
+        )
+
+        return {
+            "action": "created_version",
+            "resumeProfileId": existing_profile["id"],
+            "resumeVersionId": created_version["id"],
+        }
+
+    created_version = create_resume_version(
+        supabase=supabase,
+        profile_id="00000000-0000-0000-0000-000000000000",  # temporary placeholder
+        version_number=1,
+        source_kind="legacy_import",
+        source_label=config.resume_source_label,
+        normalized_resume=normalized_resume,
+    )
+
+    created_profile = create_resume_profile(
+        supabase=supabase,
+        name=config.resume_profile_name,
+        current_version_id=created_version["id"],
+    )
+
+    (
+        supabase.table("resume_versions")
+        .update({"profile_id": created_profile["id"]})
+        .eq("id", created_version["id"])
+        .execute()
+    )
+
+    return {
+        "action": "created",
+        "resumeProfileId": created_profile["id"],
+        "resumeVersionId": created_version["id"],
+    }
+
+
+def preview_baseline_resume(
+    legacy_resume: dict[str, Any],
+    config: ImportConfig,
 ) -> dict[str, Any]:
     return {
         "resumeProfile": {
@@ -265,10 +554,10 @@ def make_resume_import_payload(
     }
 
 
-def make_jobs_import_payload(legacy_jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def preview_jobs(jobs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     payload: list[dict[str, Any]] = []
 
-    for job in legacy_jobs:
+    for job in jobs:
         payload.append(
             {
                 "legacyId": str(job.get("id") or ""),
@@ -286,31 +575,50 @@ def make_jobs_import_payload(legacy_jobs: list[dict[str, Any]]) -> list[dict[str
     return payload
 
 
-def post_json(url: str, payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
-    data = json.dumps(payload).encode("utf-8")
-    req = request.Request(
-        url,
-        data=data,
-        headers={
-            "content-type": "application/json",
-            **headers,
-        },
-        method="POST",
-    )
+def import_jobs(
+    supabase: Client,
+    jobs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    created_job_ids: list[str] = []
+    skipped_legacy_ids: list[str] = []
 
-    try:
-        with request.urlopen(req) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"HTTP {exc.code} from {url}: {body}") from exc
+    for job in jobs:
+        company = str(job.get("company") or "").strip()
+        title = str(job.get("title") or "").strip()
+        source_url = create_legacy_source_url(job)
 
+        existing = find_job_by_source_url(supabase, source_url)
+        if not existing and source_url.startswith("legacy://"):
+            existing = find_job_by_company_title(supabase, company, title)
 
-def require_env(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value:
-        raise RuntimeError(f"Missing environment variable: {name}")
-    return value
+        if existing:
+            skipped_legacy_ids.append(str(job.get("id") or ""))
+            continue
+
+        created = create_job(
+            supabase=supabase,
+            company=company,
+            title=title,
+            source_url=source_url,
+            source_text=build_source_text(job),
+            status=map_legacy_status(job.get("status")),
+        )
+        created_job_ids.append(created["id"])
+
+        for event in make_import_events(job):
+            create_application_event(
+                supabase=supabase,
+                job_id=created["id"],
+                event_type=event["type"],
+                note=event["note"],
+            )
+
+    return {
+        "createdJobs": len(created_job_ids),
+        "skippedJobs": len(skipped_legacy_ids),
+        "createdJobIds": created_job_ids,
+        "skippedLegacyIds": skipped_legacy_ids,
+    }
 
 
 def run_import(config: ImportConfig) -> None:
@@ -320,12 +628,8 @@ def run_import(config: ImportConfig) -> None:
 
     jobs_a = load_jobs(jobs_path_a)
     jobs_b = load_jobs(jobs_path_b) if jobs_path_b.exists() else []
-    resume = load_resume(resume_path)
-
+    legacy_resume = load_resume(resume_path)
     deduped_jobs = dedupe_jobs(jobs_a, jobs_b)
-
-    resume_payload = make_resume_import_payload(config, resume)
-    jobs_payload = make_jobs_import_payload(deduped_jobs)
 
     print("Legacy import summary")
     print("---------------------")
@@ -336,37 +640,28 @@ def run_import(config: ImportConfig) -> None:
     print(f"Dry run: {config.dry_run}")
 
     if config.dry_run:
-        print("\nResume payload preview:")
-        print(json.dumps(resume_payload, indent=2))
+        print_json("Resume payload preview", preview_baseline_resume(legacy_resume, config))
 
-        print("\nJobs payload preview:")
-        print(json.dumps(jobs_payload[:5], indent=2))
-        if len(jobs_payload) > 5:
-            print(f"... and {len(jobs_payload) - 5} more jobs")
+        jobs_preview = preview_jobs(deduped_jobs)
+        print_json("Jobs payload preview", jobs_preview[:5])
+        if len(jobs_preview) > 5:
+            print(f"... and {len(jobs_preview) - 5} more jobs")
         return
 
-    api_base_url = require_env("COACH_API_BASE_URL").rstrip("/")
-    api_token = os.environ.get("COACH_API_TOKEN", "").strip()
+    supabase = create_supabase()
 
-    headers: dict[str, str] = {}
-    if api_token:
-        headers["authorization"] = f"Bearer {api_token}"
-
-    print("\nImporting baseline resume...")
-    resume_response = post_json(
-        f"{api_base_url}/api/legacy-import/resume",
-        resume_payload,
-        headers,
+    resume_result = ensure_baseline_resume(
+        supabase=supabase,
+        legacy_resume=legacy_resume,
+        config=config,
     )
-    print(json.dumps(resume_response, indent=2))
+    print_json("Resume import result", resume_result)
 
-    print("\nImporting jobs...")
-    jobs_response = post_json(
-        f"{api_base_url}/api/legacy-import/jobs",
-        {"jobs": jobs_payload},
-        headers,
+    jobs_result = import_jobs(
+        supabase=supabase,
+        jobs=deduped_jobs,
     )
-    print(json.dumps(jobs_response, indent=2))
+    print_json("Jobs import result", jobs_result)
 
 
 def parse_args() -> ImportConfig:
@@ -375,11 +670,6 @@ def parse_args() -> ImportConfig:
         "--opencode-repo-root",
         required=True,
         help="Absolute or relative path to the opencode repo root",
-    )
-    parser.add_argument(
-        "--coach-repo-root",
-        default=".",
-        help="Absolute or relative path to the coach repo root",
     )
     parser.add_argument(
         "--dry-run",
@@ -394,13 +684,12 @@ def parse_args() -> ImportConfig:
     parser.add_argument(
         "--resume-source-label",
         default="Legacy OpenCode resume import",
-        help="Source label to attach to the baseline resume version",
+        help="Source label to attach to the imported baseline resume version",
     )
 
     args = parser.parse_args()
 
     return ImportConfig(
-        coach_repo_root=Path(args.coach_repo_root).resolve(),
         opencode_repo_root=Path(args.opencode_repo_root).resolve(),
         dry_run=bool(args.dry_run),
         resume_profile_name=str(args.resume_profile_name),
@@ -409,9 +698,13 @@ def parse_args() -> ImportConfig:
 
 
 def main() -> int:
-    config = parse_args()
-    run_import(config)
-    return 0
+    try:
+        config = parse_args()
+        run_import(config)
+        return 0
+    except Exception as exc:
+        print(f"Import failed: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

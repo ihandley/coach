@@ -17,14 +17,12 @@ The legacy `resume.json` becomes:
 * one resume profile
 * one baseline resume version
 
-Mapped into the rebuilt `NormalizedResume` shape.
-
 ### Jobs
 
 Legacy job entries become:
 
 * job records
-* application events derived from notes and dates where useful
+* application events derived from saved/applied dates and legacy notes
 
 ## Not imported
 
@@ -55,19 +53,35 @@ Legacy job statuses are mapped as follows:
 * `archived` → `archived`
 * anything else → `saved`
 
-## Deduping
+## Dedupe rules
 
 Jobs are deduped by:
 
-1. real source URL when present
+1. `source_url` when present
 2. otherwise `(company + title)`
 
-## Running the import
+## Idempotency rules
 
-Dry run first:
+### Resume
+
+* if the resume profile already exists by name, reuse it
+* if a baseline version already exists with:
+  * `source_kind = legacy_import`
+  * `source_label = Legacy OpenCode resume import`
+    then do not create another one
+
+### Jobs
+
+* skip jobs already present by `source_url`
+* if the job uses a generated `legacy://...` source URL, fall back to `(company + title)`
+
+### Events
+
+Legacy events are created only for newly imported jobs.
+
+## Required environment variables
 
 ```bash
-python3 scripts/import-legacy-opencode-data.py \
-  --opencode-repo-root ../opencode-config \
-  --dry-run
+export SUPABASE_URL="..."
+export SUPABASE_SERVICE_ROLE_KEY="..."
 ```
