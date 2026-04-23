@@ -37,5 +37,18 @@ describe("IntegrationsPage", () => {
         );
 
         expect(await screen.findByText("Connected")).toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: "Connect Gmail" }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("shows a loading state before integration status resolves", () => {
+        render(
+            <IntegrationsPage
+                getIntegrationAccount={async () => new Promise(() => {})}
+            />,
+        );
+
+        expect(screen.getByText("Loading...")).toBeInTheDocument();
     });
 });
