@@ -46,6 +46,9 @@ export default function IntegrationsPage({
             <section>
                 <h2>Gmail</h2>
                 <p>{integrationAccount?.isConnected ? "Connected" : "Disconnected"}</p>
+                {!integrationAccount?.isConnected ? (
+                    <button type="button">Connect Gmail</button>
+                ) : null}
             </section>
         </div>
     );

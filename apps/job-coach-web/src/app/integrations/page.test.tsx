@@ -18,6 +18,9 @@ describe("IntegrationsPage", () => {
         ).toBeInTheDocument();
         expect(await screen.findByText("Gmail")).toBeInTheDocument();
         expect(await screen.findByText("Disconnected")).toBeInTheDocument();
+        expect(
+            await screen.findByRole("button", { name: "Connect Gmail" }),
+        ).toBeInTheDocument();
     });
 
     it("shows Gmail as connected when the integration exists", async () => {
