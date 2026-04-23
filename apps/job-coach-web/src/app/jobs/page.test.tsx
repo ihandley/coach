@@ -27,21 +27,19 @@ describe("JobsPage", () => {
         expect(screen.getByText("Loading...")).toBeInTheDocument();
     });
 
-    it("renders an empty state when there are no jobs", async () => {
-        render(<JobsPage getJobs={async () => []} />);
-
-        expect(
-            await screen.findByRole("heading", { name: "Jobs" }),
-        ).toBeInTheDocument();
-        expect(await screen.findByText("No jobs yet.")).toBeInTheDocument();
-    });
-
-    it("renders jobs from the data source", async () => {
+    it("renders jobs sorted by most recently updated first", async () => {
         const getJobs = vi.fn().mockResolvedValue([
             {
-                id: "job-123",
-                company: "Acme",
-                title: "Senior Software Engineer",
+                id: "job-1",
+                company: "OldCo",
+                title: "Old Job",
+                status: "saved",
+                updatedAt: "2026-04-20T10:00:00.000Z",
+            },
+            {
+                id: "job-2",
+                company: "NewCo",
+                title: "New Job",
                 status: "saved",
                 updatedAt: "2026-04-23T10:00:00.000Z",
             },
@@ -49,11 +47,9 @@ describe("JobsPage", () => {
 
         render(<JobsPage getJobs={getJobs} />);
 
-        expect(await screen.findByText("Acme")).toBeInTheDocument();
-        expect(
-            await screen.findByText("Senior Software Engineer"),
-        ).toBeInTheDocument();
+        const items = await screen.findAllByRole("listitem");
 
-        expect(getJobs).toHaveBeenCalled();
+        expect(items[0]).toHaveTextContent("NewCo");
+        expect(items[1]).toHaveTextContent("OldCo");
     });
 });

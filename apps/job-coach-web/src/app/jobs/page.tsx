@@ -20,6 +20,13 @@ async function defaultGetJobs(): Promise<JobListItem[]> {
     return res.json();
 }
 
+function sortJobsByUpdatedAt(jobs: JobListItem[]) {
+    return [...jobs].sort(
+        (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+}
+
 export default function JobsPage({
     getJobs = defaultGetJobs,
 }: {
@@ -28,7 +35,9 @@ export default function JobsPage({
     const [jobs, setJobs] = useState<JobListItem[] | null>(null);
 
     useEffect(() => {
-        getJobs().then(setJobs);
+        getJobs().then((loadedJobs) => {
+            setJobs(sortJobsByUpdatedAt(loadedJobs));
+        });
     }, [getJobs]);
 
     if (!jobs) {
