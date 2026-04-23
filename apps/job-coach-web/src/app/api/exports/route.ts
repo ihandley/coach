@@ -1,7 +1,4 @@
 import { createExport } from "@coach/core";
-import { createExportsServer } from "../../../server/exports";
-
-const { exportDocument } = createExportsServer();
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
@@ -72,6 +69,9 @@ export async function POST(request: Request) {
     if (!isValidExportBody(body)) {
         return Response.json({ error: "INVALID_EXPORT_INPUT" }, { status: 400 });
     }
+
+    const { createExportsServer } = await import("../../../server/exports");
+    const { exportDocument } = createExportsServer();
 
     const result = await exportDocument(body);
 
