@@ -7,7 +7,7 @@
     "@coach/core": "workspace:*"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "exports": {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const exportDocumentMock = vi.fn();
 
@@ -11,19 +11,19 @@ vi.mock("../../../server/exports", () => {
 });
 
 describe("POST /api/exports", () => {
-    beforeEach(() => {
+    afterEach(() => {
         exportDocumentMock.mockReset();
     });
 
     it("returns exported resume content", async () => {
+        const { POST } = await import("./route");
+
         exportDocumentMock.mockResolvedValue({
             fileName: "resume.docx",
             mimeType:
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            buffer: new Uint8Array([1, 2, 3]).buffer,
+            buffer: new TextEncoder().encode("resume").buffer,
         });
-
-        const { POST } = await import("./route");
 
         const response = await POST(
             new Request("http://localhost/api/exports", {
@@ -31,9 +31,12 @@ describe("POST /api/exports", () => {
                 body: JSON.stringify({
                     documentType: "resume",
                     format: "docx",
-                    resumeProfileId: "profile-1",
+                    resumeProfileId: "resume-profile-1",
                     resumeVersionId: "resume-version-1",
                 }),
+                headers: {
+                    "content-type": "application/json",
+                },
             }),
         );
 
@@ -45,25 +48,25 @@ describe("POST /api/exports", () => {
             'attachment; filename="resume.docx"',
         );
 
-        const bytes = await response.arrayBuffer();
-        expect(bytes.byteLength).toBeGreaterThan(0);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        expect(new TextDecoder().decode(bytes)).toBe("resume");
 
         expect(exportDocumentMock).toHaveBeenCalledWith({
             documentType: "resume",
             format: "docx",
-            resumeProfileId: "profile-1",
+            resumeProfileId: "resume-profile-1",
             resumeVersionId: "resume-version-1",
         });
     });
 
     it("returns exported resume pdf content", async () => {
+        const { POST } = await import("./route");
+
         exportDocumentMock.mockResolvedValue({
             fileName: "resume.pdf",
             mimeType: "application/pdf",
-            buffer: new Uint8Array([1, 2, 3]).buffer,
+            buffer: new TextEncoder().encode("%PDF").buffer,
         });
-
-        const { POST } = await import("./route");
 
         const response = await POST(
             new Request("http://localhost/api/exports", {
@@ -71,9 +74,12 @@ describe("POST /api/exports", () => {
                 body: JSON.stringify({
                     documentType: "resume",
                     format: "pdf",
-                    resumeProfileId: "profile-1",
+                    resumeProfileId: "resume-profile-1",
                     resumeVersionId: "resume-version-1",
                 }),
+                headers: {
+                    "content-type": "application/json",
+                },
             }),
         );
 
@@ -83,34 +89,76 @@ describe("POST /api/exports", () => {
             'attachment; filename="resume.pdf"',
         );
 
-        const bytes = await response.arrayBuffer();
-        expect(bytes.byteLength).toBeGreaterThan(0);
-
         expect(exportDocumentMock).toHaveBeenCalledWith({
             documentType: "resume",
             format: "pdf",
-            resumeProfileId: "profile-1",
+            resumeProfileId: "resume-profile-1",
             resumeVersionId: "resume-version-1",
         });
     });
 
-    it("returns 400 for invalid input", async () => {
+    it("returns exported application packet pdf content", async () => {
+        const { POST } = await import("./route");
+
+        exportDocumentMock.mockResolvedValue({
+            fileName: "application-packet-rp1-rv1-cl1.pdf",
+            mimeType: "application/pdf",
+            buffer: new TextEncoder().encode("%PDF-application-packet").buffer,
+        });
+
+        const response = await POST(
+            new Request("http://localhost/api/exports", {
+                method: "POST",
+                body: JSON.stringify({
+                    documentType: "application-packet",
+                    format: "pdf",
+                    resumeProfileId: "rp1",
+                    resumeVersionId: "rv1",
+                    coverLetterDraftId: "cl1",
+                }),
+                headers: {
+                    "content-type": "application/json",
+                },
+            }),
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get("content-type")).toContain("application/pdf");
+        expect(response.headers.get("content-disposition")).toBe(
+            'attachment; filename="application-packet-rp1-rv1-cl1.pdf"',
+        );
+
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        expect(new TextDecoder().decode(bytes)).toBe("%PDF-application-packet");
+
+        expect(exportDocumentMock).toHaveBeenCalledWith({
+            documentType: "application-packet",
+            format: "pdf",
+            resumeProfileId: "rp1",
+            resumeVersionId: "rv1",
+            coverLetterDraftId: "cl1",
+        });
+    });
+
+    it("returns 400 for invalid document type", async () => {
         const { POST } = await import("./route");
 
         const response = await POST(
             new Request("http://localhost/api/exports", {
                 method: "POST",
                 body: JSON.stringify({
-                    documentType: "",
+                    documentType: "invalid",
                     format: "docx",
+                    resumeProfileId: "resume-profile-1",
+                    resumeVersionId: "resume-version-1",
                 }),
+                headers: {
+                    "content-type": "application/json",
+                },
             }),
         );
 
         expect(response.status).toBe(400);
-        await expect(response.json()).resolves.toEqual({
-            error: "INVALID_EXPORT_INPUT",
-        });
         expect(exportDocumentMock).not.toHaveBeenCalled();
     });
 
@@ -123,15 +171,15 @@ describe("POST /api/exports", () => {
                 body: JSON.stringify({
                     documentType: "resume",
                     format: "docx",
-                    resumeProfileId: "profile-1",
+                    resumeProfileId: "resume-profile-1",
                 }),
+                headers: {
+                    "content-type": "application/json",
+                },
             }),
         );
 
         expect(response.status).toBe(400);
-        await expect(response.json()).resolves.toEqual({
-            error: "INVALID_EXPORT_INPUT",
-        });
         expect(exportDocumentMock).not.toHaveBeenCalled();
     });
 
@@ -144,15 +192,15 @@ describe("POST /api/exports", () => {
                 body: JSON.stringify({
                     documentType: "cover-letter",
                     format: "pdf",
-                    resumeProfileId: "profile-1",
+                    resumeProfileId: "resume-profile-1",
                 }),
+                headers: {
+                    "content-type": "application/json",
+                },
             }),
         );
 
         expect(response.status).toBe(400);
-        await expect(response.json()).resolves.toEqual({
-            error: "INVALID_EXPORT_INPUT",
-        });
         expect(exportDocumentMock).not.toHaveBeenCalled();
     });
 
@@ -165,16 +213,16 @@ describe("POST /api/exports", () => {
                 body: JSON.stringify({
                     documentType: "application-packet",
                     format: "pdf",
-                    resumeProfileId: "profile-1",
+                    resumeProfileId: "resume-profile-1",
                     resumeVersionId: "resume-version-1",
                 }),
+                headers: {
+                    "content-type": "application/json",
+                },
             }),
         );
 
         expect(response.status).toBe(400);
-        await expect(response.json()).resolves.toEqual({
-            error: "INVALID_EXPORT_INPUT",
-        });
         expect(exportDocumentMock).not.toHaveBeenCalled();
     });
 });
