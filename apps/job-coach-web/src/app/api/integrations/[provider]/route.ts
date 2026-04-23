@@ -10,18 +10,18 @@ function isSupportedProvider(value: string): value is "gmail" {
 
 export async function GET(
     _request: Request,
-    context: { params: { provider: string } },
+    context: { params: Promise<{ provider: string }> },
 ) {
-    if (!isSupportedProvider(context.params.provider)) {
+    const { provider } = await context.params;
+
+    if (!isSupportedProvider(provider)) {
         return Response.json(
             { error: "UNSUPPORTED_INTEGRATION_PROVIDER" },
             { status: 400 },
         );
     }
 
-    const integrationAccount = await getIntegrationAccount(
-        context.params.provider,
-    );
+    const integrationAccount = await getIntegrationAccount(provider);
 
     return Response.json(integrationAccount);
 }

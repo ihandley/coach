@@ -1,28 +1,20 @@
 import { createDbUpsertIntegrationAccount } from "@coach/db";
+import { handleConnectIntegration } from "./route-impl";
 
 const upsertIntegrationAccount = createDbUpsertIntegrationAccount({
     db: {} as never,
 });
 
-function isSupportedProvider(value: string): value is "gmail" {
-    return value === "gmail";
-}
-
 export async function POST(
     _request: Request,
-    context: { params: { provider: string } },
+    context: { params: Promise<{ provider: string }> },
 ) {
-    if (!isSupportedProvider(context.params.provider)) {
-        return Response.json(
-            { error: "UNSUPPORTED_INTEGRATION_PROVIDER" },
-            { status: 400 },
-        );
-    }
+    const { provider } = await context.params;
 
-    const integrationAccount = await upsertIntegrationAccount({
-        provider: context.params.provider,
-        isConnected: true,
+    return handleConnectIntegration(provider, async (resolvedProvider) => {
+        await upsertIntegrationAccount({
+            provider: resolvedProvider,
+            isConnected: true,
+        });
     });
-
-    return Response.json(integrationAccount);
 }

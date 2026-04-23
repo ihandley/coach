@@ -1,31 +1,41 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GET } from "./route";
+const getLatestEvaluation = vi.fn();
+
+vi.mock("../../../../server/evaluations/server", () => ({
+    evaluationsServer: {
+        getLatestEvaluation,
+    },
+}));
 
 describe("GET /api/evaluations/latest", () => {
-    it("returns the latest evaluation", async () => {
-        const request = new Request(
-            "http://localhost/api/evaluations/latest?jobId=job-1&resumeProfileId=resume-1",
-        );
+    beforeEach(() => {
+        getLatestEvaluation.mockReset();
+    });
 
-        const response = await GET(request, {
-            server: {
-                getLatestEvaluation: async () => ({
-                    id: "evaluation-1",
-                    jobId: "job-1",
-                    resumeProfileId: "resume-1",
-                    score: 82,
-                    recommendation: "good-fit",
-                    reasoning: {
-                        strengths: ["Strong TypeScript alignment"],
-                        gaps: [],
-                        riskFactors: [],
-                        summary: "Solid match",
-                    },
-                    createdAt: new Date().toISOString(),
-                }),
+    it("returns the latest evaluation", async () => {
+        getLatestEvaluation.mockResolvedValue({
+            id: "evaluation-1",
+            jobId: "job-1",
+            resumeProfileId: "resume-1",
+            score: 82,
+            recommendation: "good-fit",
+            reasoning: {
+                strengths: ["Strong TypeScript alignment"],
+                gaps: [],
+                riskFactors: [],
+                summary: "Solid match",
             },
+            createdAt: new Date().toISOString(),
         });
+
+        const { GET } = await import("./route");
+
+        const response = await GET(
+            new Request(
+                "http://localhost/api/evaluations/latest?jobId=job-1&resumeProfileId=resume-1",
+            ),
+        );
 
         expect(response.status).toBe(200);
 
@@ -37,27 +47,25 @@ describe("GET /api/evaluations/latest", () => {
     });
 
     it("returns 400 when query params are missing", async () => {
-        const request = new Request("http://localhost/api/evaluations/latest");
+        const { GET } = await import("./route");
 
-        const response = await GET(request, {
-            server: {
-                getLatestEvaluation: async () => null,
-            },
-        });
+        const response = await GET(
+            new Request("http://localhost/api/evaluations/latest"),
+        );
 
         expect(response.status).toBe(400);
     });
 
     it("returns 404 when no evaluation exists", async () => {
-        const request = new Request(
-            "http://localhost/api/evaluations/latest?jobId=job-1&resumeProfileId=resume-1",
-        );
+        getLatestEvaluation.mockResolvedValue(null);
 
-        const response = await GET(request, {
-            server: {
-                getLatestEvaluation: async () => null,
-            },
-        });
+        const { GET } = await import("./route");
+
+        const response = await GET(
+            new Request(
+                "http://localhost/api/evaluations/latest?jobId=job-1&resumeProfileId=resume-1",
+            ),
+        );
 
         expect(response.status).toBe(404);
     });

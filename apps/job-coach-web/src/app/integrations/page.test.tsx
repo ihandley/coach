@@ -1,17 +1,18 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
 
-import IntegrationsPage from "./page";
+import { IntegrationsPageClient } from "./integrations-page-client";
 
 afterEach(() => cleanup());
 
 describe("IntegrationsPage", () => {
     it("shows Gmail as disconnected when no integration exists", async () => {
         render(
-            <IntegrationsPage
-                getIntegrationAccount={async () => null}
-                connectIntegration={vi.fn()}
-            />,
+            createElement(IntegrationsPageClient, {
+                getIntegrationAccount: async () => null,
+                connectIntegration: vi.fn(),
+            }),
         );
 
         expect(
@@ -26,16 +27,16 @@ describe("IntegrationsPage", () => {
 
     it("shows Gmail as connected when the integration exists", async () => {
         render(
-            <IntegrationsPage
-                getIntegrationAccount={async () => ({
+            createElement(IntegrationsPageClient, {
+                getIntegrationAccount: async () => ({
                     id: "int-1",
-                    provider: "gmail",
+                    provider: "gmail" as const,
                     isConnected: true,
                     createdAt: "2026-04-23T10:00:00.000Z",
                     updatedAt: "2026-04-23T10:00:00.000Z",
-                })}
-                connectIntegration={vi.fn()}
-            />,
+                }),
+                connectIntegration: vi.fn(),
+            }),
         );
 
         expect(await screen.findByText("Connected")).toBeInTheDocument();
@@ -46,10 +47,10 @@ describe("IntegrationsPage", () => {
 
     it("shows a loading state before integration status resolves", () => {
         render(
-            <IntegrationsPage
-                getIntegrationAccount={async () => new Promise(() => {})}
-                connectIntegration={vi.fn()}
-            />,
+            createElement(IntegrationsPageClient, {
+                getIntegrationAccount: async () => new Promise<null>(() => {}),
+                connectIntegration: vi.fn(),
+            }),
         );
 
         expect(screen.getByText("Loading...")).toBeInTheDocument();
@@ -68,7 +69,7 @@ describe("IntegrationsPage", () => {
         const connectIntegration = vi.fn(async () => {
             account = {
                 id: "int-1",
-                provider: "gmail",
+                provider: "gmail" as const,
                 isConnected: true,
                 createdAt: "2026-04-23T10:00:00.000Z",
                 updatedAt: "2026-04-23T10:00:00.000Z",
@@ -76,10 +77,10 @@ describe("IntegrationsPage", () => {
         });
 
         render(
-            <IntegrationsPage
-                getIntegrationAccount={getIntegrationAccount}
-                connectIntegration={connectIntegration}
-            />,
+            createElement(IntegrationsPageClient, {
+                getIntegrationAccount,
+                connectIntegration,
+            }),
         );
 
         fireEvent.click(

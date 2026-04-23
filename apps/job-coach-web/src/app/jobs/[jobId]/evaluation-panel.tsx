@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createElement, useEffect, useState } from "react";
 
 type Evaluation = {
     id: string;
@@ -17,78 +17,86 @@ type Evaluation = {
     createdAt: string;
 };
 
-type Props = {
-    jobId: string;
-    resumeProfileId: string;
-    getLatestEvaluation(input: {
-        jobId: string;
-        resumeProfileId: string;
-    }): Promise<Evaluation | null>;
-    scoreJobFit(input: {
-        jobId: string;
-        resumeProfileId: string;
-    }): Promise<Evaluation>;
-};
-
 export function EvaluationPanel({
     jobId,
     resumeProfileId,
     getLatestEvaluation,
     scoreJobFit,
-}: Props) {
+}: {
+    jobId: string;
+    resumeProfileId: string;
+    getLatestEvaluation: (input: {
+        jobId: string;
+        resumeProfileId: string;
+    }) => Promise<Evaluation | null>;
+    scoreJobFit: (input: {
+        jobId: string;
+        resumeProfileId: string;
+    }) => Promise<Evaluation>;
+}) {
     const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [isScoring, setIsScoring] = useState(false);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const [scoreError, setScoreError] = useState<string | null>(null);
 
     useEffect(() => {
-        setLoadError(null);
+        let isMounted = true;
 
-        void getLatestEvaluation({ jobId, resumeProfileId })
-            .then(setEvaluation)
-            .catch(() => {
-                setLoadError("Failed to load latest evaluation.");
-            });
-    }, [getLatestEvaluation, jobId, resumeProfileId]);
-
-    async function handleScoreFit() {
-        setIsScoring(true);
-        setScoreError(null);
-
-        try {
-            const nextEvaluation = await scoreJobFit({
+        async function loadEvaluation() {
+            const latestEvaluation = await getLatestEvaluation({
                 jobId,
                 resumeProfileId,
             });
 
-            setEvaluation(nextEvaluation);
-        } catch {
-            setScoreError("Failed to score fit evaluation.");
-        } finally {
-            setIsScoring(false);
+            if (isMounted) {
+                setEvaluation(latestEvaluation);
+                setIsLoading(false);
+            }
         }
+
+        void loadEvaluation();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [getLatestEvaluation, jobId, resumeProfileId]);
+
+    async function handleScoreFit() {
+        setIsScoring(true);
+
+        const nextEvaluation = await scoreJobFit({
+            jobId,
+            resumeProfileId,
+        });
+
+        setEvaluation(nextEvaluation);
+        setIsScoring(false);
     }
 
-    return (
-        <section>
-            <h2>Fit evaluation</h2>
+    if (isLoading) {
+        return createElement("p", {}, "Loading evaluation...");
+    }
 
-            <button type="button" onClick={handleScoreFit} disabled={isScoring}>
-                {isScoring ? "Scoring..." : "Score fit"}
-            </button>
-
-            {loadError ? <p>{loadError}</p> : null}
-            {scoreError ? <p>{scoreError}</p> : null}
-
-            {evaluation ? (
-                <div>
-                    <p>{evaluation.score}</p>
-                    <p>{evaluation.recommendation}</p>
-                    <p>{evaluation.reasoning.summary}</p>
-                </div>
-            ) : (
-                <p>No evaluation yet.</p>
-            )}
-        </section>
+    return createElement(
+        "section",
+        {},
+        createElement("h2", {}, "Fit evaluation"),
+        createElement(
+            "button",
+            {
+                type: "button",
+                onClick: handleScoreFit,
+                disabled: isScoring,
+            },
+            isScoring ? "Scoring..." : "Score job fit",
+        ),
+        evaluation
+            ? createElement(
+                  "div",
+                  {},
+                  createElement("p", {}, String(evaluation.score)),
+                  createElement("p", {}, evaluation.recommendation),
+                  createElement("p", {}, evaluation.reasoning.summary),
+              )
+            : createElement("p", {}, "No evaluation yet."),
     );
 }
