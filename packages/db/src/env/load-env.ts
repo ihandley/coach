@@ -8,8 +8,16 @@ function getSecret(account: string): string {
 }
 
 export function loadEnvFromKeychain(): void {
-  process.env.SUPABASE_URL = getSecret("coach_SUPABASE_URL");
-  process.env.SUPABASE_SERVICE_ROLE_KEY = getSecret(
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return;
+  }
+
+  if (process.platform !== "darwin") {
+    return;
+  }
+
+  process.env.SUPABASE_URL ??= getSecret("coach_SUPABASE_URL");
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??= getSecret(
     "coach_SUPABASE_SERVICE_ROLE_KEY",
   );
 }

@@ -3,9 +3,16 @@ import { DbJobRepository } from "./db-job-repository";
 import { createServerClient } from "../supabase/create-server-client";
 import { loadEnvFromKeychain } from "../env/load-env";
 
-describe("DbJobRepository", () => {
-  loadEnvFromKeychain();
-  const repo = new DbJobRepository(createServerClient());
+loadEnvFromKeychain();
+
+const hasSupabaseEnv = Boolean(
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
+
+const describeIntegration = hasSupabaseEnv ? describe : describe.skip;
+
+describeIntegration("DbJobRepository", () => {
+  const createRepo = () => new DbJobRepository(createServerClient());
 
   beforeEach(async () => {
     const supabase = createServerClient();
@@ -26,6 +33,8 @@ describe("DbJobRepository", () => {
   });
 
   it("creates and fetches a job", async () => {
+    const repo = createRepo();
+
     const created = await repo.createJob({
       company: "Acme",
       title: "Backend Engineer",
@@ -40,6 +49,8 @@ describe("DbJobRepository", () => {
   });
 
   it("lists jobs ordered by updatedAt desc", async () => {
+    const repo = createRepo();
+
     await repo.createJob({
       company: "First Co",
       title: "Engineer I",
@@ -64,6 +75,8 @@ describe("DbJobRepository", () => {
   });
 
   it("adds and lists application events", async () => {
+    const repo = createRepo();
+
     const created = await repo.createJob({
       company: "Acme",
       title: "Backend Engineer",
@@ -86,6 +99,8 @@ describe("DbJobRepository", () => {
   });
 
   it("finds a job by source URL", async () => {
+    const repo = createRepo();
+
     const created = await repo.createJob({
       company: "Acme",
       title: "Backend Engineer",
@@ -102,6 +117,8 @@ describe("DbJobRepository", () => {
   });
 
   it("returns null when no job exists for the source URL", async () => {
+    const repo = createRepo();
+
     const found = await repo.findJobBySourceUrl(
       "https://example.com/jobs/missing",
     );
