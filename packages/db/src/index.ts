@@ -14,4 +14,8 @@ export * from "./cover-letter-drafts/create-db-get-cover-letter-draft";
 export * from "./exported-artifacts/db-exported-artifact-repository";
 export * from "./workflows/db-workflow-run-repository";
 
+export * from "./integrations/create-db-get-integration-account";
+export * from "./integrations/create-db-upsert-integration-account";
+export * from "./integrations/integration-types";
+
 export * from "./supabase/create-server-client";
