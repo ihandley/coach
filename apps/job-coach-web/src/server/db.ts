@@ -1,18 +1,23 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let cached: SupabaseClient | null = null;
 
-// In tests, allow a mock DB instead of crashing import-time
-const isTest = process.env.NODE_ENV === "test" || process.env.VITEST;
+function getClient() {
+    if (cached) return cached;
 
-if (!supabaseUrl || !supabaseKey) {
-    if (isTest) {
-        // lightweight mock client (tests should stub behavior if needed)
-        export const db = {} as any;
-    } else {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        // allow tests to import safely without crashing
+        if (process.env.VITEST) {
+            return {} as SupabaseClient;
+        }
         throw new Error("Missing Supabase environment variables");
     }
-} else {
-    export const db = createClient(supabaseUrl, supabaseKey);
+
+    cached = createClient(supabaseUrl, supabaseKey);
+    return cached;
 }
+
+export const db = getClient();
