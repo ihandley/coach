@@ -1,94 +1,71 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-    formatJobUpdatedDate,
-    sortJobsByUpdatedDate,
-    type JobListItem,
-} from "./jobs-page-model";
 
-async function defaultGetJobs(): Promise<JobListItem[]> {
-    const res = await fetch("/api/jobs");
-    if (!res.ok) return [];
-    return res.json();
-}
+type JobListItem = {
+    id: string;
+    company: string;
+    title: string;
+    status: string;
+    updatedAt: string;
+};
 
-async function createJob(input: {
-    sourceUrl?: string;
-    sourceText?: string;
-}) {
-    const res = await fetch("/api/jobs", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(input),
-    });
-
-    if (!res.ok) {
-        throw new Error("Failed to create job");
-    }
-
-    return res.json();
-}
-
-export function JobsPageClient({
-    getJobs = defaultGetJobs,
-}: {
-    getJobs?: () => Promise<JobListItem[]>;
-}) {
-    const [jobs, setJobs] = useState<JobListItem[] | null>(null);
-
-    const [sourceUrl, setSourceUrl] = useState("");
-    const [sourceText, setSourceText] = useState("");
+export function JobsPageClient() {
+    const [jobs, setJobs] = useState<JobListItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    async function refresh() {
-        const result = await getJobs();
-        setJobs(sortJobsByUpdatedDate(result));
+    const [sourceUrl, setSourceUrl] = useState("");
+    const [sourceText, setSourceText] = useState("");
+
+    async function loadJobs() {
+        const res = await fetch("/api/jobs");
+        const data = await res.json();
+        setJobs(data);
     }
 
     useEffect(() => {
-        refresh();
+        loadJobs();
     }, []);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+
         setLoading(true);
         setError(null);
 
         try {
-            if (sourceUrl.trim()) {
-                await createJob({ sourceUrl });
-                setSourceUrl("");
-            } else if (sourceText.trim()) {
-                await createJob({ sourceText });
-                setSourceText("");
-            } else {
-                throw new Error("Provide URL or text");
+            const res = await fetch("/api/jobs", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sourceUrl: sourceUrl || undefined,
+                    sourceText: sourceText || undefined,
+                }),
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to create job");
             }
 
-            await refresh();
+            // reset form
+            setSourceUrl("");
+            setSourceText("");
+
+            // refresh jobs
+            await loadJobs();
         } catch (err) {
-            setError("Failed to create job");
+            setError("Something went wrong while creating the job");
         } finally {
             setLoading(false);
         }
-    }
-
-    if (!jobs) {
-        return (
-            <div>
-                <h1>Jobs</h1>
-                <p>Loading...</p>
-            </div>
-        );
     }
 
     return (
         <div>
             <h1>Jobs</h1>
 
-            <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
+            <form onSubmit={handleSubmit}>
                 <div>
                     <input
                         placeholder="Job URL"
@@ -125,7 +102,7 @@ export function JobsPageClient({
                                 <a href={`/jobs/${job.id}`}>{job.title}</a>
                             </div>
                             <div>{job.status}</div>
-                            <div>{formatJobUpdatedDate(job.updatedAt)}</div>
+                            <div>{job.updatedAt.slice(0, 10)}</div>
                         </li>
                     ))}
                 </ul>
