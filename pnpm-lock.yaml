@@ -35,6 +35,9 @@ importers:
       '@coach/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@supabase/supabase-js':
+        specifier: ^2.0.0
+        version: 2.104.0
       docx:
         specifier: ^9.6.1
         version: 9.6.1
