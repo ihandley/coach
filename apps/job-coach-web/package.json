@@ -7,6 +7,7 @@
     "@coach/ai": "workspace:^",
     "@coach/core": "workspace:*",
     "@coach/db": "workspace:*",
+    "@supabase/supabase-js": "^2.0.0",
     "docx": "^9.6.1",
     "next": "^15.5.6",
     "react": "^19.2.5",

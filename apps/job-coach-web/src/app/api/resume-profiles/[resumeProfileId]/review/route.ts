@@ -1,7 +1,8 @@
 import { createDbReviewCurrentResumeProfile } from "@coach/db";
+import { db } from "../../../../../server/db";
 
 const reviewCurrentResumeProfile = createDbReviewCurrentResumeProfile({
-    db: {} as never,
+    db,
 });
 
 export async function GET(

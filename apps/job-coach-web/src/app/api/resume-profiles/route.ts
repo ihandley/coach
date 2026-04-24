@@ -1,7 +1,8 @@
 import { createDbCreateResumeProfile } from "@coach/db";
+import { db } from "../../../server/db";
 
 const createResumeProfile = createDbCreateResumeProfile({
-    db: {} as never,
+    db,
 });
 
 function isNonEmptyString(value: unknown): value is string {
@@ -31,5 +32,5 @@ export async function POST(request: Request) {
         normalizedResume: body.normalizedResume,
     });
 
-    return Response.json(result, { status: 201 });
+    return Response.json(result);
 }

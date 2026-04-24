@@ -1,7 +1,8 @@
 import { createDbGetResumeProfile } from "@coach/db";
+import { db } from "../../../../server/db";
 
 const getResumeProfile = createDbGetResumeProfile({
-    db: {} as never,
+    db,
 });
 
 export async function GET(

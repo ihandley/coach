@@ -1,7 +1,9 @@
 import { createDbGetIntegrationAccount } from "@coach/db";
 
+import { dbAdapter } from "../../../../../server/db-adapter";
+
 const getIntegrationAccount = createDbGetIntegrationAccount({
-    db: {} as never,
+    db: dbAdapter,
 });
 
 function isSupportedProvider(value: string): value is "gmail" {
