@@ -37,9 +37,7 @@ describe("GET /api/jobs", () => {
 
         const { GET } = await import("./route");
 
-        const response = await GET(
-            new Request("http://localhost/api/jobs"),
-        );
+        const response = await GET();
 
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toMatchObject([

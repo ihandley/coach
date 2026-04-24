@@ -13,6 +13,23 @@ async function defaultGetJobs(): Promise<JobListItem[]> {
     return res.json();
 }
 
+async function createJob(input: {
+    sourceUrl?: string;
+    sourceText?: string;
+}) {
+    const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+    });
+
+    if (!res.ok) {
+        throw new Error("Failed to create job");
+    }
+
+    return res.json();
+}
+
 export function JobsPageClient({
     getJobs = defaultGetJobs,
 }: {
@@ -20,9 +37,43 @@ export function JobsPageClient({
 }) {
     const [jobs, setJobs] = useState<JobListItem[] | null>(null);
 
+    const [sourceUrl, setSourceUrl] = useState("");
+    const [sourceText, setSourceText] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    async function refresh() {
+        const result = await getJobs();
+        setJobs(sortJobsByUpdatedDate(result));
+    }
+
     useEffect(() => {
-        getJobs().then((result) => setJobs(sortJobsByUpdatedDate(result)));
-    }, [getJobs]);
+        refresh();
+    }, []);
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            if (sourceUrl.trim()) {
+                await createJob({ sourceUrl });
+                setSourceUrl("");
+            } else if (sourceText.trim()) {
+                await createJob({ sourceText });
+                setSourceText("");
+            } else {
+                throw new Error("Provide URL or text");
+            }
+
+            await refresh();
+        } catch (err) {
+            setError("Failed to create job");
+        } finally {
+            setLoading(false);
+        }
+    }
 
     if (!jobs) {
         return (
@@ -36,6 +87,32 @@ export function JobsPageClient({
     return (
         <div>
             <h1>Jobs</h1>
+
+            <form onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
+                <div>
+                    <input
+                        placeholder="Job URL"
+                        value={sourceUrl}
+                        onChange={(e) => setSourceUrl(e.target.value)}
+                        style={{ width: "100%", marginBottom: 8 }}
+                    />
+                </div>
+
+                <div>
+                    <textarea
+                        placeholder="Paste job description"
+                        value={sourceText}
+                        onChange={(e) => setSourceText(e.target.value)}
+                        style={{ width: "100%", height: 120 }}
+                    />
+                </div>
+
+                <button type="submit" disabled={loading}>
+                    {loading ? "Creating..." : "Add Job"}
+                </button>
+
+                {error && <p>{error}</p>}
+            </form>
 
             {jobs.length === 0 ? (
                 <p>No jobs yet.</p>
