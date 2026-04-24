@@ -31,5 +31,5 @@ export async function POST(request: Request) {
         normalizedResume: body.normalizedResume,
     });
 
-    return Response.json(result);
+    return Response.json(result, { status: 201 });
 }

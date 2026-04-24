@@ -1,38 +1,36 @@
-import { createDbJobImporter } from "@coach/db";
-import { DbJobRepository } from "@coach/db";
+import { createDbJobImporter, DbJobRepository, createServerClient } from "@coach/db";
+import { fetchJobPageAsDependency, extractJobStub } from "@coach/ai";
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
 }
 
 export async function GET() {
-    const { listJobs } = new DbJobRepository({} as never);
-    const jobs = await listJobs();
+    const db = createServerClient();
+    const repo = new DbJobRepository(db);
+
+    const jobs = await repo.listJobs();
 
     return Response.json(jobs);
 }
 
 export async function POST(request: Request) {
     const body = await request.json();
+    const db = createServerClient();
 
-    // URL ingestion path
     if (isNonEmptyString(body?.sourceUrl)) {
-        const importer = createDbJobImporter({} as never);
+        const importer = createDbJobImporter({
+            fetchPage: fetchJobPageAsDependency,
+            extractJob: extractJobStub,
+        });
 
-        try {
-            const job = await importer.importJobFromUrl(body.sourceUrl);
-            return Response.json(job, { status: 201 });
-        } catch (error) {
-            return Response.json(
-                { error: "JOB_IMPORT_FAILED" },
-                { status: 500 },
-            );
-        }
+        const job = await importer.importJobFromUrl(body.sourceUrl);
+
+        return Response.json(job, { status: 201 });
     }
 
-    // Raw text fallback
     if (isNonEmptyString(body?.sourceText)) {
-        const repo = new DbJobRepository({} as never);
+        const repo = new DbJobRepository(db);
 
         const job = await repo.createJob({
             company: "Unknown",
