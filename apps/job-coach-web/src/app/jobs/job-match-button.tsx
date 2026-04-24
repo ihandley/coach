@@ -45,21 +45,12 @@ export function JobMatchButton({
     }
 
     return (
-        <div>
-            <button onClick={runMatch} disabled={loading || !resumeProfileId}>
-                {loading ? "Scoring..." : "Match"}
-            </button>
-
-            {result && (
-                <div style={{ marginTop: 8 }}>
-                    <div>Score: {result.score}</div>
-                    <ul>
-                        {result.reasons?.map((r: string, i: number) => (
-                            <li key={i}>{r}</li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-        </div>
+        <button
+            onClick={runMatch}
+            disabled={loading || !resumeProfileId}
+            className="btn-primary w-full disabled:opacity-50"
+        >
+            {loading ? "Scoring..." : "Match"}
+        </button>
     );
 }
