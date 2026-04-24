@@ -1,10 +1,12 @@
-import { workflowsServer } from "../../../../server/workflows-server";
-
 export async function GET(
     _request: Request,
     context: { params: Promise<{ workflowRunId: string }> },
 ) {
     const { workflowRunId } = await context.params;
+
+    const { workflowsServer } = await import(
+        "../../../../server/workflows-server"
+    );
 
     const result = await workflowsServer.getWorkflowRun({
         workflowRunId,
