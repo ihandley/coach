@@ -1,9 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
+import {
+    createDbCreateResumeProfile,
+    createServerClient,
+} from "@coach/db";
 
-const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+const supabase = createServerClient();
+
+const createResumeProfile = createDbCreateResumeProfile({
+    db: supabase,
+});
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
@@ -39,19 +43,11 @@ export async function POST(request: Request) {
         );
     }
 
-    const { data, error } = await supabase
-        .from("resume_profiles")
-        .insert({
-            name: body.name,
-            source: body.source,
-            normalized_resume: body.normalizedResume,
-        })
-        .select("id, name")
-        .single();
+    const result = await createResumeProfile({
+        name: body.name,
+        source: body.source,
+        normalizedResume: body.normalizedResume,
+    });
 
-    if (error) {
-        return Response.json({ error: error.message }, { status: 500 });
-    }
-
-    return Response.json(data);
+    return Response.json(result);
 }
