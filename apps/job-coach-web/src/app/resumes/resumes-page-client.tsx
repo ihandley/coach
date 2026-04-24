@@ -1,13 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+type ResumeProfile = {
+    id: string;
+    name: string;
+};
 
 export function ResumesPageClient() {
     const [name, setName] = useState("");
     const [text, setText] = useState("");
+    const [resumes, setResumes] = useState<ResumeProfile[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+
+    async function loadResumes() {
+        const res = await fetch("/api/resume-profiles");
+        const data = await res.json();
+        setResumes(data);
+    }
+
+    useEffect(() => {
+        loadResumes();
+    }, []);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -39,6 +55,7 @@ export function ResumesPageClient() {
             setName("");
             setText("");
             setSuccess("Resume saved");
+            await loadResumes();
         } catch {
             setError("Failed to save resume");
         } finally {
@@ -47,16 +64,17 @@ export function ResumesPageClient() {
     }
 
     return (
-        <div>
+        <div style={{ padding: 24 }}>
             <h1>Resumes</h1>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} style={{ marginBottom: 32 }}>
                 <div>
                     <input
                         placeholder="Resume name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         style={{ width: "100%", marginBottom: 8 }}
+                        required
                     />
                 </div>
 
@@ -66,6 +84,7 @@ export function ResumesPageClient() {
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         style={{ width: "100%", height: 160 }}
+                        required
                     />
                 </div>
 
@@ -76,6 +95,18 @@ export function ResumesPageClient() {
                 {error && <p>{error}</p>}
                 {success && <p>{success}</p>}
             </form>
+
+            <div>
+                <h2>Saved Resumes</h2>
+
+                {resumes.length === 0 && <p>No resumes yet.</p>}
+
+                <ul>
+                    {resumes.map((r) => (
+                        <li key={r.id}>{r.name}</li>
+                    ))}
+                </ul>
+            </div>
         </div>
     );
 }
