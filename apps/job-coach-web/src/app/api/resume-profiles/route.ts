@@ -1,11 +1,25 @@
-import { createDbCreateResumeProfile } from "@coach/db";
+import { createClient } from "@supabase/supabase-js";
 
-const createResumeProfile = createDbCreateResumeProfile({
-    db: {} as never,
-});
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
+}
+
+export async function GET() {
+    const { data, error } = await supabase
+        .from("resume_profiles")
+        .select("id, name")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    return Response.json(data);
 }
 
 export async function POST(request: Request) {
@@ -25,11 +39,19 @@ export async function POST(request: Request) {
         );
     }
 
-    const result = await createResumeProfile({
-        name: body.name,
-        source: body.source,
-        normalizedResume: body.normalizedResume,
-    });
+    const { data, error } = await supabase
+        .from("resume_profiles")
+        .insert({
+            name: body.name,
+            source: body.source,
+            normalized_resume: body.normalizedResume,
+        })
+        .select("id, name")
+        .single();
 
-    return Response.json(result);
+    if (error) {
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    return Response.json(data);
 }
