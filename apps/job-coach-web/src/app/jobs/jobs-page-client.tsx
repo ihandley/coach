@@ -1,63 +1,70 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { JobMatchButton } from "./job-match-button";
+import { JobMatchView } from "./job-match-view";
 
-type Job = {
+type RankedJob = {
     id: string;
-    company: string;
     title: string;
-    status: string;
+    company: string;
+    score: number;
 };
 
-export default function JobsPageClient() {
-    const [jobs, setJobs] = useState<Job[]>([]);
+export function JobsPageClient() {
+    const [jobs, setJobs] = useState<RankedJob[]>([]);
+    const [url, setUrl] = useState("");
+
+    async function load() {
+        const res = await fetch("/api/jobs/ranked");
+        setJobs(await res.json());
+    }
+
+    async function handleImport() {
+        if (!url) return;
+
+        await fetch("/api/jobs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sourceUrl: url }),
+        });
+
+        await load();
+        setUrl("");
+    }
 
     useEffect(() => {
-        fetch("/api/jobs")
-            .then((res) => res.json())
-            .then(setJobs);
+        load();
     }, []);
 
     return (
-        <div style={{ padding: 24 }}>
-            <h1>Jobs</h1>
+        <div>
+            <h1>Ranked Jobs</h1>
 
-            <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 16 }}>
-                <thead>
-                    <tr style={{ textAlign: "left", borderBottom: "1px solid #ccc" }}>
-                        <th style={{ padding: 8 }}>Company</th>
-                        <th style={{ padding: 8 }}>Title</th>
-                        <th style={{ padding: 8 }}>Status</th>
-                    </tr>
-                </thead>
+            <div style={{ marginBottom: 16 }}>
+                <input
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="Paste job URL"
+                    style={{ width: 300, marginRight: 8 }}
+                />
+                <button onClick={handleImport}>Import</button>
+            </div>
 
-                <tbody>
-                    {jobs.map((job) => (
-                        <tr key={job.id} style={{ borderBottom: "1px solid #eee" }}>
-                            <td style={{ padding: 8 }}>{job.company}</td>
-                            <td style={{ padding: 8 }}>{job.title}</td>
-                            <td style={{ padding: 8 }}>
-                                <StatusBadge status={job.status} />
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            <ul>
+                {jobs.map((job) => (
+                    <li key={job.id} style={{ marginBottom: 12 }}>
+                        <div>
+                            <strong>{job.title}</strong> — {job.company}
+                        </div>
+
+                        <div>Score: {job.score}</div>
+
+                        <JobMatchButton jobId={job.id} resumeProfileId="default" />
+                        <JobMatchView jobId={job.id} />
+                    </li>
+                ))}
+            </ul>
         </div>
-    );
-}
-
-function StatusBadge({ status }: { status: string }) {
-    const color =
-        status === "applied"
-            ? "green"
-            : status === "rejected"
-                ? "red"
-                : "#666";
-
-    return (
-        <span style={{ color, fontWeight: 600 }}>
-            {status}
-        </span>
     );
 }

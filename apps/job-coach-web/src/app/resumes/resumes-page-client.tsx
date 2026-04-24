@@ -9,9 +9,11 @@ type ResumeProfile = {
 
 export function ResumesPageClient() {
     const [name, setName] = useState("");
-    const [content, setContent] = useState("");
+    const [text, setText] = useState("");
     const [resumes, setResumes] = useState<ResumeProfile[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
     async function loadResumes() {
         const res = await fetch("/api/resume-profiles");
@@ -25,29 +27,40 @@ export function ResumesPageClient() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+
         setLoading(true);
+        setError(null);
+        setSuccess(null);
 
-        await fetch("/api/resume-profiles", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                name,
-                source: {
-                    kind: "manual",
-                    label: "Pasted Resume",
-                },
-                normalizedResume: {
-                    rawText: content,
-                },
-            }),
-        });
+        try {
+            const res = await fetch("/api/resume-profiles", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name,
+                    source: {
+                        kind: "manual",
+                        label: "Pasted Resume",
+                    },
+                    normalizedResume: {
+                        rawText: text,
+                    },
+                }),
+            });
 
-        setName("");
-        setContent("");
-        await loadResumes();
-        setLoading(false);
+            if (!res.ok) {
+                throw new Error("Failed");
+            }
+
+            setName("");
+            setText("");
+            setSuccess("Resume saved");
+            await loadResumes();
+        } catch {
+            setError("Failed to save resume");
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
@@ -60,16 +73,17 @@ export function ResumesPageClient() {
                         placeholder="Resume name"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        style={{ width: "100%", marginBottom: 8 }}
                         required
                     />
                 </div>
 
                 <div>
                     <textarea
-                        placeholder="Paste resume here"
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        rows={10}
+                        placeholder="Paste resume text"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        style={{ width: "100%", height: 160 }}
                         required
                     />
                 </div>
@@ -77,6 +91,9 @@ export function ResumesPageClient() {
                 <button type="submit" disabled={loading}>
                     {loading ? "Saving..." : "Save Resume"}
                 </button>
+
+                {error && <p>{error}</p>}
+                {success && <p>{success}</p>}
             </form>
 
             <div>

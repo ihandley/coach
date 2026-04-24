@@ -69,7 +69,7 @@ describe("POST /api/resume-profiles", () => {
 
         const response = await POST(request);
 
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(201);
         expect(createResumeProfileMock).toHaveBeenCalledWith({
             name: "Primary Resume",
             source,

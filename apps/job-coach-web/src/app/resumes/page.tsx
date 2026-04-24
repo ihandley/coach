@@ -1,5 +1,10 @@
+import { AppShell } from "../app-shell";
 import { ResumesPageClient } from "./resumes-page-client";
 
-export default function ResumesPage() {
-    return <ResumesPageClient />;
+export default function Page() {
+    return (
+        <AppShell>
+            <ResumesPageClient />
+        </AppShell>
+    );
 }
