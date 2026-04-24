@@ -1,19 +1,21 @@
 import { DbJobRepository } from "@coach/db";
 
-const jobRepository = new DbJobRepository({} as never);
+function createJobRepository() {
+    return new DbJobRepository({} as never);
+}
 
 export async function GET(
     _request: Request,
-    context: { params: { jobId: string } },
+    context: { params: Promise<{ jobId: string }> },
 ) {
+    const { jobId } = await context.params;
+    const jobRepository = createJobRepository();
+
     const jobs = await jobRepository.listJobs();
-    const job = jobs.find((candidate) => candidate.id === context.params.jobId);
+    const job = jobs.find((candidate) => candidate.id === jobId);
 
     if (!job) {
-        return Response.json(
-            { error: "JOB_NOT_FOUND" },
-            { status: 404 },
-        );
+        return Response.json({ error: "JOB_NOT_FOUND" }, { status: 404 });
     }
 
     return Response.json({

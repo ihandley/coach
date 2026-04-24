@@ -37,7 +37,7 @@ describe("POST /api/jobs/[jobId]/status", () => {
                 },
                 body: JSON.stringify({ status: "applied" }),
             }),
-            { params: { jobId: "job-123" } },
+            { params: Promise.resolve({ jobId: "job-123" }) },
         );
 
         expect(updateJobStatus).toHaveBeenCalledWith({
@@ -58,7 +58,7 @@ describe("POST /api/jobs/[jobId]/status", () => {
                 },
                 body: JSON.stringify({ status: "" }),
             }),
-            { params: { jobId: "job-123" } },
+            { params: Promise.resolve({ jobId: "job-123" }) },
         );
 
         expect(response.status).toBe(400);

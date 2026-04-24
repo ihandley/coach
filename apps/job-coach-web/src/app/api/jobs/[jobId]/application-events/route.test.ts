@@ -43,7 +43,7 @@ describe("GET /api/jobs/[jobId]/application-events", () => {
 
         const response = await GET(
             new Request("http://localhost/api/jobs/job-123/application-events"),
-            { params: { jobId: "job-123" } },
+            { params: Promise.resolve({ jobId: "job-123" }) },
         );
 
         expect(response.status).toBe(200);

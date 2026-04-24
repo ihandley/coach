@@ -1,6 +1,8 @@
 import { DbJobRepository } from "@coach/db";
 
-const jobRepository = new DbJobRepository({} as never);
+function createJobRepository() {
+    return new DbJobRepository({} as never);
+}
 
 function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
@@ -8,8 +10,9 @@ function isNonEmptyString(value: unknown): value is string {
 
 export async function POST(
     request: Request,
-    context: { params: { jobId: string } },
+    context: { params: Promise<{ jobId: string }> },
 ) {
+    const { jobId } = await context.params;
     const body = await request.json();
 
     if (!body || !isNonEmptyString(body.note)) {
@@ -19,8 +22,10 @@ export async function POST(
         );
     }
 
+    const jobRepository = createJobRepository();
+
     const result = await jobRepository.addApplicationEvent({
-        jobId: context.params.jobId,
+        jobId,
         type: "note_added",
         note: body.note,
     });

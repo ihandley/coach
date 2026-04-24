@@ -40,7 +40,7 @@ describe("POST /api/jobs/[jobId]/notes", () => {
                 },
                 body: JSON.stringify({ note: "Reached out to recruiter" }),
             }),
-            { params: { jobId: "job-123" } },
+            { params: Promise.resolve({ jobId: "job-123" }) },
         );
 
         expect(addApplicationEvent).toHaveBeenCalledWith({
@@ -62,7 +62,7 @@ describe("POST /api/jobs/[jobId]/notes", () => {
                 },
                 body: JSON.stringify({ note: "" }),
             }),
-            { params: { jobId: "job-123" } },
+            { params: Promise.resolve({ jobId: "job-123" }) },
         );
 
         expect(response.status).toBe(400);

@@ -1,14 +1,17 @@
 import { DbJobRepository } from "@coach/db";
 
-const jobRepository = new DbJobRepository({} as never);
+function createJobRepository() {
+    return new DbJobRepository({} as never);
+}
 
 export async function GET(
     _request: Request,
-    context: { params: { jobId: string } },
+    context: { params: Promise<{ jobId: string }> },
 ) {
-    const applicationEvents = await jobRepository.listApplicationEvents(
-        context.params.jobId,
-    );
+    const { jobId } = await context.params;
+    const jobRepository = createJobRepository();
+
+    const applicationEvents = await jobRepository.listApplicationEvents(jobId);
 
     return Response.json(applicationEvents);
 }

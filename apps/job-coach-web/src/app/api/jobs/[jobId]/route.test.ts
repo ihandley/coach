@@ -39,7 +39,7 @@ describe("GET /api/jobs/[jobId]", () => {
 
         const response = await GET(
             new Request("http://localhost/api/jobs/job-123"),
-            { params: { jobId: "job-123" } },
+            { params: Promise.resolve({ jobId: "job-123" }) },
         );
 
         expect(response.status).toBe(200);
@@ -60,7 +60,7 @@ describe("GET /api/jobs/[jobId]", () => {
 
         const response = await GET(
             new Request("http://localhost/api/jobs/missing"),
-            { params: { jobId: "missing" } },
+            { params: Promise.resolve({ jobId: "missing" }) },
         );
 
         expect(response.status).toBe(404);
