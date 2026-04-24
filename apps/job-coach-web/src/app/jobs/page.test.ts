@@ -28,4 +28,26 @@ describe("jobs page model", () => {
         expect(jobs[0]?.company).toBe("NewCo");
         expect(jobs[1]?.company).toBe("OldCo");
     });
+
+    it("keeps stable order for equal timestamps", () => {
+        const jobs = sortJobsByUpdatedDate([
+            {
+                id: "job-1",
+                company: "A",
+                title: "A",
+                status: "saved",
+                updatedAt: "2026-04-23T10:00:00.000Z",
+            },
+            {
+                id: "job-2",
+                company: "B",
+                title: "B",
+                status: "saved",
+                updatedAt: "2026-04-23T10:00:00.000Z",
+            },
+        ]);
+
+        expect(jobs[0]?.id).toBe("job-1");
+        expect(jobs[1]?.id).toBe("job-2");
+    });
 });

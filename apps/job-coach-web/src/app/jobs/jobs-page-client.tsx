@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-type JobListItem = {
-    id: string;
-    company: string;
-    title: string;
-    status: string;
-    updatedAt: string;
-};
+import {
+    formatJobUpdatedDate,
+    sortJobsByUpdatedDate,
+    type JobListItem,
+} from "./jobs-page-model";
 
 export function JobsPageClient() {
     const [jobs, setJobs] = useState<JobListItem[]>([]);
@@ -21,7 +18,7 @@ export function JobsPageClient() {
     async function loadJobs() {
         const res = await fetch("/api/jobs");
         const data = await res.json();
-        setJobs(data);
+        setJobs(sortJobsByUpdatedDate(data));
     }
 
     useEffect(() => {
@@ -48,13 +45,11 @@ export function JobsPageClient() {
                 throw new Error("Failed to create job");
             }
 
-            // reset form
             setSourceUrl("");
             setSourceText("");
 
-            // refresh jobs
             await loadJobs();
-        } catch (err) {
+        } catch {
             setError("Something went wrong while creating the job");
         } finally {
             setLoading(false);
@@ -102,7 +97,7 @@ export function JobsPageClient() {
                                 <a href={`/jobs/${job.id}`}>{job.title}</a>
                             </div>
                             <div>{job.status}</div>
-                            <div>{job.updatedAt.slice(0, 10)}</div>
+                            <div>{formatJobUpdatedDate(job.updatedAt)}</div>
                         </li>
                     ))}
                 </ul>
