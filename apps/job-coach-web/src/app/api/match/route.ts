@@ -1,25 +1,106 @@
 import { calculateFit } from "../../../server/match/calculate-fit";
-import { getDb } from "../../../server/db/client";
+import {
+    createServerClient,
+    DbJobRepository,
+} from "@coach/db";
+
+function normalizedResumeToText(normalizedResume: any): string {
+    const parts = [];
+
+    if (normalizedResume.basics) {
+        parts.push(normalizedResume.basics.fullName);
+        parts.push(normalizedResume.basics.headline);
+        parts.push(normalizedResume.basics.summary);
+    }
+
+    if (normalizedResume.skills) {
+        parts.push(normalizedResume.skills.join(" "));
+    }
+
+    if (normalizedResume.experience) {
+        for (const exp of normalizedResume.experience) {
+            parts.push(exp.company);
+            parts.push(exp.title);
+            if (exp.highlights) {
+                parts.push(exp.highlights.join(" "));
+            }
+        }
+    }
+
+    return parts.filter(Boolean).join(" ");
+}
 
 export async function POST(request: Request) {
     const body = await request.json();
-    const db = getDb();
 
     if (!body?.jobId || !body?.resumeProfileId) {
         return Response.json({ error: "INVALID_INPUT" }, { status: 400 });
     }
 
-    const job = {
-        title: "Unknown",
-        company: "Unknown",
-        sourceText: "",
-    };
+    let db;
 
-    const resume = {
-        rawText: body.resumeProfileId,
-    };
+    try {
+        db = createServerClient();
+    } catch (error) {
+        if (
+            error instanceof Error &&
+            (error.message === "Missing SUPABASE_URL" ||
+                error.message === "Missing SUPABASE_SERVICE_ROLE_KEY")
+        ) {
+            return Response.json({ error: error.message }, { status: 500 });
+        }
 
-    const result = calculateFit(job, resume);
+        throw error;
+    }
+
+    const jobRepo = new DbJobRepository(db);
+
+    const job = await jobRepo.getJobById(body.jobId);
+
+    if (!job) {
+        return Response.json({ error: "JOB_NOT_FOUND" }, { status: 404 });
+    }
+
+    let resumeText = "";
+
+    let profileQuery = db
+        .from("resume_profiles")
+        .select("id, normalized_resume, created_at");
+
+    if (body.resumeProfileId !== "default") {
+        profileQuery = profileQuery.eq("id", body.resumeProfileId);
+    }
+
+    const { data: profile, error: profileError } = await profileQuery
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (profileError) {
+        throw profileError;
+    }
+
+    if (profile?.normalized_resume) {
+        resumeText = normalizedResumeToText(profile.normalized_resume);
+    } else if (profile?.id) {
+        const { data: version, error: versionError } = await db
+            .from("resume_versions")
+            .select("normalized_resume, created_at")
+            .eq("resume_profile_id", profile.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (versionError) {
+            throw versionError;
+        }
+
+        if (version?.normalized_resume) {
+            resumeText = normalizedResumeToText(version.normalized_resume);
+        }
+    }
+
+    const result = calculateFit(job, { rawText: resumeText });
 
     return Response.json(result);
 }

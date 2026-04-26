@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AppShell } from "./app-shell";
+import "../styles/globals.css";
 
 export default function RootLayout({
     children,

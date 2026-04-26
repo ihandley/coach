@@ -6,5 +6,12 @@ export function LogoutButton() {
         window.location.href = "/login";
     }
 
-    return <button onClick={handleLogout}>Logout</button>;
+    return (
+        <button
+            onClick={handleLogout}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+        >
+            Logout
+        </button>
+    );
 }

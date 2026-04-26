@@ -4,29 +4,29 @@ import { LogoutButton } from "./logout-button";
 
 export function AppShell({ children }: { children: ReactNode }) {
     return (
-        <div style={{ display: "flex", minHeight: "100vh", flexDirection: "column" }}>
-            <header
-                style={{
-                    borderBottom: "1px solid #e5e5e5",
-                    padding: "12px 16px",
-                    display: "flex",
-                    gap: "16px",
-                    alignItems: "center",
-                }}
-            >
-                <strong>Job Coach</strong>
-
-                <nav style={{ display: "flex", gap: "12px", flex: 1 }}>
-                    <Link href="/">Home</Link>
-                    <Link href="/jobs">Jobs</Link>
-                    <Link href="/resumes">Resumes</Link>
-                    <Link href="/integrations">Integrations</Link>
-                </nav>
-
-                <LogoutButton />
+        <div className="flex min-h-screen flex-col">
+            <header className="border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-xl font-bold text-gray-900">Job Coach</h1>
+                    <nav className="flex flex-1 gap-6">
+                        <Link href="/" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                            Home
+                        </Link>
+                        <Link href="/jobs" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                            Jobs
+                        </Link>
+                        <Link href="/resumes" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                            Resumes
+                        </Link>
+                        <Link href="/integrations" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                            Integrations
+                        </Link>
+                    </nav>
+                    <LogoutButton />
+                </div>
             </header>
 
-            <main style={{ padding: "16px", flex: 1 }}>{children}</main>
+            <main className="flex-1 bg-gray-50 px-4 py-6 sm:px-6">{children}</main>
         </div>
     );
 }
