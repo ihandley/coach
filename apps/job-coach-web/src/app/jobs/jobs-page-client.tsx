@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { JobMatchButton } from "./job-match-button";
-import { JobMatchView } from "./job-match-view";
 
 type RankedJob = {
     id: string;
@@ -13,11 +12,25 @@ type RankedJob = {
 
 export function JobsPageClient() {
     const [jobs, setJobs] = useState<RankedJob[]>([]);
+    const [error, setError] = useState<string | null>(null);
     const [url, setUrl] = useState("");
 
     async function load() {
         const res = await fetch("/api/jobs/ranked");
+
+        if (!res.ok) {
+            const body = await res.json().catch(() => null);
+            const message =
+                body && typeof body.error === "string"
+                    ? body.error
+                    : "Unable to load ranked jobs.";
+
+            setError(message);
+            return;
+        }
+
         setJobs(await res.json());
+        setError(null);
     }
 
     async function handleImport() {
@@ -40,6 +53,12 @@ export function JobsPageClient() {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
+
+            {error ? (
+                <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            ) : null}
 
             <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex gap-2">
@@ -81,7 +100,6 @@ export function JobsPageClient() {
 
                             <div className="space-y-2 border-t border-gray-100 pt-3 mt-3">
                                 <JobMatchButton jobId={job.id} resumeProfileId="default" />
-                                <JobMatchView jobId={job.id} />
                             </div>
                         </div>
                     ))}
