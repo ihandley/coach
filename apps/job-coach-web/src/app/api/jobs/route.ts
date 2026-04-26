@@ -1,3 +1,4 @@
+import { cleanJobText, extractJobFields } from "@coach/core";
 import { createDbJobImporter, DbJobRepository, createServerClient } from "@coach/db";
 import { fetchJobPageAsDependency, extractJobStub } from "@coach/ai";
 

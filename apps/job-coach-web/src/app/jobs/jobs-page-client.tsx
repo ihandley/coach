@@ -73,6 +73,14 @@ export function JobsPageClient() {
       {
         accessorKey: "title",
         header: "Title",
+        cell: ({ row }) => (
+          <a
+            href={`/jobs/${row.original.id}`}
+            className="text-blue-600 underline"
+          >
+            {row.original.title}
+          </a>
+        ),
       },
       {
         accessorKey: "company",

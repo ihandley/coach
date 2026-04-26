@@ -1,55 +1,59 @@
-import { AppShell } from "../../app-shell";
+import { notFound } from "next/navigation";
 
-async function getJob(jobId: string) {
-    const res = await fetch(`http://localhost:3000/api/jobs/${jobId}`, {
-        cache: "no-store",
-    });
-    return res.json();
-}
+type Job = {
+  id: string;
+  title: string;
+  company: string;
+  status: string;
+  sourceUrl?: string;
+  sourceText?: string;
+};
 
-async function getMatches(jobId: string) {
-    const res = await fetch(
-        `http://localhost:3000/api/jobs/${jobId}/matches`,
-        { cache: "no-store" }
-    );
-    return res.json();
+async function getJob(jobId: string): Promise<Job | null> {
+  const res = await fetch(`http://localhost:3000/api/jobs/${jobId}`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+  return res.json();
 }
 
 export default async function JobDetailPage({
-    params,
+  params,
 }: {
-    params: Promise<{ jobId: string }>;
+  params: Promise<{ jobId: string }>;
 }) {
-    const { jobId } = await params;
+  const { jobId } = await params;
+  const job = await getJob(jobId);
 
-    const job = await getJob(jobId);
-    const matches = await getMatches(jobId);
+  if (!job) return notFound();
 
-    return (
-        <AppShell>
-            <div>
-                <h1>{job?.title ?? "Job"}</h1>
-                <p>{job?.company}</p>
+  return (
+    <div className="space-y-6">
+      <a href="/jobs" className="text-sm text-blue-600 underline">
+        ← Back to jobs
+      </a>
 
-                <h2>Match History</h2>
+      <div>
+        <h1 className="text-3xl font-bold">{job.title}</h1>
+        <div className="text-gray-600">{job.company}</div>
+      </div>
 
-                {matches?.length ? (
-                    <ul>
-                        {matches.map((m: any, i: number) => (
-                            <li key={i}>
-                                <div>Score: {m.result?.score}</div>
-                                <ul>
-                                    {m.result?.reasons?.map((r: string, j: number) => (
-                                        <li key={j}>{r}</li>
-                                    ))}
-                                </ul>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p>No matches yet</p>
-                )}
-            </div>
-        </AppShell>
-    );
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div>Status: {job.status}</div>
+      </div>
+
+      {job.sourceUrl ? (
+        <a href={job.sourceUrl} target="_blank" className="text-blue-600 underline">
+          View Original Posting
+        </a>
+      ) : null}
+
+      {job.sourceText ? (
+        <pre className="whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-4 text-sm">
+          {job.sourceText}
+        </pre>
+      ) : null}
+    </div>
+  );
 }
