@@ -1,3 +1,4 @@
+import { JobStatusSelect } from "./job-status-select";
 import { notFound } from "next/navigation";
 
 type Job = {
@@ -40,7 +41,7 @@ export default async function JobDetailPage({
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <div>Status: {job.status}</div>
+        <JobStatusSelect jobId={job.id} initialStatus={job.status} />
       </div>
 
       {job.sourceUrl ? (

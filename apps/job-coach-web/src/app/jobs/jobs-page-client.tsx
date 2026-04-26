@@ -1,5 +1,6 @@
 "use client";
 
+import { JobStatusSelect } from "./[jobId]/job-status-select";
 import { useEffect, useMemo, useState } from "react";
 import { JobMatchButton } from "./job-match-button";
 import {
@@ -89,6 +90,12 @@ export function JobsPageClient() {
       {
         accessorKey: "status",
         header: "Status",
+        cell: ({ row }) => (
+          <JobStatusSelect
+            jobId={row.original.id}
+            initialStatus={row.original.status}
+          />
+        ),
       },
       {
         accessorKey: "updatedAt",
