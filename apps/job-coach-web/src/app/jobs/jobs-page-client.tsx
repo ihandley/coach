@@ -61,6 +61,16 @@ export function JobsPageClient() {
     setUrl("");
   }
 
+  async function handleDelete(jobId: string) {
+    await fetch("/api/jobs", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: jobId }),
+    });
+
+    await load();
+  }
+
   useEffect(() => {
     load();
   }, []);
@@ -127,7 +137,15 @@ export function JobsPageClient() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <JobMatchButton jobId={row.original.id} resumeProfileId="default" />
+          <div className="flex gap-2">
+            <JobMatchButton jobId={row.original.id} resumeProfileId="default" />
+            <button
+              onClick={() => handleDelete(row.original.id)}
+              className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+            >
+              Delete
+            </button>
+          </div>
         ),
       },
     ],

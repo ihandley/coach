@@ -21,6 +21,14 @@ export async function POST(request: Request) {
         const db = createServerClient();
 
         if (isNonEmptyString(body?.sourceUrl)) {
+            const repo = new DbJobRepository(db);
+
+            const existing = await repo.findJobBySourceUrl(body.sourceUrl);
+
+            if (existing) {
+                return Response.json(existing, { status: 200 });
+            }
+
             const importer = createDbJobImporter({
                 fetchPage: fetchJobPageAsDependency,
                 extractJob: extractJobStub,
@@ -71,4 +79,26 @@ export async function POST(request: Request) {
             { status: 500 }
         );
     }
+}
+
+
+export async function DELETE(request: Request) {
+    const body = await request.json();
+
+    if (!body?.id) {
+        return Response.json({ error: "MISSING_ID" }, { status: 400 });
+    }
+
+    const db = createServerClient();
+
+    const { error } = await db
+        .from("jobs")
+        .delete()
+        .eq("id", body.id);
+
+    if (error) {
+        return Response.json({ error: "DELETE_FAILED" }, { status: 500 });
+    }
+
+    return Response.json({ success: true });
 }
