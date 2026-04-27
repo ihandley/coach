@@ -85,9 +85,14 @@ export async function GET() {
       company: job.company,
       status: job.status,
       sourceUrl: job.sourceUrl,
+      sourceText: job.sourceText ?? job.source_text ?? "", 
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
-      score: calculateFit(job, resume).score,
+      score:
+        (job.matchResult?.score ??
+         job.match_score ??
+         job.score ??
+         calculateFit(job, resume).score),
     }))
     .sort((a: any, b: any) => b.score - a.score);
 
