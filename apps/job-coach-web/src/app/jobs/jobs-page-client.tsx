@@ -92,8 +92,9 @@ export function JobsPageClient() {
 
       if (matchRes.ok) {
         const result = await matchRes.json();
+        console.log("match result", result);
 
-        await fetch("/api/match/save", {
+        const saveRes = await fetch("/api/match/save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -105,6 +106,12 @@ export function JobsPageClient() {
 
         setMessageType("success");
         setMessage("✅ Job imported and matched");
+
+        if (!saveRes.ok) {
+          setMessageType("error");
+          setMessage("❌ Job imported, but match save failed");
+          return;
+        }
 
         await load();
       }
