@@ -93,6 +93,8 @@ export function JobsPageClient() {
       if (matchRes.ok) {
         const result = await matchRes.json();
         console.log("match result", result);
+        setMessageType("info");
+        setMessage(`🔍 Match calculated: ${Math.round((result?.score ?? 0) * 100)}%. Saving...`);
 
         const saveRes = await fetch("/api/match/save", {
           method: "POST",
@@ -105,7 +107,7 @@ export function JobsPageClient() {
         });
 
         setMessageType("success");
-        setMessage("✅ Job imported and matched");
+        setMessage(`✅ Job imported and matched (${Math.round((result?.score ?? 0) * 100)}%)`);
 
         if (!saveRes.ok) {
           setMessageType("error");

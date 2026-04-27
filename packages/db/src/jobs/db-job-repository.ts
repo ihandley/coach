@@ -109,7 +109,7 @@ export class DbJobRepository implements JobRepository {
         created_at,
         updated_at
       `)
-      .order("updated_at", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (input?.status) {
       query = query.eq("status", input.status);
