@@ -27,6 +27,7 @@ export function JobsPageClient() {
   const [jobs, setJobs] = useState<RankedJob[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
+  const [message, setMessage] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -51,11 +52,21 @@ export function JobsPageClient() {
   async function handleImport() {
     if (!url) return;
 
-    await fetch("/api/jobs", {
+    const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sourceUrl: url }),
     });
+
+    const data = await res.json();
+
+    if (data.duplicate) {
+      setMessage("Job already exists");
+    } else if (data.created) {
+      setMessage("Job imported successfully");
+    } else {
+      setMessage("Import completed");
+    }
 
     await load();
     setUrl("");
@@ -194,7 +205,10 @@ export function JobsPageClient() {
 
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex gap-2">
-          <input
+          {message && (
+    <div className="mb-2 text-sm text-gray-600">{message}</div>
+  )}
+  <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Paste job URL"

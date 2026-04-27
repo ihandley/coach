@@ -26,7 +26,10 @@ export async function POST(request: Request) {
             const existing = await repo.findJobBySourceUrl(body.sourceUrl);
 
             if (existing) {
-                return Response.json(existing, { status: 200 });
+                return Response.json(
+    { job: existing, duplicate: true },
+    { status: 200 }
+);
             }
 
             const importer = createDbJobImporter({
@@ -36,7 +39,10 @@ export async function POST(request: Request) {
 
             try {
                 const job = await importer.importJobFromUrl(body.sourceUrl);
-                return Response.json(job, { status: 201 });
+                return Response.json(
+    { job, created: true },
+    { status: 201 }
+);
             } catch (err: any) {
                 console.error("IMPORT ERROR:", err);
 
@@ -61,7 +67,10 @@ export async function POST(request: Request) {
                 status: "saved",
             });
 
-            return Response.json(job, { status: 201 });
+            return Response.json(
+    { job, created: true },
+    { status: 201 }
+);
         }
 
         return Response.json(
