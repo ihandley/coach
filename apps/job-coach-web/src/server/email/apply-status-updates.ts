@@ -1,7 +1,13 @@
 export async function applyStatusUpdates(emails: any[]) {
-  for (const email of emails) {
-    if (!email.detectedStatus || !email.matchedJobId) continue;
+  const updates = emails.filter(
+    (email) =>
+      email.detectedStatus &&
+      email.matchedJobId &&
+      email.currentStatus &&
+      email.currentStatus !== email.detectedStatus
+  );
 
+  for (const email of updates) {
     await fetch(`http://localhost:3000/api/jobs/${email.matchedJobId}/status`, {
       method: "POST",
       headers: {
@@ -10,4 +16,8 @@ export async function applyStatusUpdates(emails: any[]) {
       body: JSON.stringify({ status: email.detectedStatus }),
     });
   }
+
+  return {
+    applied: updates.length,
+  };
 }

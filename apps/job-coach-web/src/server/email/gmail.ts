@@ -62,6 +62,7 @@ export async function listRecentEmails() {
         matchedJobId: matchedJob?.id || null,
         matchedJobTitle: matchedJob?.title || null,
         matchedJobCompany: matchedJob?.company || null,
+        currentStatus: matchedJob?.status || null,
       };
     })
   );

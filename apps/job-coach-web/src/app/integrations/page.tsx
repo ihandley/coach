@@ -1,3 +1,5 @@
+import { ApplyUpdatesButton } from "./apply-updates-button";
+
 async function getEmails() {
   const res = await fetch("http://localhost:3000/api/integrations/email", {
     cache: "no-store",
@@ -15,7 +17,10 @@ export default async function IntegrationsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Email Integration (MVP)</h1>
+      <div className="flex items-center justify-between">
+  <h1 className="text-3xl font-bold">Email Integration (MVP)</h1>
+  <ApplyUpdatesButton />
+</div>
 
       {query ? (
         <div className="text-xs bg-gray-100 p-2 rounded">
@@ -34,10 +39,23 @@ export default async function IntegrationsPage() {
               <div className="text-sm mt-2">{email.snippet}</div>
               <div className="text-xs mt-2 text-blue-600">
                 Detected: {email.detectedStatus || "none"}
+
               {email.matchedJobId ? (
-                <span className="ml-2 text-green-600">
-                  → matched job
-                </span>
+                <div className="mt-2 text-sm">
+                  <div className="text-gray-500">
+                    {email.matchedJobCompany} — {email.matchedJobTitle}
+                  </div>
+
+                  {email.detectedStatus && email.currentStatus !== email.detectedStatus ? (
+                    <div className="text-orange-600">
+                      {email.currentStatus} → {email.detectedStatus}
+                    </div>
+                  ) : (
+                    <div className="text-gray-400">
+                      no change
+                    </div>
+                  )}
+                </div>
               ) : null}
               </div>
             </div>

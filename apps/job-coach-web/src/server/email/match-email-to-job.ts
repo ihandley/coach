@@ -1,6 +1,6 @@
 export function matchEmailToJob(
   email: { subject: string; snippet: string; from: string },
-  jobs: { id: string; company: string; title: string }[]
+  jobs: { id: string; company: string; title: string; status?: string }[]
 ) {
   const text = `${email.subject} ${email.snippet} ${email.from}`.toLowerCase();
 
