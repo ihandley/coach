@@ -81,7 +81,7 @@ async function main() {
       company: job.company ?? "Unknown",
       title: job.title ?? "Unknown",
       source_url: job.url ?? "",
-      source_text: job.description ?? job.notes ?? "",
+      source_text: job.description ?? job.rawDescription ?? job.notes ?? "",
       status: mapStatus(job.status),
       created_at: normalizedCreatedAt(job),
     });
