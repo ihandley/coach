@@ -2,7 +2,6 @@
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { JobMatchButton } from "./job-match-button";
 import {
   useReactTable,
   getCoreRowModel,
@@ -81,6 +80,30 @@ export function JobsPageClient() {
 
     await load();
     setUrl("");
+
+    if (data?.job?.id) {
+      const matchRes = await fetch("/api/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: data.job.id, resumeProfileId: "default" }),
+      });
+
+      if (matchRes.ok) {
+        const result = await matchRes.json();
+
+        await fetch("/api/match/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobId: data.job.id,
+            resumeProfileId: "default",
+            result,
+          }),
+        });
+
+        await load();
+      }
+    }
   }
 
   async function handleDelete(jobId: string) {
@@ -176,15 +199,12 @@ export function JobsPageClient() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => (
-          <div className="flex gap-2">
-            <JobMatchButton jobId={row.original.id} resumeProfileId="default" />
-            <button
-              onClick={() => handleDelete(row.original.id)}
-              className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
-            >
-              Delete
-            </button>
-          </div>
+          <button
+            onClick={() => handleDelete(row.original.id)}
+            className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+          >
+            Delete
+          </button>
         ),
       },
     ],
