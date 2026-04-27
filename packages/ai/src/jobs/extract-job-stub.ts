@@ -12,15 +12,20 @@ export const extractJobStub = async (
 ): Promise<ExtractedJobData> => {
     const html = input.html;
 
-    const title =
+    let title =
         extractOgMeta(html, "og:title") ??
         extractTitleFromH1(html) ??
         "Unknown";
 
-    const company =
+    title = cleanTitle(title);
+
+    let company =
         extractCompanyFromGreenhouseBackLink(html) ??
         extractOgMeta(html, "og:site_name") ??
+        extractCompanyFromTitle(title) ??
         "Unknown";
+
+    company = cleanCompany(company);
 
     const rawDescription =
         extractJobDescriptionText(html) ??
@@ -40,6 +45,36 @@ export const extractJobStub = async (
     };
 };
 
+function cleanTitle(title: string): string {
+    return title
+        .replace(/\|\s*LinkedIn.*$/i, "")
+        .replace(/\|\s*Glassdoor.*$/i, "")
+        .replace(/-+\s*Job.*$/i, "")
+        .replace(/\s*\(.*?\)\s*$/, "")
+        .trim();
+}
+
+function cleanCompany(company: string): string {
+    return company
+        .replace(/\|\s*LinkedIn.*$/i, "")
+        .replace(/\s+Jobs?$/i, "")
+        .trim();
+}
+
+function extractCompanyFromTitle(title: string): string | null {
+    const parts = title.split(" at ");
+    if (parts.length === 2) {
+        return parts[1].trim();
+    }
+
+    const dashParts = title.split(" - ");
+    if (dashParts.length === 2) {
+        return dashParts[1].trim();
+    }
+
+    return null;
+}
+
 function extractOgMeta(html: string, property: string): string | null {
     const escaped = escapeRegExp(property);
     const regex = new RegExp(
@@ -56,12 +91,6 @@ function extractTitleFromH1(html: string): string | null {
 }
 
 function extractCompanyFromGreenhouseBackLink(html: string): string | null {
-    const match = html.match(/Back to jobs<\/a>[\s\S]*?<div class="job__tags"/i);
-    if (!match) {
-        const logoAltMatch = html.match(/alt="([^"]+)\s+Logo"/i);
-        return decodeHtml(logoAltMatch?.[1] ?? "").trim() || null;
-    }
-
     const logoAltMatch = html.match(/alt="([^"]+)\s+Logo"/i);
     return decodeHtml(logoAltMatch?.[1] ?? "").trim() || null;
 }
@@ -71,9 +100,7 @@ function extractJobDescriptionText(html: string): string | null {
         /<div class="job__description body"><div>([\s\S]*?)<\/div><\/div>/i,
     );
 
-    if (!match) {
-        return null;
-    }
+    if (!match) return null;
 
     return normalizeWhitespace(decodeHtml(stripHtml(match[1]))).trim() || null;
 }
