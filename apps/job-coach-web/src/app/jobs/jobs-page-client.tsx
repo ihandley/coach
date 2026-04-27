@@ -295,7 +295,7 @@ export function JobsPageClient() {
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <React.Fragment key={row.id}>
+                <Fragment key={row.id}>
                   <tr className="border-t">
                     {row.getVisibleCells().map((cell) => (
                       <td key={cell.id} className="px-4 py-2 align-top">
@@ -358,7 +358,7 @@ export function JobsPageClient() {
                       </td>
                     </tr>
                   )}
-                </React.Fragment>
+                </Fragment>
               ))}
             </tbody>
           </table>
