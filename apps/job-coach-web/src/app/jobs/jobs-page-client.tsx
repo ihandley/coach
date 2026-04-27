@@ -82,6 +82,8 @@ export function JobsPageClient() {
     setUrl("");
 
     if (data?.job?.id) {
+      setMessageType("info");
+      setMessage("🔍 Running job match...");
       const matchRes = await fetch("/api/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,6 +102,9 @@ export function JobsPageClient() {
             result,
           }),
         });
+
+        setMessageType("success");
+        setMessage("✅ Job imported and matched");
 
         await load();
       }
