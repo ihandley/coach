@@ -8,10 +8,8 @@ async function getEmails() {
 
   if (!res.ok) {
     return {
-      emails: [],
-      query: null,
-      totalScanned: 0,
-      totalMatched: 0,
+      counts: { scanned: 0, matched: 0, actionable: 0 },
+      results: [],
     };
   }
 
@@ -20,16 +18,6 @@ async function getEmails() {
 
 export default async function IntegrationsPage() {
   const data = await getEmails();
-  const emails = data?.emails || [];
-  const totalScanned = data?.totalScanned ?? 0;
-  const totalMatched = data?.totalMatched ?? emails.length;
-
-  const updatesFound = emails.filter(
-    (email: any) =>
-      email.detectedStatus &&
-      email.currentStatus &&
-      email.currentStatus !== email.detectedStatus
-  ).length;
 
   return (
     <div className="space-y-6">
@@ -38,17 +26,7 @@ export default async function IntegrationsPage() {
         <RefreshButton />
       </div>
 
-      <div className="space-y-2 rounded bg-gray-100 p-2 text-xs">
-        <div><strong>Scanned:</strong> {totalScanned}</div>
-        <div><strong>Matched:</strong> {totalMatched}</div>
-        <div><strong>New updates:</strong> {updatesFound}</div>
-      </div>
-
-      {emails.length === 0 ? (
-        <p>No matching job emails found.</p>
-      ) : (
-        <EmailIntegrationTable data={emails} />
-      )}
+      <EmailIntegrationTable data={data} />
     </div>
   );
 }
