@@ -123,7 +123,7 @@ export function JobsPageClient() {
         cell: ({ row }) => (
           <button
             onClick={() =>
-              setExpandedJobId(expandedJobId === row.original.id ? null : row.original.id)
+              setExpandedJobId((prev) => prev === row.original.id ? null : row.original.id)
             }
             className="text-left font-medium text-blue-600 underline"
           >
@@ -237,6 +237,11 @@ export function JobsPageClient() {
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleImport();
+                }
+              }}
               placeholder="Paste job URL"
               className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
