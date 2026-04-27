@@ -51,6 +51,9 @@ export async function listRecentEmails() {
       const from = headers.find((h) => h.name === "From")?.value || "";
       const messageId = headers.find((h) => h.name === "Message-ID")?.value || "";
       const snippet = msg.data.snippet || "";
+      const date = msg.data.internalDate
+        ? new Date(Number(msg.data.internalDate)).toISOString()
+        : null;
 
       const llm = await classifyEmailLLM({ subject, snippet });
       const fallback = classifyEmail({ subject, snippet, from });
@@ -66,6 +69,7 @@ export async function listRecentEmails() {
         messageId,
         appleMailUrl: messageId ? `message://${messageId}` : null,
         snippet,
+        date,
         detectedStatus,
         matchedJobId: matchedJob?.id || null,
         matchedJobTitle: matchedJob?.title || null,
