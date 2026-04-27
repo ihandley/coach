@@ -1,3 +1,5 @@
+console.log("🧠 LLM called for:", input.url);
+
 import OpenAI from "openai";
 import type { ExtractedJobData, FetchedJobPage } from "@coach/core";
 
@@ -45,6 +47,7 @@ ${html}
     const text = res.choices[0]?.message?.content ?? "";
 
     const parsed = JSON.parse(text);
+    console.log("✅ LLM success:", parsed.title);
 
     if (!parsed.title || !parsed.description) return null;
 
