@@ -60,6 +60,7 @@ export async function POST(request: Request) {
             const repo = new DbJobRepository(db);
 
             const job = await repo.createJob({
+                ...(body.createdAt ? { createdAt: body.createdAt } : {}),
                 company: "Unknown",
                 title: "Imported Job",
                 sourceUrl: "",

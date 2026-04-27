@@ -28,7 +28,8 @@ export const extractJobStub = async (
     company = cleanCompany(company);
 
     const rawDescription =
-        extractJobDescriptionText(html) ??
+        stripHtmlToText(html) ||
+        extractJobDescriptionText(html) ||
         stripHtmlToText(html);
 
     if (!rawDescription || rawDescription.trim().length === 0) {
