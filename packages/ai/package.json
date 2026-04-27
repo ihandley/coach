@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@coach/core": "workspace:*"
+    "@coach/core": "workspace:*",
+    "openai": "^6.34.0"
   },
   "scripts": {
     "test": "vitest run --passWithNoTests",

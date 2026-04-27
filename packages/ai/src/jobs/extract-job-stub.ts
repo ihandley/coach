@@ -1,4 +1,5 @@
 import type { ExtractedJobData, FetchedJobPage } from "@coach/core";
+import { extractJobWithLLM } from "./extract-job-llm";
 
 export class ExtractJobDataError extends Error {
     constructor(message: string) {
@@ -7,43 +8,52 @@ export class ExtractJobDataError extends Error {
     }
 }
 
+
 export const extractJobStub = async (
-    input: FetchedJobPage,
+  input: FetchedJobPage,
 ): Promise<ExtractedJobData> => {
-    const html = input.html;
+  try {
+    const llm = await extractJobWithLLM(input);
 
-    let title =
-        extractOgMeta(html, "og:title") ??
-        extractTitleFromH1(html) ??
-        "Unknown";
-
-    title = cleanTitle(title);
-
-    let company =
-        extractCompanyFromGreenhouseBackLink(html) ??
-        extractOgMeta(html, "og:site_name") ??
-        extractCompanyFromTitle(title) ??
-        "Unknown";
-
-    company = cleanCompany(company);
-
-    const rawDescription =
-        extractJobDescriptionText(html) ||
-        extractMainContent(html) ||
-        stripHtmlToText(html);
-
-    if (!rawDescription || rawDescription.trim().length === 0) {
-        throw new ExtractJobDataError("Could not extract job description text");
+    if (llm) {
+      console.log("🧠 LLM extraction succeeded");
+      return llm;
     }
+  } catch (err) {
+    console.warn("⚠️ LLM extraction failed, falling back", err);
+  }
 
-    const location = extractOgMeta(html, "og:description") ?? undefined;
+  console.log("⚠️ Falling back to stub extraction");
 
-    return {
-        company,
-        title,
-        rawDescription,
-        ...(location ? { location } : {}),
-    };
+  // fallback (your existing logic)
+  const html = input.html;
+
+  let title =
+    extractOgMeta(html, "og:title") ??
+    extractTitleFromH1(html) ??
+    "Unknown";
+
+  title = cleanTitle(title);
+
+  let company =
+    extractCompanyFromGreenhouseBackLink(html) ??
+    extractOgMeta(html, "og:site_name") ??
+    extractCompanyFromTitle(title) ??
+    "Unknown";
+
+  company = cleanCompany(company);
+
+  const rawDescription =
+    extractMainContent(html) ??
+    stripHtmlToText(html);
+
+  return {
+    company,
+    title,
+    rawDescription,
+  };
+};
+
 };
 
 function cleanTitle(title: string): string {

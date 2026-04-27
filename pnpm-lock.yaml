@@ -99,6 +99,9 @@ importers:
       '@coach/core':
         specifier: workspace:*
         version: link:../core
+      openai:
+        specifier: ^6.34.0
+        version: 6.34.0(ws@8.20.0)
 
   packages/core: {}
 
