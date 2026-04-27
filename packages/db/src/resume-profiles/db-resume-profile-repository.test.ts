@@ -8,74 +8,66 @@ describe("createDbResumeProfileRepository", () => {
             id: string;
             name: string;
             current_version_id: string;
+            created_at: string;
         }>();
 
         const db = {
-            insertInto(table: string) {
+            from(table: string) {
                 expect(table).toBe("resume_profiles");
 
                 return {
-                    values(input: {
-                        id?: string;
-                        name: string;
-                        current_version_id: string;
-                    }) {
+                    insert(input: any) {
                         const row = {
                             id: input.id ?? crypto.randomUUID(),
                             name: input.name,
                             current_version_id: input.current_version_id,
+                            created_at: new Date().toISOString(),
                         };
 
                         rows.set(row.id, row);
 
                         return {
-                            returningAll() {
+                            select() {
                                 return {
-                                    executeTakeFirstOrThrow: async () => row,
+                                    single: async () => ({ data: row, error: null }),
                                 };
                             },
                         };
                     },
-                };
-            },
 
-            selectFrom(table: string) {
-                expect(table).toBe("resume_profiles");
-
-                return {
-                    selectAll() {
+                    select() {
                         return {
-                            where(column: string, operator: string, value: string) {
+                            eq(column: string, value: string) {
                                 expect(column).toBe("id");
-                                expect(operator).toBe("=");
 
                                 return {
-                                    executeTakeFirst: async () => rows.get(value) ?? undefined,
+                                    single: async () => ({
+                                        data: rows.get(value) ?? null,
+                                        error: rows.has(value)
+                                            ? null
+                                            : { code: "PGRST116" },
+                                    }),
                                 };
                             },
                         };
                     },
-                };
-            },
 
-            updateTable(table: string) {
-                expect(table).toBe("resume_profiles");
-
-                return {
-                    set(input: { current_version_id: string }) {
+                    update(input: any) {
                         return {
-                            where(column: string, operator: string, value: string) {
+                            eq(column: string, value: string) {
                                 expect(column).toBe("id");
-                                expect(operator).toBe("=");
 
                                 return {
-                                    returningAll() {
+                                    select() {
                                         return {
-                                            executeTakeFirst: async () => {
+                                            single: async () => {
                                                 const existing = rows.get(value);
 
                                                 if (!existing) {
-                                                    return undefined;
+                                                    return {
+                                                        data: null,
+                                                        error: { code: "PGRST116" },
+                                                    };
                                                 }
 
                                                 const updated = {
@@ -84,7 +76,11 @@ describe("createDbResumeProfileRepository", () => {
                                                 };
 
                                                 rows.set(value, updated);
-                                                return updated;
+
+                                                return {
+                                                    data: updated,
+                                                    error: null,
+                                                };
                                             },
                                         };
                                     },
@@ -92,11 +88,20 @@ describe("createDbResumeProfileRepository", () => {
                             },
                         };
                     },
+
+                    order() {
+                        return {
+                            then: async () => ({
+                                data: Array.from(rows.values()),
+                                error: null,
+                            }),
+                        };
+                    },
                 };
             },
         };
 
-        const repo = createDbResumeProfileRepository({ db });
+        const repo = createDbResumeProfileRepository({ db: db as any });
 
         const created = await repo.createResumeProfile({
             name: "Baseline Resume",

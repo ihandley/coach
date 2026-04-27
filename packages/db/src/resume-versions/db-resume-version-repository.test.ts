@@ -129,7 +129,7 @@ describe("createDbResumeVersionRepository", () => {
             },
         };
 
-        const repo = createDbResumeVersionRepository({ db });
+        const repo = createDbResumeVersionRepository({ db: db as any });
 
         const created = await repo.createResumeVersion({
             profileId: "profile-1",

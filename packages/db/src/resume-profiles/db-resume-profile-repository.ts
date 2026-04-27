@@ -4,6 +4,7 @@ import type { ResumeProfile } from "@coach/core";
 type DbResumeProfileRow = {
     id: string;
     name: string;
+    current_version_id?: string | null;
     created_at: string;
 };
 
@@ -11,7 +12,7 @@ function mapResumeProfile(row: DbResumeProfileRow): ResumeProfile {
     return {
         id: row.id,
         name: row.name,
-        currentVersionId: "",
+        currentVersionId: row.current_version_id ?? "",
     };
 }
 
@@ -20,7 +21,7 @@ export function createDbResumeProfileRepository({ db }: { db: SupabaseClient }) 
         async listResumeProfiles() {
             const { data, error } = await db
                 .from("resume_profiles")
-                .select("id, name, created_at")
+                .select("id, name, current_version_id, created_at")
                 .order("created_at", { ascending: false });
 
             if (error) {
@@ -38,8 +39,9 @@ export function createDbResumeProfileRepository({ db }: { db: SupabaseClient }) 
                 .from("resume_profiles")
                 .insert({
                     name: input.name,
+                    current_version_id: input.currentVersionId,
                 })
-                .select("id, name, created_at")
+                .select("id, name, current_version_id, created_at")
                 .single();
 
             if (error) {
