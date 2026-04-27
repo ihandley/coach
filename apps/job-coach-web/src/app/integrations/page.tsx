@@ -47,7 +47,7 @@ export default async function IntegrationsPage() {
       {emails.length === 0 ? (
         <p>No matching job emails found.</p>
       ) : (
-        <EmailIntegrationTable emails={emails} />
+        <EmailIntegrationTable data={emails} />
       )}
     </div>
   );
