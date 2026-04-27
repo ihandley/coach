@@ -28,6 +28,8 @@ export function JobsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error" | "info">("info");
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -52,6 +54,9 @@ export function JobsPageClient() {
   async function handleImport() {
     if (!url) return;
 
+    setMessageType("info");
+    setMessage("⏳ Importing job...");
+
     const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -60,12 +65,18 @@ export function JobsPageClient() {
 
     const data = await res.json();
 
-    if (data.duplicate) {
-      setMessage("Job already exists");
+    if (!res.ok) {
+      setMessageType("error");
+      setMessage("❌ Import failed");
+    } else if (data.duplicate) {
+      setMessageType("info");
+      setMessage("⚠️ Job already exists");
     } else if (data.created) {
-      setMessage("Job imported successfully");
+      setMessageType("success");
+      setMessage("✅ Job imported successfully");
     } else {
-      setMessage("Import completed");
+      setMessageType("success");
+      setMessage("✅ Import completed");
     }
 
     await load();
@@ -86,23 +97,38 @@ export function JobsPageClient() {
     load();
   }, []);
 
+  function formatDateTime(value: string) {
+    if (!value) return "";
+    return new Date(value).toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  const messageClass =
+    messageType === "success"
+      ? "border-green-200 bg-green-50 text-green-700"
+      : messageType === "error"
+        ? "border-red-200 bg-red-50 text-red-700"
+        : "border-blue-200 bg-blue-50 text-blue-700";
+
   const columns = useMemo<ColumnDef<RankedJob>[]>(
     () => [
-      {
-        accessorKey: "score",
-        header: "Match",
-        cell: (info) => `${Math.round(info.getValue<number>() * 100)}%`,
-      },
       {
         accessorKey: "title",
         header: "Title",
         cell: ({ row }) => (
-          <a
-            href={`/jobs/${row.original.id}`}
-            className="text-blue-600 underline"
+          <button
+            onClick={() =>
+              setExpandedJobId(expandedJobId === row.original.id ? null : row.original.id)
+            }
+            className="text-left font-medium text-blue-600 underline"
           >
             {row.original.title}
-          </a>
+          </button>
         ),
       },
       {
@@ -122,10 +148,12 @@ export function JobsPageClient() {
       {
         accessorKey: "updatedAt",
         header: "Updated",
+        cell: (info) => formatDateTime(info.getValue<string>()),
       },
       {
         accessorKey: "createdAt",
         header: "Created",
+        cell: (info) => formatDateTime(info.getValue<string>()),
       },
       {
         accessorKey: "sourceUrl",
@@ -204,23 +232,28 @@ export function JobsPageClient() {
       ) : null}
 
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex gap-2">
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Paste job URL"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+            <button
+              onClick={handleImport}
+              disabled={!url}
+              className="btn-primary disabled:opacity-50"
+            >
+              Import
+            </button>
+          </div>
+
           {message && (
-    <div className="mb-2 text-sm text-gray-600">{message}</div>
-  )}
-  <input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste job URL"
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-          <button
-            onClick={handleImport}
-            disabled={!url}
-            className="btn-primary disabled:opacity-50"
-          >
-            Import
-          </button>
+            <div className={`rounded-md border px-3 py-2 text-sm ${messageClass}`}>
+              {message}
+            </div>
+          )}
         </div>
       </div>
 
@@ -257,16 +290,70 @@ export function JobsPageClient() {
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-2">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  ))}
-                </tr>
+                <>
+                  <tr key={row.id} className="border-t">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-2 align-top">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {expandedJobId === row.original.id && (
+                    <tr key={`${row.id}-details`} className="border-t bg-gray-50">
+                      <td colSpan={row.getVisibleCells().length} className="px-4 py-4">
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                          <div className="mb-3 flex items-center justify-between">
+                            <div>
+                              <div className="text-lg font-semibold">{row.original.title}</div>
+                              <div className="text-sm text-gray-600">{row.original.company}</div>
+                            </div>
+                            <div className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+                              Match: {Math.round(row.original.score * 100)}%
+                            </div>
+                          </div>
+
+                          <dl className="grid gap-3 text-sm md:grid-cols-2">
+                            <div>
+                              <dt className="font-medium text-gray-500">Status</dt>
+                              <dd>{row.original.status}</dd>
+                            </div>
+                            <div>
+                              <dt className="font-medium text-gray-500">Created</dt>
+                              <dd>{formatDateTime(row.original.createdAt)}</dd>
+                            </div>
+                            <div>
+                              <dt className="font-medium text-gray-500">Updated</dt>
+                              <dd>{formatDateTime(row.original.updatedAt)}</dd>
+                            </div>
+                            <div>
+                              <dt className="font-medium text-gray-500">Source</dt>
+                              <dd>
+                                {row.original.sourceUrl ? (
+                                  <a href={row.original.sourceUrl} target="_blank" className="text-blue-600 underline">
+                                    Open posting
+                                  </a>
+                                ) : (
+                                  "—"
+                                )}
+                              </dd>
+                            </div>
+                          </dl>
+
+                          <div className="mt-4">
+                            <div className="mb-1 font-medium text-gray-500">Description</div>
+                            <div className="max-h-72 overflow-auto whitespace-pre-wrap rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                              {(row.original as any).sourceText || (row.original as any).rawDescription || "No description captured."}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>

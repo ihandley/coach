@@ -4,6 +4,15 @@ import { useState } from "react";
 
 const statuses = ["saved", "applied", "interviewing", "rejected", "offer", "archived"];
 
+const statusClasses: Record<string, string> = {
+  saved: "border-gray-300 bg-gray-50 text-gray-700",
+  applied: "border-blue-300 bg-blue-50 text-blue-700",
+  interviewing: "border-purple-300 bg-purple-50 text-purple-700",
+  rejected: "border-red-300 bg-red-50 text-red-700",
+  offer: "border-green-300 bg-green-50 text-green-700",
+  archived: "border-stone-300 bg-stone-50 text-stone-700",
+};
+
 export function JobStatusSelect({
   jobId,
   initialStatus,
@@ -34,12 +43,11 @@ export function JobStatusSelect({
 
   return (
     <label className="flex items-center gap-3">
-      <span className="font-medium">Status:</span>
       <select
         value={status}
         onChange={(e) => updateStatus(e.target.value)}
         disabled={isSaving}
-        className="rounded-md border border-gray-300 bg-white px-3 py-2"
+        className={`rounded-md border px-3 py-2 ${statusClasses[status] ?? "border-gray-300 bg-white text-gray-700"}`}
       >
         {statuses.map((s) => (
           <option key={s} value={s}>
