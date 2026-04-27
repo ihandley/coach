@@ -138,7 +138,7 @@ export class DbJobRepository implements JobRepository {
     const { data, error } = await this.supabase
       .from("jobs")
       .update({
-        status: input.status || "saved",
+        status: input.status,
       })
       .eq("id", input.jobId)
       .select(`
