@@ -1,3 +1,15 @@
+function normalizedCreatedAt(job: any): string {
+  const value =
+    job.applied_date ||
+    job.saved_date ||
+    job.createdAt ||
+    job.created_at;
+
+  return value && String(value).trim().length > 0
+    ? new Date(value).toISOString()
+    : new Date().toISOString();
+}
+
 import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -71,6 +83,7 @@ async function main() {
       source_url: job.url ?? "",
       source_text: job.description ?? job.notes ?? "",
       status: mapStatus(job.status),
+      created_at: normalizedCreatedAt(job),
     });
 
     if (error) {
