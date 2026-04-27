@@ -351,7 +351,7 @@ export function JobsPageClient() {
                           <div className="mt-4">
                             <div className="mb-1 font-medium text-gray-500">Description</div>
                             <div className="max-h-72 overflow-auto whitespace-pre-wrap rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
-                              {(row.original as any).sourceText || (row.original as any).rawDescription || "No description captured."}
+                              {(row.original as any).sourceText || (row.original as any).description || (row.original as any).rawDescription || "No description captured."}
                             </div>
                           </div>
                         </div>

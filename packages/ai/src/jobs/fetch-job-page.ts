@@ -27,20 +27,6 @@ export async function fetchJobPage(
 
     const html = await response.text();
 
-    const resolvedUrl = await resolveCanonicalUrl(url, html);
-
-    if (resolvedUrl !== url) {
-        const response2 = await dependencies.fetch(resolvedUrl);
-
-        if (response2.ok) {
-            const html2 = await response2.text();
-            return {
-                url: resolvedUrl,
-                html: html2,
-            };
-        }
-    }
-
     return {
         url,
         html,
@@ -62,27 +48,3 @@ export const fetchJobPageAsDependency: FetchPage = async (
         },
     });
 };
-
-function extractApplyUrlFromLinkedIn(html: string): string | null {
-    const match = html.match(/href="(https:\/\/[^"]+)"[^>]*>\s*Apply/i);
-    if (match) return decodeURIComponent(match[1]);
-
-    const alt = html.match(/"applyUrl":"([^"]+)"/);
-    if (alt) return decodeURIComponent(alt[1]);
-
-    return null;
-}
-
-function isLinkedIn(url: string): boolean {
-    return url.includes("linkedin.com");
-}
-
-async function resolveCanonicalUrl(
-    url: string,
-    html: string,
-): Promise<string> {
-    if (!isLinkedIn(url)) return url;
-
-    const applyUrl = extractApplyUrlFromLinkedIn(html);
-    return applyUrl || url;
-}
