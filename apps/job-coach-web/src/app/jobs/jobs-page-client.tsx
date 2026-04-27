@@ -81,17 +81,25 @@ export function JobsPageClient() {
     await load();
     setUrl("");
 
-    if (data?.job?.id) {
+    const jobId = data?.job?.id;
+
+    if (jobId) {
       setMessageType("info");
       setMessage("🔍 Running job match...");
+
       const matchRes = await fetch("/api/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: data.job.id, resumeProfileId: "default" }),
+        body: JSON.stringify({ jobId, resumeProfileId: "default" }),
       });
 
-      if (matchRes.ok) {
-        const result = await matchRes.json();
+      if (!matchRes.ok) {
+        setMessageType("error");
+        setMessage("❌ Job imported, but match calculation failed");
+        return;
+      }
+
+      const result = await matchRes.json();
         console.log("match result", result);
         setMessageType("info");
         setMessage(`🔍 Match calculated: ${Math.round((result?.score ?? 0) * 100)}%. Saving...`);
@@ -100,7 +108,7 @@ export function JobsPageClient() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            jobId: data.job.id,
+            jobId,
             resumeProfileId: "default",
             result,
           }),
@@ -116,7 +124,6 @@ export function JobsPageClient() {
         }
 
         await load();
-      }
     }
   }
 
