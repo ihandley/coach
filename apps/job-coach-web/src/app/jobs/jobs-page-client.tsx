@@ -28,6 +28,7 @@ export function JobsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   async function load() {
     const res = await fetch("/api/jobs/ranked");
@@ -133,8 +134,13 @@ export function JobsPageClient() {
     []
   );
 
+  const filteredJobs =
+    statusFilter === "all"
+      ? jobs
+      : jobs.filter((j) => j.status === statusFilter);
+
   const table = useReactTable({
-    data: jobs,
+    data: filteredJobs,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -144,7 +150,23 @@ export function JobsPageClient() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
+      <div className="flex items-center justify-between">
+  <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
+
+  <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+  >
+    <option value="all">All</option>
+    <option value="saved">Saved</option>
+    <option value="applied">Applied</option>
+    <option value="interviewing">Interviewing</option>
+    <option value="rejected">Rejected</option>
+    <option value="offer">Offer</option>
+    <option value="archived">Archived</option>
+  </select>
+</div>
 
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
