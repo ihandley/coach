@@ -1,4 +1,3 @@
-console.log("🧠 LLM called for:", input.url);
 
 import OpenAI from "openai";
 import type { ExtractedJobData, FetchedJobPage } from "@coach/core";
@@ -11,6 +10,7 @@ export async function extractJobWithLLM(
   input: FetchedJobPage,
 ): Promise<ExtractedJobData | null> {
   try {
+    console.log("🧠 LLM called for:", input.url);
     const html = input.html.slice(0, 15000); // prevent huge payloads
 
     const res = await client.chat.completions.create({
