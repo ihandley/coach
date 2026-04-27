@@ -107,7 +107,11 @@ export async function DELETE(request: Request) {
         .eq("id", body.id);
 
     if (error) {
-        return Response.json({ error: "DELETE_FAILED" }, { status: 500 });
+        console.error("DELETE ERROR:", error);
+        return Response.json(
+            { error: "DELETE_FAILED", message: error.message },
+            { status: 500 }
+        );
     }
 
     return Response.json({ success: true });
