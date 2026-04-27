@@ -54,7 +54,6 @@ export const extractJobStub = async (
   };
 };
 
-};
 
 function cleanTitle(title: string): string {
     return title
