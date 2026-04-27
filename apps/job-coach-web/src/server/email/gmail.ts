@@ -1,3 +1,4 @@
+import { classifyEmailLLM } from "./classify-email-llm";
 import { applyStatusUpdates } from "./apply-status-updates";
 import { execFileSync } from "node:child_process";
 import { google } from "googleapis";
@@ -42,26 +43,34 @@ export async function listRecentEmails() {
         userId: "me",
         id: m.id!,
         format: "metadata",
-        metadataHeaders: ["Subject", "From"],
+        metadataHeaders: ["Subject", "From", "Message-ID"],
       });
 
       const headers = msg.data.payload?.headers || [];
       const subject = headers.find((h) => h.name === "Subject")?.value || "";
       const from = headers.find((h) => h.name === "From")?.value || "";
+      const messageId = headers.find((h) => h.name === "Message-ID")?.value || "";
       const snippet = msg.data.snippet || "";
 
-      const detectedStatus = classifyEmail({ subject, snippet, from });
+      const llm = await classifyEmailLLM({ subject, snippet });
+      const fallback = classifyEmail({ subject, snippet, from });
+
+      const detectedStatus =
+        llm.confidence > 0.7 ? llm.status : fallback;
       const matchedJob = matchEmailToJob({ subject, snippet, from }, jobs);
 
       return {
         id: m.id,
         subject,
         from,
+        messageId,
+        appleMailUrl: messageId ? `message://${messageId}` : null,
         snippet,
         detectedStatus,
         matchedJobId: matchedJob?.id || null,
         matchedJobTitle: matchedJob?.title || null,
         matchedJobCompany: matchedJob?.company || null,
+        confidence: llm.confidence,
         currentStatus: matchedJob?.status || null,
       };
     })
@@ -69,5 +78,12 @@ export async function listRecentEmails() {
 
   // Do not auto-apply during preview mode.
   // Status updates should be applied explicitly after review.
-  return { query, emails };
+  const matchedEmails = emails.filter((email) => email.matchedJobId);
+
+  return {
+    query,
+    totalScanned: emails.length,
+    totalMatched: matchedEmails.length,
+    emails: matchedEmails,
+  };
 }
