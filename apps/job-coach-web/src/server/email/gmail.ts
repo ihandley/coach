@@ -71,11 +71,11 @@ export async function listRecentEmails() {
         snippet,
         date,
         detectedStatus,
-        matchedJobId: matchedJob?.id || null,
-        matchedJobTitle: matchedJob?.title || null,
-        matchedJobCompany: matchedJob?.company || null,
+        matchedJobId: matchedJob?.job.id || null,
+        matchedJobTitle: matchedJob?.job.title || null,
+        matchedJobCompany: matchedJob?.job.company || null,
         confidence: llm.confidence,
-        currentStatus: matchedJob?.status || null,
+        currentStatus: matchedJob?.job.status || null,
       };
     })
   );
