@@ -2,15 +2,28 @@
 import OpenAI from "openai";
 import type { ExtractedJobData, FetchedJobPage } from "@coach/core";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    return null;
+  }
+
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function extractJobWithLLM(
   input: FetchedJobPage,
 ): Promise<ExtractedJobData | null> {
   try {
     console.log("🧠 LLM called for:", input.url);
+    const client = getClient();
+
+    if (!client) {
+      console.warn("⚠️ OPENAI_API_KEY missing; skipping LLM extraction");
+      return null;
+    }
+
     const html = input.html.slice(0, 15000); // prevent huge payloads
 
     const res = await client.chat.completions.create({
