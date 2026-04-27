@@ -28,8 +28,8 @@ export const extractJobStub = async (
     company = cleanCompany(company);
 
     const rawDescription =
-        stripHtmlToText(html) ||
         extractJobDescriptionText(html) ||
+        extractMainContent(html) ||
         stripHtmlToText(html);
 
     if (!rawDescription || rawDescription.trim().length === 0) {
@@ -139,4 +139,24 @@ function normalizeWhitespace(value: string): string {
 
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+
+function extractMainContent(html: string): string | null {
+    const patterns = [
+        /<section[^>]+class="[^"]*(description|job|posting)[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+        /<div[^>]+class="[^"]*(description|job|posting)[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+        /<article[^>]*>([\s\S]*?)<\/article>/i,
+    ];
+
+    for (const pattern of patterns) {
+        const match = html.match(pattern);
+        if (match?.[2] || match?.[1]) {
+            const content = match[2] || match[1];
+            const cleaned = normalizeWhitespace(decodeHtml(stripHtml(content))).trim();
+            if (cleaned.length > 200) return cleaned;
+        }
+    }
+
+    return null;
 }
