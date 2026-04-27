@@ -21,12 +21,7 @@ export function RefreshButton() {
         throw new Error(data?.error || "Refresh failed");
       }
 
-      const updatesFound = data.emails.filter(
-        (email: any) =>
-          email.detectedStatus &&
-          email.currentStatus &&
-          email.currentStatus !== email.detectedStatus
-      ).length;
+      const updatesFound = data?.counts?.actionable ?? 0;
 
       setMessage(
         updatesFound > 0
@@ -48,7 +43,7 @@ export function RefreshButton() {
         disabled={isRefreshing}
         className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2 rounded shadow"
       >
-        {isRefreshing ? "Refreshing…" : "Refresh"}
+        {isRefreshing ? "Refreshing…" : "Refresh email scan"}
       </button>
 
       {isRefreshing ? (
