@@ -1,9 +1,6 @@
 "use client";
 
 import React from "react";
-
-import { JobStatusSelect } from "./[jobId]/job-status-select";
-import { useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -12,6 +9,21 @@ import {
   ColumnDef,
   SortingState,
 } from "@tanstack/react-table";
+
+import { JobStatusSelect } from "./[jobId]/job-status-select";
+import { useEffect, useMemo, useState } from "react";
+function getStatusColor(status: string) {
+  switch (status?.toLowerCase()) {
+    case "applied":
+      return "bg-blue-100 text-blue-800";
+    case "interview":
+      return "bg-purple-100 text-purple-800";
+    case "rejected":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+}
 
 type RankedJob = {
   id: string;
@@ -72,7 +84,22 @@ export function JobsPageClient() {
       {
         accessorKey: "score",
         header: "Match",
-        cell: (info) => `${Math.round(info.getValue<number>() * 100)}%`,
+        cell: (info) => {
+          const value = Math.round(info.getValue<number>() * 100);
+          return (
+            <div className="flex items-center justify-end gap-2">
+              <div className="w-20 h-2 bg-gray-200 rounded">
+                <div
+                  className="h-2 bg-green-500 rounded"
+                  style={{ width: `${value}%` }}
+                />
+              </div>
+              <span className="font-semibold text-gray-900 w-10 text-right">
+                {value}%
+              </span>
+            </div>
+          );
+        },
       },
       {
         accessorKey: "title",
@@ -91,10 +118,9 @@ export function JobsPageClient() {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <JobStatusSelect
-            jobId={row.original.id}
-            initialStatus={row.original.status}
-          />
+          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}>
+            {row.original.status}
+          </span>
         ),
       },
       {
@@ -249,7 +275,9 @@ export function JobsPageClient() {
                     <tr>
                       <td colSpan={6} className="bg-gray-50 px-4 py-3 text-sm">
                         <div><strong>Company:</strong> {row.original.company}</div>
-                        <div><strong>Status:</strong> {row.original.status}</div>
+                        <div><strong>Status:</strong> <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}>
+            {row.original.status}
+          </span></div>
                         <div><strong>Score:</strong> {row.original.score}</div>
                         {row.original.sourceUrl && (
                           <a
