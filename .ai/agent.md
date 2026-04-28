@@ -79,3 +79,26 @@ Stop and reassess if:
 - a fix requires touching unrelated files
 - runtime behavior regresses
 - tests pass but the browser fails
+
+## Regression Prevention Rules
+
+### Active Issue Discipline
+- Start every session by stating the active issue number and scope.
+- If work is outside that scope, create/reference a separate issue and do not implement it.
+
+### Data Access Boundary
+- Supabase routes use `.from(...)`
+- Kysely repos use `selectFrom(...)`
+- NEVER mix them in the same route
+
+### No File Time Travel
+- Never restore individual files from old commits unless the entire feature is verified
+
+### Checkpoint Workflow
+- Commit immediately after a working state
+- Tag important checkpoints
+
+### Stop Conditions
+- Same error twice → stop
+- Tests pass but UI broken → stop
+- Fix requires touching unrelated files → stop
