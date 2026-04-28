@@ -1,8 +1,8 @@
-import { getSupabaseClient } from "@/server/supabase/client";
+import { createServerClient } from "@coach/db";
 import { DbJobRepository } from "@coach/db";
 
 function createJobRepository() {
-  return new DbJobRepository(getSupabaseClient());
+  return new DbJobRepository(createServerClient());
 }
 
 export async function GET(
@@ -12,7 +12,8 @@ export async function GET(
   const { jobId } = await context.params;
   const jobRepository = createJobRepository();
 
-  const job = await jobRepository.getJobById(jobId);
+  const jobs = await jobRepository.listJobs();
+  const job = jobs.find((candidate: { id: string }) => candidate.id === jobId);
 
   if (!job) {
     return Response.json({ error: "JOB_NOT_FOUND" }, { status: 404 });
