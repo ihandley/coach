@@ -15,7 +15,7 @@ export function formatJobDate(date: string) {
 
 export function sortJobsByCreatedDate(jobs: JobListItem[]) {
   return [...jobs].sort((first, second) =>
-    second.createdAt.localeCompare(first.createdAt),
+    (second.createdAt ?? "").localeCompare(first.createdAt ?? ""),
   );
 }
 
