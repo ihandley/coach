@@ -78,6 +78,15 @@ export async function GET() {
 
   const resume = { rawText: resumeText };
 
+  // TEMP: use stored match score if available
+  const { data: matches } = await db
+    .from("job_matches")
+    .select("job_id, score");
+
+  const matchMap = new Map(
+    (matches || []).map((m: any) => [m.job_id, m.score])
+  );
+
   const ranked = jobs
     .map((job: any) => ({
       id: job.id,
@@ -87,7 +96,7 @@ export async function GET() {
       sourceUrl: job.sourceUrl,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
-      score: calculateFit(job, resume).score,
+      score: matchMap.get(job.id) ?? 0,
     }))
     .sort((a: any, b: any) => b.score - a.score);
 
