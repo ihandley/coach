@@ -2,7 +2,6 @@
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
 import { useEffect, useMemo, useState } from "react";
-import { JobMatchButton } from "./job-match-button";
 import {
   useReactTable,
   getCoreRowModel,
@@ -76,12 +75,9 @@ export function JobsPageClient() {
         accessorKey: "title",
         header: "Title",
         cell: ({ row }) => (
-          <a
-            href={`/jobs/${row.original.id}`}
-            className="text-blue-600 underline"
-          >
+          <span className="font-medium text-gray-900">
             {row.original.title}
-          </a>
+          </span>
         ),
       },
       {
@@ -123,13 +119,7 @@ export function JobsPageClient() {
           );
         },
       },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <JobMatchButton jobId={row.original.id} resumeProfileId="default" />
-        ),
-      },
+      
     ],
     []
   );
