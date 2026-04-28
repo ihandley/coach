@@ -1,8 +1,6 @@
 "use client";
 
-import { JobStatusSelect } from "./[jobId]/job-status-select";
-import { useEffect, useMemo, useState } from "react";
-import { JobMatchButton } from "./job-match-button";
+import React from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,6 +9,21 @@ import {
   ColumnDef,
   SortingState,
 } from "@tanstack/react-table";
+
+import { JobStatusSelect } from "./[jobId]/job-status-select";
+import { useEffect, useMemo, useState } from "react";
+function getStatusColor(status: string) {
+  switch (status?.toLowerCase()) {
+    case "applied":
+      return "bg-blue-100 text-blue-800";
+    case "interview":
+      return "bg-purple-100 text-purple-800";
+    case "rejected":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+}
 
 type RankedJob = {
   id: string;
@@ -25,6 +38,7 @@ type RankedJob = {
 
 export function JobsPageClient() {
   const [jobs, setJobs] = useState<RankedJob[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -70,18 +84,36 @@ export function JobsPageClient() {
       {
         accessorKey: "score",
         header: "Match",
-        cell: (info) => `${Math.round(info.getValue<number>() * 100)}%`,
+        cell: (info) => {
+          const value = Math.round(info.getValue<number>() * 100);
+          return (
+            <div className="flex items-center justify-end gap-2">
+              <div className="w-20 h-2 bg-gray-200 rounded">
+                <div
+                  className={`h-2 rounded ${
+                    value >= 75
+                      ? "bg-green-500"
+                      : value >= 50
+                      ? "bg-yellow-500"
+                      : "bg-gray-400"
+                  }`}
+                  style={{ width: `${value}%` }}
+                />
+              </div>
+              <span className="font-semibold text-gray-900 w-10 text-right">
+                {value}%
+              </span>
+            </div>
+          );
+        },
       },
       {
         accessorKey: "title",
         header: "Title",
         cell: ({ row }) => (
-          <a
-            href={`/jobs/${row.original.id}`}
-            className="text-blue-600 underline"
-          >
+          <span className="font-medium text-gray-900">
             {row.original.title}
-          </a>
+          </span>
         ),
       },
       {
@@ -92,10 +124,9 @@ export function JobsPageClient() {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <JobStatusSelect
-            jobId={row.original.id}
-            initialStatus={row.original.status}
-          />
+          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}>
+            {row.original.status}
+          </span>
         ),
       },
       {
@@ -123,13 +154,7 @@ export function JobsPageClient() {
           );
         },
       },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => (
-          <JobMatchButton jobId={row.original.id} resumeProfileId="default" />
-        ),
-      },
+      
     ],
     []
   );
@@ -233,16 +258,47 @@ export function JobsPageClient() {
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-2">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  ))}
-                </tr>
+                <React.Fragment key={row.id}>
+                  <tr
+                    key={row.id}
+                    className="cursor-pointer border-t hover:bg-gray-50"
+                    onClick={() =>
+                      setExpandedId(
+                        expandedId === row.original.id ? null : row.original.id
+                      )
+                    }
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-2">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  {expandedId === row.original.id && (
+                    <tr>
+                      <td colSpan={6} className="bg-gray-50 px-4 py-3 text-sm">
+                        <div><strong>Company:</strong> {row.original.company}</div>
+                        <div><strong>Status:</strong> <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}>
+            {row.original.status}
+          </span></div>
+                        <div><strong>Score:</strong> {row.original.score}</div>
+                        {row.original.sourceUrl && (
+                          <a
+                            href={row.original.sourceUrl}
+                            target="_blank"
+                            className="text-blue-600 underline"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            View Job Posting
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
