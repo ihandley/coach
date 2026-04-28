@@ -11,39 +11,20 @@ describe("createDbResumeProfileRepository", () => {
         }>();
 
         const db = {
-  from: () => ({
-    insert: () => ({
-      select: () => ({
-        single: () => ({
-          data: { id: "test-id", name: "Test", created_at: new Date().toISOString() },
-          error: null,
-        }),
-      }),
-    }),
-    select: () => ({
-      order: () => ({
-        data: [],
-        error: null,
-      }),
-      eq: () => ({
-        single: () => ({
-          data: null,
-          error: { code: "PGRST116" },
-        }),
-      }),
-    }),
-    update: () => ({
-      eq: () => ({
-        select: () => ({
-          single: () => ({
-            data: { id: "test-id", name: "Test", created_at: new Date().toISOString() },
-            error: null,
-          }),
-        }),
-      }),
-    }),
-  }),
-} as any;
+            insertInto(table: string) {
+                expect(table).toBe("resume_profiles");
+
+                return {
+                    values(input: {
+                        id?: string;
+                        name: string;
+                        current_version_id: string;
+                    }) {
+                        const row = {
+                            id: input.id ?? crypto.randomUUID(),
+                            name: input.name,
+                            current_version_id: input.current_version_id,
+                        };
 
                         rows.set(row.id, row);
 

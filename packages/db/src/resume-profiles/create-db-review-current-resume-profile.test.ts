@@ -69,27 +69,20 @@ describe("createDbReviewCurrentResumeProfile", () => {
         });
 
         const db = {
-  from: () => ({
-    insert: () => ({
-      select: () => ({
-        single: () => ({ data: {}, error: null }),
-      }),
-    }),
-    select: () => ({
-      order: () => ({ data: [], error: null }),
-      eq: () => ({
-        single: () => ({ data: null, error: { code: "PGRST116" } }),
-      }),
-    }),
-    update: () => ({
-      eq: () => ({
-        select: () => ({
-          single: () => ({ data: {}, error: null }),
-        }),
-      }),
-    }),
-  }),
-} as any;
+            selectFrom(table: string) {
+                if (table === "resume_profiles") {
+                    return {
+                        selectAll() {
+                            return {
+                                where(column: string, operator: string, value: string) {
+                                    if (column !== "id" || operator !== "=") {
+                                        throw new Error("Unexpected profile query");
+                                    }
+
+                                    return {
+                                        executeTakeFirst: async () =>
+                                            resumeProfiles.get(value) ?? undefined,
+                                    };
                                 },
                             };
                         },

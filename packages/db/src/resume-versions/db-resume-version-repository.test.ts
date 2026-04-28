@@ -33,59 +33,23 @@ describe("createDbResumeVersionRepository", () => {
         >();
 
         const db = {
-  from: () => ({
-    insert: () => ({
-      select: () => ({
-        single: () => ({
-          data: {
-            id: "test-id",
-            profile_id: "profile-id",
-            version_number: 1,
-            kind: "baseline",
-            source_kind: "manual",
-            source_label: "Test",
-            normalized_resume: {},
-            source_resume_version_id: null,
-            source_job_id: null,
-          },
-          error: null,
-        }),
-      }),
-    }),
-    select: () => ({
-      order: () => ({
-        data: [],
-        error: null,
-      }),
-      eq: () => ({
-        single: () => ({
-          data: null,
-          error: { code: "PGRST116" },
-        }),
-      }),
-    }),
-    update: () => ({
-      eq: () => ({
-        select: () => ({
-          single: () => ({
-            data: {
-              id: "test-id",
-              profile_id: "profile-id",
-              version_number: 1,
-              kind: "baseline",
-              source_kind: "manual",
-              source_label: "Test",
-              normalized_resume: {},
-              source_resume_version_id: null,
-              source_job_id: null,
-            },
-            error: null,
-          }),
-        }),
-      }),
-    }),
-  }),
-} as any;
+            insertInto(table: string) {
+                expect(table).toBe("resume_versions");
+
+                return {
+                    values(input: {
+                        id?: string;
+                        profile_id: string;
+                        version_number: number;
+                        kind: "baseline" | "tailored";
+                        source_kind: string;
+                        source_label: string;
+                        normalized_resume: {
+                            basics: {
+                                fullName: string;
+                                headline: string;
+                                summary: string;
+                            };
                             skills: string[];
                             experience: Array<{
                                 company: string;
