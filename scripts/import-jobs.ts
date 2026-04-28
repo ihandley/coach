@@ -25,6 +25,18 @@ function uuidFromLegacyId(legacyId: string) {
   ].join("-");
 }
 
+function normalizedCreatedAt(job: any): string {
+  const value =
+    job.applied_date ||
+    job.saved_date ||
+    job.createdAt ||
+    job.created_at;
+
+  return value && String(value).trim().length > 0
+    ? new Date(value).toISOString()
+    : new Date().toISOString();
+}
+
 function mapStatus(status: unknown) {
   if (typeof status !== "string" || status.trim() === "") return "saved";
 
@@ -69,8 +81,9 @@ async function main() {
       company: job.company ?? "Unknown",
       title: job.title ?? "Unknown",
       source_url: job.url ?? "",
-      source_text: job.description ?? job.notes ?? "",
+      source_text: job.description ?? job.rawDescription ?? job.notes ?? "",
       status: mapStatus(job.status),
+      created_at: normalizedCreatedAt(job),
     });
 
     if (error) {
