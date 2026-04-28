@@ -4,9 +4,9 @@ export type JobListItem = {
   title: string;
   status: string;
   sourceUrl?: string | null;
-  createdAt: string;
+  createdAt?: string;
   updatedAt: string;
-  score: number;
+  score?: number;
 };
 
 export function formatJobDate(date: string) {
