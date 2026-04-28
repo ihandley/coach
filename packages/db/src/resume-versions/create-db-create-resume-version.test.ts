@@ -69,21 +69,27 @@ describe("createDbCreateResumeVersion", () => {
         });
 
         const db = {
-            selectFrom(table: string) {
-                if (table === "resume_profiles") {
-                    return {
-                        selectAll() {
-                            return {
-                                where(column: string, operator: string, value: string) {
-                                    return {
-                                        executeTakeFirst: async () => {
-                                            if (column !== "id" || operator !== "=") {
-                                                throw new Error("Unexpected profile lookup");
-                                            }
-
-                                            return resumeProfiles.get(value) ?? undefined;
-                                        },
-                                    };
+  from: () => ({
+    insert: () => ({
+      select: () => ({
+        single: () => ({ data: {}, error: null }),
+      }),
+    }),
+    select: () => ({
+      order: () => ({ data: [], error: null }),
+      eq: () => ({
+        single: () => ({ data: null, error: { code: "PGRST116" } }),
+      }),
+    }),
+    update: () => ({
+      eq: () => ({
+        select: () => ({
+          single: () => ({ data: {}, error: null }),
+        }),
+      }),
+    }),
+  }),
+} as any;
                                 },
                             };
                         },
