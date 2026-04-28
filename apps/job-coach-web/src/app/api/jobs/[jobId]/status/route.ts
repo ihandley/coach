@@ -1,8 +1,8 @@
-import { getSupabaseClient } from "@/server/supabase/client";
+import { createServerClient } from "@coach/db";
 import { DbJobRepository } from "@coach/db";
 
 function createJobRepository() {
-  return new DbJobRepository(getSupabaseClient());
+  return new DbJobRepository(createServerClient());
 }
 
 export async function POST(
