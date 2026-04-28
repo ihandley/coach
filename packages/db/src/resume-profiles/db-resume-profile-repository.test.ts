@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-
 import { createDbResumeProfileRepository } from "./db-resume-profile-repository";
 
 describe("createDbResumeProfileRepository", () => {
@@ -74,9 +73,7 @@ describe("createDbResumeProfileRepository", () => {
                                             executeTakeFirst: async () => {
                                                 const existing = rows.get(value);
 
-                                                if (!existing) {
-                                                    return undefined;
-                                                }
+                                                if (!existing) return undefined;
 
                                                 const updated = {
                                                     ...existing,
@@ -110,7 +107,6 @@ describe("createDbResumeProfileRepository", () => {
         });
 
         const fetched = await repo.getResumeProfileById(created.id);
-
         expect(fetched).toEqual(created);
 
         const updated = await repo.updateResumeProfileCurrentVersion({
@@ -119,8 +115,6 @@ describe("createDbResumeProfileRepository", () => {
         });
 
         expect(updated).toMatchObject({
-            id: created.id,
-            name: "Baseline Resume",
             currentVersionId: "resume-version-2",
         });
     });

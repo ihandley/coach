@@ -1,89 +1,76 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ResumeProfile } from "@coach/core";
 
 type DbResumeProfileRow = {
     id: string;
     name: string;
-    created_at: string;
+    current_version_id?: string | null;
+    created_at?: string;
 };
 
 function mapResumeProfile(row: DbResumeProfileRow): ResumeProfile {
     return {
         id: row.id,
         name: row.name,
-        currentVersionId: "",
+        currentVersionId: row.current_version_id ?? "",
     };
 }
 
-export function createDbResumeProfileRepository({ db }: { db: SupabaseClient }) {
+export function createDbResumeProfileRepository({ db }: { db: any }) {
     return {
         async listResumeProfiles() {
-            const { data, error } = await db
-                .from("resume_profiles")
-                .select("id, name, created_at")
-                .order("created_at", { ascending: false });
+            const rows = await db
+                .selectFrom("resume_profiles")
+                .selectAll()
+                .orderBy("created_at", "desc")
+                .execute();
 
-            if (error) {
-                throw error;
-            }
-
-            return data.map(mapResumeProfile);
+            return rows.map(mapResumeProfile);
         },
 
         async createResumeProfile(input: {
             name: string;
             currentVersionId: string;
         }) {
-            const { data, error } = await db
-                .from("resume_profiles")
-                .insert({
+            const row = await db
+                .insertInto("resume_profiles")
+                .values({
                     name: input.name,
+                    current_version_id: input.currentVersionId,
                 })
-                .select("id, name, created_at")
-                .single();
+                .returningAll()
+                .executeTakeFirstOrThrow();
 
-            if (error) {
-                throw error;
-            }
-
-            return mapResumeProfile(data);
+            return mapResumeProfile(row);
         },
 
         async getResumeProfileById(resumeProfileId: string) {
-            const { data, error } = await db
-                .from("resume_profiles")
-                .select("id, name, current_version_id, created_at")
-                .eq("id", resumeProfileId)
-                .single();
+            const row = await db
+                .selectFrom("resume_profiles")
+                .selectAll()
+                .where("id", "=", resumeProfileId)
+                .executeTakeFirst();
 
-            if (error) {
-                if (error.code === "PGRST116") {
-                    return null;
-                }
-                throw error;
-            }
-
-            return mapResumeProfile(data);
+            return row ? mapResumeProfile(row) : null;
         },
 
         async updateResumeProfileCurrentVersion(input: {
             resumeProfileId: string;
             currentVersionId: string;
         }) {
-            const { data, error } = await db
-                .from("resume_profiles")
-                .update({
+            const row = await db
+                .updateTable("resume_profiles")
+                .set({
                     current_version_id: input.currentVersionId,
                 })
-                .eq("id", input.resumeProfileId)
-                .select("id, name, current_version_id, created_at")
-                .single();
+                .where("id", "=", input.resumeProfileId)
+                .returningAll()
+                .executeTakeFirst();
 
-            if (error) {
-                throw error;
+            if (!row) {
+                return null;
             }
 
-            return mapResumeProfile(data);
+            return mapResumeProfile(row);
         },
     };
 }
