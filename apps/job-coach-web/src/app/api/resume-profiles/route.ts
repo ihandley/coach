@@ -32,5 +32,20 @@ export async function POST(request: Request) {
         normalizedResume: body.normalizedResume,
     });
 
-    return Response.json(result);
+    return Response.json(result, { status: 201 });
+}
+
+
+
+export async function GET() {
+    const { data, error } = await db
+        .from("resume_profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        return Response.json({ error: error.message }, { status: 500 });
+    }
+
+    return Response.json(data);
 }

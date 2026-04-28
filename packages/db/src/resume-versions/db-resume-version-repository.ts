@@ -1,4 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NormalizedResume, ResumeSource, ResumeVersion } from "@coach/core";
 
 type DbResumeVersionRow = {
@@ -20,21 +19,21 @@ function mapResumeVersion(row: DbResumeVersionRow): ResumeVersion {
         versionNumber: row.version_number,
         kind: row.kind,
         source: {
-            kind: row.source_kind,
+            kind: row.source_kind as ResumeSource["kind"],
             label: row.source_label,
         },
         normalizedResume: row.normalized_resume,
         lineage:
             row.source_resume_version_id || row.source_job_id
                 ? {
-                    sourceResumeVersionId: row.source_resume_version_id ?? undefined,
-                    sourceJobId: row.source_job_id ?? undefined,
-                }
+                      sourceResumeVersionId: row.source_resume_version_id ?? undefined,
+                      sourceJobId: row.source_job_id ?? undefined,
+                  }
                 : undefined,
     };
 }
 
-export function createDbResumeVersionRepository({ db }: { db: SupabaseClient }) {
+export function createDbResumeVersionRepository({ db }: { db: any }) {
     return {
         async createResumeVersion(input: {
             id?: string;
@@ -48,9 +47,9 @@ export function createDbResumeVersionRepository({ db }: { db: SupabaseClient }) 
                 sourceJobId?: string;
             };
         }) {
-            const { data, error } = await db
-                .from("resume_versions")
-                .insert({
+            const row = await db
+                .insertInto("resume_versions")
+                .values({
                     id: input.id,
                     profile_id: input.profileId,
                     version_number: input.versionNumber,
@@ -61,45 +60,31 @@ export function createDbResumeVersionRepository({ db }: { db: SupabaseClient }) 
                     source_resume_version_id: input.lineage?.sourceResumeVersionId ?? null,
                     source_job_id: input.lineage?.sourceJobId ?? null,
                 })
-                .select()
-                .single();
+                .returningAll()
+                .executeTakeFirstOrThrow();
 
-            if (error) {
-                throw error;
-            }
-
-            return mapResumeVersion(data);
+            return mapResumeVersion(row);
         },
 
         async getResumeVersionById(resumeVersionId: string) {
-            const { data, error } = await db
-                .from("resume_versions")
-                .select("*")
-                .eq("id", resumeVersionId)
-                .single();
+            const row = await db
+                .selectFrom("resume_versions")
+                .selectAll()
+                .where("id", "=", resumeVersionId)
+                .executeTakeFirst();
 
-            if (error) {
-                if (error.code === "PGRST116") {
-                    return null;
-                }
-                throw error;
-            }
-
-            return mapResumeVersion(data);
+            return row ? mapResumeVersion(row) : null;
         },
 
         async listResumeVersionsByProfileId(resumeProfileId: string) {
-            const { data, error } = await db
-                .from("resume_versions")
-                .select("*")
-                .eq("profile_id", resumeProfileId)
-                .order("version_number", { ascending: true });
+            const rows = await db
+                .selectFrom("resume_versions")
+                .selectAll()
+                .where("profile_id", "=", resumeProfileId)
+                .orderBy("version_number", "asc")
+                .execute();
 
-            if (error) {
-                throw error;
-            }
-
-            return data.map(mapResumeVersion);
+            return rows.map(mapResumeVersion);
         },
     };
 }

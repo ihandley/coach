@@ -144,6 +144,14 @@ export function JobsPageClient() {
     columns,
     state: { sorting },
     onSortingChange: setSorting,
+    initialState: {
+      sorting: [
+        {
+          id: "createdAt",
+          desc: true,
+        },
+      ],
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });

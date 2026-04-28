@@ -1,3 +1,6 @@
+process.env.SUPABASE_URL = "http://127.0.0.1:54321";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listJobs = vi.fn();

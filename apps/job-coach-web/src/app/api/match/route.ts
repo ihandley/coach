@@ -102,5 +102,19 @@ export async function POST(request: Request) {
 
     const result = calculateFit(job, { rawText: resumeText });
 
+    // Persist match result
+    const { error: upsertError } = await db
+        .from("job_matches")
+        .upsert({
+            job_id: body.jobId,
+            resume_profile_id: profile?.id ?? null,
+            score: result.score,
+            created_at: new Date().toISOString(),
+        });
+
+    if (upsertError) {
+        throw upsertError;
+    }
+
     return Response.json(result);
 }
