@@ -102,3 +102,13 @@ Stop and reassess if:
 - Same error twice → stop
 - Tests pass but UI broken → stop
 - Fix requires touching unrelated files → stop
+
+## Non-Guessing Rule (Critical)
+
+- Do NOT assume file contents, variable names, or structure.
+- Do NOT write patch scripts based on patterns unless the exact code is confirmed.
+- ALWAYS inspect the current file with grep/sed before modifying it.
+- Prefer explicit, surgical edits over regex or bulk replacement.
+- If the exact target is unclear, STOP and ask for the relevant snippet.
+
+If this rule is violated, revert and re-approach using direct inspection.

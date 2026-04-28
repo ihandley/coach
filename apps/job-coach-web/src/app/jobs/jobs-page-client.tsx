@@ -90,7 +90,13 @@ export function JobsPageClient() {
             <div className="flex items-center justify-end gap-2">
               <div className="w-20 h-2 bg-gray-200 rounded">
                 <div
-                  className="h-2 bg-green-500 rounded"
+                  className={`h-2 rounded ${
+                    value >= 75
+                      ? "bg-green-500"
+                      : value >= 50
+                      ? "bg-yellow-500"
+                      : "bg-gray-400"
+                  }`}
                   style={{ width: `${value}%` }}
                 />
               </div>
