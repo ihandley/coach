@@ -25,3 +25,11 @@ export function isRecentlyCreated(date: string, now = new Date()) {
 
   return ageMs >= 0 && ageMs < 24 * 60 * 60 * 1000;
 }
+
+export const formatJobUpdatedDate = formatJobDate;
+
+export function sortJobsByUpdatedDate(jobs: JobListItem[]) {
+  return [...jobs].sort((first, second) =>
+    second.updatedAt.localeCompare(first.updatedAt),
+  );
+}
