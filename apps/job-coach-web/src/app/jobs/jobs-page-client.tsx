@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { JobStatusSelect } from "./[jobId]/job-status-select";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -24,6 +26,7 @@ type RankedJob = {
 
 export function JobsPageClient() {
   const [jobs, setJobs] = useState<RankedJob[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -223,16 +226,45 @@ export function JobsPageClient() {
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="border-t">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-2">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  ))}
-                </tr>
+                <React.Fragment key={row.id}>
+                  <tr
+                    key={row.id}
+                    className="cursor-pointer border-t hover:bg-gray-50"
+                    onClick={() =>
+                      setExpandedId(
+                        expandedId === row.original.id ? null : row.original.id
+                      )
+                    }
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-2">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                  {expandedId === row.original.id && (
+                    <tr>
+                      <td colSpan={6} className="bg-gray-50 px-4 py-3 text-sm">
+                        <div><strong>Company:</strong> {row.original.company}</div>
+                        <div><strong>Status:</strong> {row.original.status}</div>
+                        <div><strong>Score:</strong> {row.original.score}</div>
+                        {row.original.sourceUrl && (
+                          <a
+                            href={row.original.sourceUrl}
+                            target="_blank"
+                            className="text-blue-600 underline"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            View Job Posting
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
