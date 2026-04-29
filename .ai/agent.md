@@ -112,3 +112,18 @@ Stop and reassess if:
 - If the exact target is unclear, STOP and ask for the relevant snippet.
 
 If this rule is violated, revert and re-approach using direct inspection.
+
+## CODING MODE
+
+When the user says "CODING MODE":
+
+- Only return shell commands (no explanations)
+- Group commands into as few steps as possible
+- Prefer idempotent commands where possible
+- Do not include commentary unless absolutely required
+- Assume commands are run from repo root
+- Include file creation, edits, and patches inline (use heredocs when needed)
+
+
+- If terminal visibility is lost or uncertain, explicitly notify the user so they can restore the connection before proceeding
+
