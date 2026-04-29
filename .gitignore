@@ -146,3 +146,4 @@ vite.config.ts.timestamp-*
 # AI issue sync artifacts (generated)
 .ai/issues/
 apps/job-coach-web/next-env.d.ts
+backups/
