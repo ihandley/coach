@@ -20,14 +20,32 @@ export async function POST(request: Request) {
     const db = createServerClient();
 
     if (isNonEmptyString(body?.sourceUrl)) {
-        const importer = createDbJobImporter({
-            fetchPage: fetchJobPageAsDependency,
-            extractJob: extractJobStub,
-        });
+        try {
+            const importer = createDbJobImporter({
+                fetchPage: fetchJobPageAsDependency,
+                extractJob: extractJobStub,
+            });
 
-        const job = await importer.importJobFromUrl(body.sourceUrl);
+            const job = await importer.importJobFromUrl(body.sourceUrl);
 
-        return Response.json(job, { status: 201 });
+            return Response.json(job, { status: 201 });
+        } catch (error: any) {
+            if (error?.name === "FetchJobPageError") {
+                return Response.json(
+                    { error: "FAILED_TO_FETCH_JOB_PAGE" },
+                    { status: 400 },
+                );
+            }
+
+            if (error?.name === "InvalidExtractedJobDataError") {
+                return Response.json(
+                    { error: "INVALID_EXTRACTED_JOB_DATA" },
+                    { status: 422 },
+                );
+            }
+
+            throw error;
+        }
     }
 
     if (isNonEmptyString(body?.sourceText)) {
