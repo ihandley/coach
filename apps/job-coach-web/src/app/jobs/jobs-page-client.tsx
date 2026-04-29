@@ -261,6 +261,7 @@ export function JobsPageClient() {
                 <React.Fragment key={row.id}>
                   <tr
                     key={row.id}
+                    data-testid="job-row"
                     className="cursor-pointer border-t hover:bg-gray-50"
                     onClick={() =>
                       setExpandedId(
@@ -278,7 +279,7 @@ export function JobsPageClient() {
                     ))}
                   </tr>
                   {expandedId === row.original.id && (
-                    <tr>
+                    <tr data-testid="job-details">
                       <td colSpan={6} className="bg-gray-50 px-4 py-3 text-sm">
                         <div><strong>Company:</strong> {row.original.company}</div>
                         <div><strong>Status:</strong> <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}>

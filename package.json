@@ -10,9 +10,11 @@
     "build:job-coach:prd": "echo '🔴 Building Job Coach PRD' && APP_ENV=production pnpm --filter job-coach-web build",
     "db:reset:dev": "APP_ENV=development pnpm tsx scripts/require-dev-env.ts && supabase db reset",
     "db:reset": "APP_ENV=development pnpm tsx scripts/require-dev-env.ts && supabase db reset",
-    "db:export:prd": "APP_ENV=production pnpm tsx scripts/export-data.ts"
+    "db:export:prd": "APP_ENV=production pnpm tsx scripts/export-data.ts",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
     "turbo": "^2.9.6",
