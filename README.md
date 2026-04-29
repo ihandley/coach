@@ -189,3 +189,14 @@ It is useful for:
 - identifying terminology that may still appear in scripts or docs
 
 It is not the product runtime and should not be treated as the source of truth for current application behavior.
+## Browser E2E tests
+
+This repo uses Playwright for browser-driven end-to-end tests.
+
+Run locally:
+
+pnpm test:e2e
+
+The Playwright config starts the Job Coach web app on http://localhost:3000 automatically. If the browser binaries are missing, run:
+
+pnpm exec playwright install

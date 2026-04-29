@@ -147,3 +147,7 @@ vite.config.ts.timestamp-*
 .ai/issues/
 apps/job-coach-web/next-env.d.ts
 backups/
+.turbo/
+test-results/
+playwright-report/
+node_modules/
