@@ -127,3 +127,9 @@ When the user says "CODING MODE":
 
 - If terminal visibility is lost or uncertain, explicitly notify the user so they can restore the connection before proceeding
 
+
+- When a PR is ready to merge, do not ask the user to review it with `gh pr view` or open it in the browser
+- Merge directly with the appropriate `gh pr merge` command
+- Prefer squash merge and branch deletion unless the user explicitly requests another merge strategy
+- Add PR comments or update the PR summary before merging only when needed
+
