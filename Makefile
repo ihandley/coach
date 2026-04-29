@@ -1,4 +1,4 @@
-.PHONY: help install test typecheck dev build start session-start
+.PHONY: help install test typecheck dev build start session-handoff
 
 help:
 	@echo "Available commands:"
@@ -8,7 +8,7 @@ help:
 	@echo "  make dev                Start the web app dev server"
 	@echo "  make build              Build the web app"
 	@echo "  make start              Start the built web app"
-	@echo "  make session-start N=44 Start a new issue session"
+	@echo "  make session-handoff N=44 Start or hand off an issue session"
 
 install:
 	pnpm install
@@ -32,6 +32,6 @@ build:
 start:
 	pnpm --filter job-coach-web start
 
-session-start:
-	@test -n "$(N)" || (echo "Usage: make session-start N=<issue-number>" && exit 1)
-	./scripts/session-start.sh $(N)
+session-handoff:
+	@test -n "$(N)" || (echo "Usage: make session-handoff N=<issue-number> OR make session-handoff" && exit 1)
+	./scripts/session-handoff.sh $(N)

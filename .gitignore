@@ -141,10 +141,8 @@ vite.config.ts.timestamp-*
 .DS_Store
 .ai/.DS_Store
 # AI issue sync artifacts (generated)
-.ai/issues/
 
 # AI issue sync artifacts (generated)
-.ai/issues/
 apps/job-coach-web/next-env.d.ts
 backups/
 .turbo/

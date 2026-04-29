@@ -59,14 +59,13 @@ All outputs must be:
 
 Every session must begin with:
 
-./scripts/session-start.sh <issue-number>
+./scripts/session-handoff.sh <issue-number>
 
 This ensures:
 
 * branch is created or checked out
 * main is up to date
 * PR is created or linked
-* issue context is loaded into `.ai/issues`
 
 ***
 

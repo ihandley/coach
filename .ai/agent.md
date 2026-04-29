@@ -117,19 +117,27 @@ If this rule is violated, revert and re-approach using direct inspection.
 
 When the user says "CODING MODE":
 
-- Only return shell commands (no explanations)
-- Group commands into as few steps as possible
-- Prefer idempotent commands where possible
-- Do not include commentary unless absolutely required
-- Assume commands are run from repo root
-- Include file creation, edits, and patches inline (use heredocs when needed)
+- Output MUST be shell commands only
+- ZERO prose, explanations, or commentary
+- No headers, no formatting, no extra text
+- Commands must be directly copy-pasteable
+- Use heredocs for file edits
+- Assume execution from repo root
 
+### Strict Enforcement
 
-- If terminal visibility is lost or uncertain, explicitly notify the user so they can restore the connection before proceeding
+- If ANY explanation is included, the response is invalid
+- If uncertain, STOP instead of guessing
+- If terminal visibility is unclear, output ONLY:
+  echo "TERMINAL NOT VISIBLE"
 
+## Branch Naming
 
-- When a PR is ready to merge, do not ask the user to review it with `gh pr view` or open it in the browser
-- Merge directly with the appropriate `gh pr merge` command
-- Prefer squash merge and branch deletion unless the user explicitly requests another merge strategy
-- Add PR comments or update the PR summary before merging only when needed
+Use short, idiomatic branch names:
 
+- Format: `<issue-number>-<short-description>`
+- Example: `101-e2e-seed-data`
+- Keep the full branch name under 60 characters
+- Prefer meaningful words over truncation
+- Do not repeat `issue` or the issue number twice
+- Avoid generic names like `fix`, `updates`, or `changes`
