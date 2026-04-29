@@ -1,5 +1,19 @@
 import { execSync } from "node:child_process";
 
+type AppEnv = "development" | "production";
+
+function getAppEnv(): AppEnv {
+  const appEnv = process.env.APP_ENV ?? "development";
+
+  if (appEnv !== "development" && appEnv !== "production") {
+    throw new Error(
+      `Invalid APP_ENV "${appEnv}". Expected "development" or "production".`,
+    );
+  }
+
+  return appEnv;
+}
+
 function getSecret(account: string): string {
   return execSync(
     `security find-generic-password -a "$USER" -s "${account}" -w`,
@@ -16,8 +30,11 @@ export function loadEnvFromKeychain(): void {
     return;
   }
 
-  process.env.SUPABASE_URL ??= getSecret("coach_SUPABASE_URL");
+  const appEnv = getAppEnv();
+  const keychainEnv = appEnv === "production" ? "prd" : "dev";
+
+  process.env.SUPABASE_URL ??= getSecret(`coach_${keychainEnv}_SUPABASE_URL`);
   process.env.SUPABASE_SERVICE_ROLE_KEY ??= getSecret(
-    "coach_SUPABASE_SERVICE_ROLE_KEY",
+    `coach_${keychainEnv}_SUPABASE_SERVICE_ROLE_KEY`,
   );
 }
