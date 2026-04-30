@@ -37,6 +37,10 @@ type RankedJob = {
 };
 
 export function JobsPageClient() {
+  const [visibleStatuses, setVisibleStatuses] = React.useState(
+    new Set(["saved", "applied", "interviewing", "offer"])
+  );
+
   const [jobs, setJobs] = useState<RankedJob[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +128,10 @@ export function JobsPageClient() {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}>
+          <span
+            data-testid="job-status"
+            className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}
+          >
             {row.original.status}
           </span>
         ),
@@ -159,10 +166,9 @@ export function JobsPageClient() {
     []
   );
 
-  const filteredJobs =
-    statusFilter === "all"
-      ? jobs
-      : jobs.filter((j) => j.status === statusFilter);
+  const filteredJobs = React.useMemo(() => {
+    return jobs.filter((j) => visibleStatuses.has(j.status?.toLowerCase()));
+  }, [jobs, visibleStatuses]);
 
   const table = useReactTable({
     data: filteredJobs,
@@ -186,19 +192,33 @@ export function JobsPageClient() {
       <div className="flex items-center justify-between">
   <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
 
-  <select
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(e.target.value)}
-    className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-  >
-    <option value="all">All</option>
-    <option value="saved">Saved</option>
-    <option value="applied">Applied</option>
-    <option value="interviewing">Interviewing</option>
-    <option value="rejected">Rejected</option>
-    <option value="offer">Offer</option>
-    <option value="archived">Archived</option>
-  </select>
+  <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-2 text-sm text-slate-600">Show:</span>
+          {["saved", "applied", "interviewing", "offer", "rejected", "archived"].map((status) => {
+            const active = visibleStatuses.has(status);
+
+            return (
+              <button
+                key={status}
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  const next = new Set(visibleStatuses);
+                  if (next.has(status)) next.delete(status);
+                  else next.add(status);
+                  setVisibleStatuses(next);
+                }}
+                className={`rounded-full border px-3 py-1 text-sm capitalize transition ${
+                  active
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {status}
+              </button>
+            );
+          })}
+        </div>
 </div>
 
       {error ? (
@@ -282,7 +302,10 @@ export function JobsPageClient() {
                     <tr data-testid="job-details">
                       <td colSpan={6} className="bg-gray-50 px-4 py-3 text-sm">
                         <div><strong>Company:</strong> {row.original.company}</div>
-                        <div><strong>Status:</strong> <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}>
+                        <div><strong>Status:</strong> <span
+            data-testid="job-status"
+            className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}
+          >
             {row.original.status}
           </span></div>
                         <div><strong>Score:</strong> {row.original.score}</div>
