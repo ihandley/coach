@@ -28,3 +28,22 @@ export async function GET(
     status: job.status,
   });
 }
+
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: { jobId: string } }
+) {
+  const body = await req.json();
+
+  const job = await jobRepository.updateJobStatus({
+    jobId: params.jobId,
+    status: body.status,
+    event: {
+      type: "status_changed",
+      note: `Status set to ${body.status}`,
+    },
+  });
+
+  return Response.json(job);
+}
