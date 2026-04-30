@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDbExportedArtifactRepository } from "./db-exported-artifact-repository";
+import { createDbExportedArtifactRepository } from "./db-exported-artifact-repository.ts";
 
 describe("createDbExportedArtifactRepository", () => {
     it("creates an exported artifact record", async () => {

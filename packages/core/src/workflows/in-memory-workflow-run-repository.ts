@@ -6,7 +6,7 @@ import type {
     WorkflowRun,
     WorkflowRunRepository,
     WorkflowStep,
-} from "./types";
+} from "./types.ts";
 
 export function createInMemoryWorkflowRunRepository(): WorkflowRunRepository {
     const workflowRuns = new Map<string, WorkflowRun>();

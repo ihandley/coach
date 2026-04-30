@@ -3,7 +3,7 @@ import type {
     ResumeProfile,
     ResumeSource,
     ResumeVersion,
-} from "./types";
+} from "./types.ts";
 
 type CreateResumeProfileInput = {
     name: string;

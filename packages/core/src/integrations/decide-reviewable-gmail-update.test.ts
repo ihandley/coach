@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decideReviewableGmailUpdate } from "./decide-reviewable-gmail-update";
+import { decideReviewableGmailUpdate } from "./decide-reviewable-gmail-update.ts";
 
 describe("decideReviewableGmailUpdate", () => {
     it("marks a reviewable update as accepted", () => {

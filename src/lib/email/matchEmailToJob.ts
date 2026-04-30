@@ -1,3 +1,4 @@
+import { isActionableMatch } from "@/lib/email/isActionableMatch";
 type Job = {
   id: string;
   company: string;

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createInMemoryResumeProfileRepository } from "./in-memory-resume-profile-repository";
-import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository";
-import { createCreateTailoredResume } from "./create-tailored-resume";
-import type { NormalizedResume, TailoringSuggestion } from "./types";
+import { createInMemoryResumeProfileRepository } from "./in-memory-resume-profile-repository.ts";
+import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository.ts";
+import { createCreateTailoredResume } from "./create-tailored-resume.ts";
+import type { NormalizedResume, TailoringSuggestion } from "./types.ts";
 
 function makeResume(): NormalizedResume {
     return {

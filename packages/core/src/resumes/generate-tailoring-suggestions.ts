@@ -2,7 +2,7 @@ import type {
     ResumeProfile,
     ResumeVersion,
     TailoringSuggestion,
-} from "./types";
+} from "./types.ts";
 
 type ResumeProfileRepository = {
     getResumeProfileById(resumeProfileId: string): Promise<ResumeProfile | null>;

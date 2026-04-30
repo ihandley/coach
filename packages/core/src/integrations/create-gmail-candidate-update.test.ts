@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createGmailCandidateUpdate } from "./create-gmail-candidate-update";
+import { createGmailCandidateUpdate } from "./create-gmail-candidate-update.ts";
 
 describe("createGmailCandidateUpdate", () => {
     it("creates a candidate update when a message matches a job and contains a supported signal", () => {

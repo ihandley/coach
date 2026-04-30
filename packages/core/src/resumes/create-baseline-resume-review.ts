@@ -1,7 +1,7 @@
 import type {
     BaselineResumeReview,
     NormalizedResume,
-} from "./types";
+} from "./types.ts";
 
 export async function createBaselineResumeReview(
     resume: NormalizedResume,

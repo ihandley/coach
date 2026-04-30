@@ -50,7 +50,11 @@ export type JobImporterDependencies = {
 };
 
 export class JobImporter {
-  constructor(private readonly dependencies: JobImporterDependencies) { }
+  private readonly dependencies: JobImporterDependencies;
+
+  constructor(dependencies: JobImporterDependencies) {
+    this.dependencies = dependencies;
+  }
 
   async importJobFromUrl(url: string): Promise<SavedImportedJob> {
     if (!isValidHttpUrl(url)) {

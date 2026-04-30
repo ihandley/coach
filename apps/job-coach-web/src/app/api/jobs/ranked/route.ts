@@ -1,7 +1,4 @@
-import {
-  createServerClient,
-  DbJobRepository,
-} from "@coach/db";
+import { createServerClient, DbJobRepository } from "@coach/db";
 
 export async function GET() {
   let db;

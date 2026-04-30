@@ -36,7 +36,7 @@ type RankedJob = {
   score: number;
 };
 
-export function JobsPageClient() {
+export function JobsPageClient({ jobs: initialJobs }: { jobs: Job[] }) {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
     new Set(["saved", "applied", "interviewing", "offer"])
   );
@@ -62,7 +62,8 @@ export function JobsPageClient() {
       return;
     }
 
-    setJobs(await res.json());
+    const body = await res.json();
+    setJobs(Array.isArray(body) ? body : []);
     setError(null);
   }
 
@@ -94,13 +95,12 @@ export function JobsPageClient() {
             <div className="flex items-center justify-end gap-2">
               <div className="w-20 h-2 bg-gray-200 rounded">
                 <div
-                  className={`h-2 rounded ${
-                    value >= 75
+                  className={`h-2 rounded ${value >= 75
                       ? "bg-green-500"
                       : value >= 50
-                      ? "bg-yellow-500"
-                      : "bg-gray-400"
-                  }`}
+                        ? "bg-yellow-500"
+                        : "bg-gray-400"
+                    }`}
                   style={{ width: `${value}%` }}
                 />
               </div>
@@ -161,13 +161,13 @@ export function JobsPageClient() {
           );
         },
       },
-      
+
     ],
     []
   );
 
   const filteredJobs = React.useMemo(() => {
-    return jobs.filter((j) => visibleStatuses.has(j.status?.toLowerCase()));
+    return jobs.filter((j) => visibleStatuses.has(String(j.status ?? "").toLowerCase()));
   }, [jobs, visibleStatuses]);
 
   const table = useReactTable({
@@ -190,9 +190,9 @@ export function JobsPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-  <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
 
-  <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="mr-2 text-sm text-slate-600">Show:</span>
           {["saved", "applied", "interviewing", "offer", "rejected", "archived"].map((status) => {
             const active = visibleStatuses.has(status);
@@ -208,18 +208,17 @@ export function JobsPageClient() {
                   else next.add(status);
                   setVisibleStatuses(next);
                 }}
-                className={`rounded-full border px-3 py-1 text-sm capitalize transition ${
-                  active
+                className={`rounded-full border px-3 py-1 text-sm capitalize transition ${active
                     ? "border-slate-900 bg-slate-900 text-white"
                     : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                }`}
+                  }`}
               >
                 {status}
               </button>
             );
           })}
         </div>
-</div>
+      </div>
 
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -277,53 +276,40 @@ export function JobsPageClient() {
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <React.Fragment key={row.id}>
-                  <tr
-                    key={row.id}
-                    data-testid="job-row"
-                    className="cursor-pointer border-t hover:bg-gray-50"
-                    onClick={() =>
-                      setExpandedId(
-                        expandedId === row.original.id ? null : row.original.id
-                      )
-                    }
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-2">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                  {expandedId === row.original.id && (
-                    <tr data-testid="job-details">
-                      <td colSpan={6} className="bg-gray-50 px-4 py-3 text-sm">
-                        <div><strong>Company:</strong> {row.original.company}</div>
-                        <div><strong>Status:</strong> <span
-            data-testid="job-status"
-            className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}
-          >
-            {row.original.status}
-          </span></div>
-                        <div><strong>Score:</strong> {row.original.score}</div>
-                        {row.original.sourceUrl && (
-                          <a
-                            href={row.original.sourceUrl}
-                            target="_blank"
-                            className="text-blue-600 underline"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            View Job Posting
-                          </a>
-                        )}
+              {table.getRowModel().rows.map((row) => {
+                const isExpanded = expandedId === row.original.id;
+
+                return (
+                  <React.Fragment key={row.id}>
+                    <tr
+                      data-testid="job-row"
+                      onClick={() =>
+                        setExpandedId(isExpanded ? null : row.original.id)
+                      }
+                      className="cursor-pointer hover:bg-gray-50"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-4 py-2">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr
+                      data-testid="job-details"
+                      style={{ display: isExpanded ? "table-row" : "none" }}
+                    >
+                      <td colSpan={row.getVisibleCells().length} className="px-4 py-3 bg-gray-50">
+                        <div className="text-sm text-gray-700">
+                          <div><strong>Title:</strong> {row.original.title}</div>
+                          <div><strong>Company:</strong> {row.original.company}</div>
+                          <div><strong>Status:</strong> {row.original.status}</div>
+                        </div>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

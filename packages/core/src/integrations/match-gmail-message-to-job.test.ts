@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { matchGmailMessageToJob } from "./match-gmail-message-to-job";
+import { matchGmailMessageToJob } from "./match-gmail-message-to-job.ts";
 
 describe("matchGmailMessageToJob", () => {
     it("matches a message to a job by company name in subject", () => {

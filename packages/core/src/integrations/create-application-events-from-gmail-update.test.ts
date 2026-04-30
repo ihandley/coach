@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createApplicationEventsFromGmailUpdate } from "./create-application-events-from-gmail-update";
+import { createApplicationEventsFromGmailUpdate } from "./create-application-events-from-gmail-update.ts";
 
 describe("createApplicationEventsFromGmailUpdate", () => {
     it("creates status and note events for an interviewing update", () => {

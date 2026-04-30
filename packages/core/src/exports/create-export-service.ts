@@ -1,5 +1,5 @@
-import type { ExportFormat, ExportResult } from "./types";
-import type { ExportRenderers } from "./renderers";
+import type { ExportFormat, ExportResult } from "./types.ts";
+import type { ExportRenderers } from "./renderers.ts";
 
 export function createExportService({
     renderers,

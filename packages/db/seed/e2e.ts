@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { createServerClient } from '../src/supabase/create-server-client';
 
 async function seed() {
@@ -9,24 +10,30 @@ async function seed() {
   // Insert deterministic test data
   await supabase.from('jobs').insert([
     {
-      id: 'job-1',
+      id: uuidv4(),
       title: 'Staff Software Engineer',
       company: 'Torus',
-      description: 'Test job 1',
+      source_url: 'https://example.com/jobs/1',
+      source_text: 'Engineering leadership role at Torus',
+      status: 'saved',
       created_at: '2024-01-01',
     },
     {
-      id: 'job-2',
+      id: uuidv4(),
       title: 'Senior Backend Engineer',
       company: 'Bloomlogic',
-      description: 'Test job 2',
+      source_url: 'https://example.com/jobs/2',
+      source_text: 'Backend platform role at Bloomlogic',
+      status: 'rejected',
       created_at: '2024-01-02',
     },
     {
-      id: 'job-3',
+      id: uuidv4(),
       title: 'Full Stack Engineer',
       company: 'Remi',
-      description: 'Test job 3',
+      source_url: 'https://example.com/jobs/3',
+      source_text: 'Full stack hiring at Remi',
+      status: 'archived',
       created_at: '2024-01-03',
     },
   ]);

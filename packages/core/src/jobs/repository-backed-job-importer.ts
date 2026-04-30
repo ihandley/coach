@@ -1,10 +1,10 @@
-import type { JobRepository } from "./job-repository";
+import type { JobRepository } from "./job-repository.ts";
 import {
     JobImporter,
     type ExtractJob,
     type FetchPage,
     type SavedImportedJob,
-} from "./job-importer";
+} from "./job-importer.ts";
 
 export type RepositoryBackedJobImporterDependencies = {
     repository: JobRepository;
@@ -13,9 +13,11 @@ export type RepositoryBackedJobImporterDependencies = {
 };
 
 export class RepositoryBackedJobImporter {
-    constructor(
-        private readonly dependencies: RepositoryBackedJobImporterDependencies,
-    ) { }
+    private readonly dependencies: RepositoryBackedJobImporterDependencies;
+
+    constructor(dependencies: RepositoryBackedJobImporterDependencies) {
+        this.dependencies = dependencies;
+    }
 
     async importJobFromUrl(url: string) {
         const existing = await this.dependencies.repository.findJobBySourceUrl(url);

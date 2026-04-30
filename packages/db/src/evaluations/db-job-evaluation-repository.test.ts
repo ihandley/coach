@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DbJobEvaluationRepository } from "./db-job-evaluation-repository";
+import { DbJobEvaluationRepository } from "./db-job-evaluation-repository.ts";
 
 describe("DbJobEvaluationRepository", () => {
     it("creates and lists evaluations by job and resume profile", async () => {

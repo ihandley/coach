@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { createInMemoryResumeProfileRepository } from "./in-memory-resume-profile-repository";
-import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository";
-import { createReviewCurrentResumeProfile } from "./review-current-resume-profile";
+import { createInMemoryResumeProfileRepository } from "./in-memory-resume-profile-repository.ts";
+import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository.ts";
+import { createReviewCurrentResumeProfile } from "./review-current-resume-profile.ts";
 
 function makeResume() {
     return {

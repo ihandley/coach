@@ -1,8 +1,8 @@
-import { createBaselineResumeReview } from "./create-baseline-resume-review";
+import { createBaselineResumeReview } from "./create-baseline-resume-review.ts";
 import type {
     ResumeProfile,
     ResumeVersion,
-} from "./types";
+} from "./types.ts";
 
 type ResumeProfileRepository = {
     getResumeProfileById(resumeProfileId: string): Promise<ResumeProfile | null>;

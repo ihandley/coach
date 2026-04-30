@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createInMemoryWorkflowRunRepository } from "./in-memory-workflow-run-repository";
-import { createWorkflowQueue } from "./workflow-queue";
+import { createInMemoryWorkflowRunRepository } from "./in-memory-workflow-run-repository.ts";
+import { createWorkflowQueue } from "./workflow-queue.ts";
 
 describe("createWorkflowQueue", () => {
     it("processes queued jobs in order", async () => {

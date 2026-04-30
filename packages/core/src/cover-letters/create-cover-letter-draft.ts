@@ -1,4 +1,4 @@
-import type { CoverLetterDraft, CoverLetterDraftRepository } from "./types";
+import type { CoverLetterDraft, CoverLetterDraftRepository } from "./types.ts";
 
 export interface CreateCoverLetterDraftInput {
     resumeProfileId: string;

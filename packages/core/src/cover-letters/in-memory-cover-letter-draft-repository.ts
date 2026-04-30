@@ -2,7 +2,7 @@ import type {
     CoverLetterDraft,
     CoverLetterDraftRepository,
     CreateCoverLetterDraftRecordInput,
-} from "./types";
+} from "./types.ts";
 
 export class InMemoryCoverLetterDraftRepository
     implements CoverLetterDraftRepository {

@@ -8,10 +8,14 @@ import type {
   ListJobsInput,
   UpdateJobStatusInput,
 } from "@coach/core";
-import { mapJobRow } from "./map-job-row";
+import { mapJobRow } from "./map-job-row.ts";
 
 export class DbJobRepository implements JobRepository {
-  constructor(private readonly supabase: SupabaseClient) { }
+  private readonly supabase: SupabaseClient;
+
+  constructor(supabase: SupabaseClient) {
+    this.supabase = supabase;
+  }
 
   async createJob(input: CreateJobInput): Promise<JobRecord> {
     const { data, error } = await this.supabase

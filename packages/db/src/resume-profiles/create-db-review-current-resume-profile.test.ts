@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbReviewCurrentResumeProfile } from "./create-db-review-current-resume-profile";
+import { createDbReviewCurrentResumeProfile } from "./create-db-review-current-resume-profile.ts";
 
 describe("createDbReviewCurrentResumeProfile", () => {
     it("reviews the current stored resume version using db repositories", async () => {

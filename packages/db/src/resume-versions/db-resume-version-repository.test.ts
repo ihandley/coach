@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbResumeVersionRepository } from "./db-resume-version-repository";
+import { createDbResumeVersionRepository } from "./db-resume-version-repository.ts";
 
 describe("createDbResumeVersionRepository", () => {
     it("creates, retrieves, and lists resume versions", async () => {

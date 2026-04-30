@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractGmailUpdate } from "./extract-gmail-update";
+import { extractGmailUpdate } from "./extract-gmail-update.ts";
 
 describe("extractGmailUpdate", () => {
     it("extracts an interview signal", () => {

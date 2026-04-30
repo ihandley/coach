@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { createCreateResumeProfile } from "./create-resume-profile";
-import { createInMemoryResumeProfileRepository } from "../resumes/in-memory-resume-profile-repository";
-import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository";
+import { createCreateResumeProfile } from "./create-resume-profile.ts";
+import { createInMemoryResumeProfileRepository } from "../resumes/in-memory-resume-profile-repository.ts";
+import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository.ts";
 
 describe("createCreateResumeProfile", () => {
     it("creates a resume profile and initial version from normalized resume input", async () => {

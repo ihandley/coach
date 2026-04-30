@@ -1,4 +1,4 @@
-import type { ExportFormat, ExportResult } from "./types";
+import type { ExportFormat, ExportResult } from "./types.ts";
 
 export interface ResumeExportData {
     resumeProfileId: string;

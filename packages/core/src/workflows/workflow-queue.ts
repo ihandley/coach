@@ -1,5 +1,5 @@
-import type { WorkflowRunRepository } from "./types";
-import { runWorkflow, type WorkflowStepDefinition } from "./run-workflow";
+import type { WorkflowRunRepository } from "./types.ts";
+import { runWorkflow, type WorkflowStepDefinition } from "./run-workflow.ts";
 
 export interface WorkflowQueueJob {
     workflowRunId: string;

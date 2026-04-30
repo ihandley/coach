@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createBaselineResumeReview } from "./create-baseline-resume-review";
+import { createBaselineResumeReview } from "./create-baseline-resume-review.ts";
 
 describe("createBaselineResumeReview", () => {
     it("returns structured baseline review output from normalized resume data", async () => {

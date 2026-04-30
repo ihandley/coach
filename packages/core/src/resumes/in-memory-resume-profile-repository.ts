@@ -1,6 +1,6 @@
 import type {
     ResumeProfile,
-} from "./types";
+} from "./types.ts";
 
 type CreateResumeProfileInput = {
     id?: string;

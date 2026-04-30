@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { createCoverLetterDraft } from "./create-cover-letter-draft";
-import type { CoverLetterDraftRepository } from "./types";
+import { createCoverLetterDraft } from "./create-cover-letter-draft.ts";
+import type { CoverLetterDraftRepository } from "./types.ts";
 
 function createRepository(): CoverLetterDraftRepository {
     return {

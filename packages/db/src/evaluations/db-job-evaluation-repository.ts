@@ -46,7 +46,11 @@ function normalizeCreatedAt(value: Date | string): string {
 }
 
 export class DbJobEvaluationRepository {
-    constructor(private readonly db: DatabaseClient) { }
+    private readonly db: DatabaseClient;
+
+    constructor(db: DatabaseClient) {
+        this.db = db;
+    }
 
     async create(input: CreateJobEvaluationInput): Promise<JobEvaluationRecord> {
         const created = await this.db.jobEvaluation.create({

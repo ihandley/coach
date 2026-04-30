@@ -1,5 +1,5 @@
-import type { JobRepository } from "./job-repository";
-import type { JobTrackerService } from "./job-tracker-service";
+import type { JobRepository } from "./job-repository.ts";
+import type { JobTrackerService } from "./job-tracker-service.ts";
 import type {
   AddApplicationEventInput,
   ApplicationEventRecord,
@@ -8,8 +8,8 @@ import type {
   UpdateJobStatusInput,
   CreateJobInput,
   ListJobsInput,
-} from "./types";
-import { JOB_STATUSES } from "./types";
+} from "./types.ts";
+import { JOB_STATUSES } from "./types.ts";
 
 export class InvalidJobStatusError extends Error {
   constructor(status: string) {
@@ -40,7 +40,11 @@ function createEmptyCountsByStatus() {
 }
 
 export class JobTracker implements JobTrackerService {
-  constructor(private readonly repository: JobRepository) {}
+  private readonly repository: JobRepository;
+
+  constructor(repository: JobRepository) {
+    this.repository = repository;
+  }
 
   async createJob(input: CreateJobInput): Promise<JobRecord> {
     return this.repository.createJob(input);

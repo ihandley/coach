@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { InMemoryJobRepository } from "./in-memory-job-repository";
-import { RepositoryBackedJobImporter } from "./repository-backed-job-importer";
+import { InMemoryJobRepository } from "./in-memory-job-repository.ts";
+import { RepositoryBackedJobImporter } from "./repository-backed-job-importer.ts";
 
 describe("RepositoryBackedJobImporter.importJobFromUrl", () => {
     it("imports a job through the repository and persists it with source data", async () => {

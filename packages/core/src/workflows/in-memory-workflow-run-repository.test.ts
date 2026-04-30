@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInMemoryWorkflowRunRepository } from "./in-memory-workflow-run-repository";
+import { createInMemoryWorkflowRunRepository } from "./in-memory-workflow-run-repository.ts";
 
 describe("createInMemoryWorkflowRunRepository", () => {
     it("creates and updates workflow runs and steps", async () => {
