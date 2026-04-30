@@ -47,6 +47,7 @@ export function JobsPageClient() {
   const [url, setUrl] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
 
   async function load() {
     const res = await fetch("/api/jobs/ranked");
@@ -85,6 +86,54 @@ export function JobsPageClient() {
 
   const columns = useMemo<ColumnDef<RankedJob>[]>(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => {
+          const visibleIds = table.getRowModel().rows.map((row) => row.original.id);
+          const allVisibleSelected =
+            visibleIds.length > 0 && visibleIds.every((id) => selectedJobIds.has(id));
+
+          return (
+            <input
+              aria-label="Select all visible jobs"
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedJobIds(new Set([...selectedJobIds, ...visibleIds]));
+                } else {
+                  setSelectedJobIds(
+                    new Set([...selectedJobIds].filter((id) => !visibleIds.includes(id)))
+                  );
+                }
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            />
+          );
+        },
+        cell: ({ row }) => {
+          const id = row.original.id;
+          const checked = selectedJobIds.has(id);
+
+          return (
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => {
+                const next = new Set(selectedJobIds);
+                if (e.target.checked) next.add(id);
+                else next.delete(id);
+                setSelectedJobIds(next);
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            />
+          );
+        },
+      },
       {
         accessorKey: "score",
         header: "Match",
@@ -163,7 +212,7 @@ export function JobsPageClient() {
       },
       
     ],
-    []
+    [selectedJobIds]
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -252,6 +301,63 @@ export function JobsPageClient() {
           </p>
         </div>
       ) : (
+        <>
+          {selectedJobIds.size > 0 && (
+            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
+              <span>{selectedJobIds.size} selected</span>
+
+              <div className="flex items-center gap-2">
+                <select
+                  aria-label="Bulk status update"
+                  onChange={async (e) => {
+                    const value = e.target.value;
+                    if (!value) return;
+
+                    const ids = Array.from(selectedJobIds);
+
+                    const prevJobs = jobs;
+
+                    // optimistic update
+                    const updatedJobs = jobs.map((job) =>
+                      ids.includes(job.id)
+                        ? { ...job, status: value }
+                        : job
+                    );
+
+                    setJobs(updatedJobs);
+
+                    try {
+                      await fetch('/api/jobs/bulk-update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids, status: value }),
+                      });
+                    } catch (err) {
+                      console.error('Bulk update failed', err);
+                      setJobs(prevJobs); // rollback
+                    }
+
+                    setSelectedJobIds(new Set());
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value="">Set status...</option>
+                  <option value="saved">Saved</option>
+                  <option value="applied">Applied</option>
+                  <option value="interviewing">Interviewing</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+
+                <button
+                  onClick={() => setSelectedJobIds(new Set())}
+                  className="text-blue-600 underline"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50">
@@ -327,6 +433,7 @@ export function JobsPageClient() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
