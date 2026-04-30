@@ -27,3 +27,26 @@ test('clicking a job row does not navigate to a job detail route', async ({ page
 
   await expect(page).toHaveURL(/\/jobs$/);
 });
+
+test('filters jobs by status', async ({ page }) => {
+  await page.goto('/jobs');
+
+  const select = page.locator('select');
+  await expect(select).toBeVisible();
+
+  const statuses = page.locator('[data-testid="job-status"]');
+  await expect(statuses.first()).toBeVisible();
+
+  const statusToFilter = (await statuses.first().innerText()).trim();
+
+  await select.selectOption(statusToFilter);
+
+  const filteredStatuses = page.locator('[data-testid="job-status"]');
+  const count = await filteredStatuses.count();
+
+  expect(count).toBeGreaterThan(0);
+
+  for (let i = 0; i < count; i++) {
+    await expect(filteredStatuses.nth(i)).toHaveText(statusToFilter);
+  }
+});
