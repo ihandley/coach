@@ -25,6 +25,30 @@ function getStatusColor(status: string) {
   }
 }
 
+
+function formatRawText(text: string) {
+  const paragraphs = text.split(/\n\s*\n/);
+
+  return paragraphs.map((p, i) => (
+    <p key={i} className="mb-3 whitespace-pre-wrap">
+      {p}
+    </p>
+  ));
+}
+
+function parseStructured(text: string) {
+  return [
+    {
+      title: "Description",
+      content: text
+        .split("\n")
+        .map((line) => line.trim().replace(/^[-•*]\s*/, ""))
+        .filter(Boolean),
+    },
+  ];
+}
+
+
 type RankedJob = {
   id: string;
   title: string;
@@ -480,7 +504,11 @@ export function JobsPageClient() {
                             initialStatus={row.original.status}
                             variant="inline"
                           /></div>
-                        <div><strong>Score:</strong> {row.original.score}</div>
+                        <div className="mb-2">
+                          <strong>Score:</strong> {row.original.score}
+                        </div>
+
+                        <JobDescription text={row.original.sourceText || ""} />
                         {row.original.sourceUrl && (
                           <a
                             href={row.original.sourceUrl}
@@ -504,3 +532,50 @@ export function JobsPageClient() {
     </div>
   );
 }
+
+
+function JobDescription({ text }: { text: string }) {
+  const [mode, setMode] = useState<"structured" | "raw">("structured");
+  const safeText = text || "No job description available.";
+  const structured = parseStructured(safeText);
+
+  return (
+    <div className="mt-4 border-t pt-4">
+      <div className="mb-3 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("structured")}
+          className={`border px-2 py-1 ${
+            mode === "structured" ? "bg-gray-200" : ""
+          }`}
+        >
+          Structured
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("raw")}
+          className={`border px-2 py-1 ${mode === "raw" ? "bg-gray-200" : ""}`}
+        >
+          Raw
+        </button>
+      </div>
+
+      <div className="max-h-96 overflow-y-auto text-sm">
+        {mode === "raw" && formatRawText(safeText)}
+
+        {mode === "structured" &&
+          structured.map((section, i) => (
+            <div key={i} className="mb-4">
+              <h4 className="mb-1 font-semibold">{section.title}</h4>
+              <ul className="ml-5 list-disc">
+                {section.content.map((item, j) => (
+                  <li key={j}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+

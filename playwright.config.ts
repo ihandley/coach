@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './apps/job-coach-web/tests',
   timeout: 30000,
 
   globalSetup: require.resolve('./e2e/global-setup'),
