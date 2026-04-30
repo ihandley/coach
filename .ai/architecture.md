@@ -1,24 +1,25 @@
-# Architecture
+# Job Coach Architecture
 
-## Repo Layout
-- `apps/` - app entry points
-- `packages/` - shared packages
-- `scripts/` - local automation
-- `supabase/` - database and backend config
-
-## Key Domains
-- Authentication
-- User profile
-- Billing or credits
-- Marketplace or core domain flows
+## Core Rule
+Supabase is the source of truth.
 
 ## Data Flow
-Describe how data moves through the system.
+UI → API → JobTracker → DbJobRepository → Supabase
 
-## External Services
-- Service name and purpose
 
-## Testing Strategy
-- Unit tests
-- Integration tests
-- End-to-end tests
+## Idempotent Patch Rule (CRITICAL)
+
+All assistant-applied code changes MUST be idempotent.
+
+### Rules
+- No duplicate imports
+- No duplicate function definitions
+- No duplicate seed entries
+- No repeated injections into files
+- Patches must detect existing state before applying changes
+- Re-running the same patch must result in no further changes
+
+### Implementation requirements
+- Always check before inserting
+- Prefer replace-over-insert instead of append
+- Never blindly modify lists, imports, or arrays

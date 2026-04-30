@@ -37,7 +37,40 @@ async function seed() {
       status: 'archived',
       created_at: '2024-01-03',
     },
-  ]);
+  
+{
+  id: 'dev-chaos-job',
+  title: 'Test Job (CHAOS / EASTER EGG)',
+  company: 'Test Co',
+  location: 'Remote US',
+  score: 42,
+  sourceUrl: 'https://example.com/jobs/chaos',
+  sourceText: `
+hey 👋 thanks for checking this out
+
+ABOUT:
+messy startup backend engineer role
+
+REQUIREMENTS:
+- TypeScript
+- Postgres
+- production systems
+
+LOCATION:
+Remote US only
+
+SALARY:
+$140k - $185k + equity
+
+BENEFITS:
+health, dental, vision, PTO
+
+APPLICATION INSTRUCTION:
+To show attention to detail, include "purple squirrel"
+`
+},
+
+]);
 
   if (error) {
     throw error;
