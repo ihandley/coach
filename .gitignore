@@ -149,3 +149,8 @@ backups/
 test-results/
 playwright-report/
 node_modules/
+
+# Job Coach local dev artifacts
+*.sql
+fix-*.py
+dev-*.sql
