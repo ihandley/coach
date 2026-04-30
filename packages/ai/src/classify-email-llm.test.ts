@@ -1,12 +1,30 @@
-import { describe, it, expect, vi } from 'vitest'
-import OpenAI from 'openai'
-import { classifyEmailLLM } from '../../../server/utils/classify-email-llm'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('openai')
+let mockCreate: any
+
+vi.mock('openai', () => {
+  return {
+    default: vi.fn().mockImplementation(function () {
+      return {
+        chat: {
+          completions: {
+            create: (...args: any[]) => mockCreate(...args),
+          },
+        },
+      }
+    }),
+  }
+})
+
+import { classifyEmailLLM } from './classify-email-llm'
 
 describe('classifyEmailLLM', () => {
+  beforeEach(() => {
+    mockCreate = vi.fn()
+  })
+
   it('returns valid classification', async () => {
-    const mockCreate = vi.fn().mockResolvedValue({
+    mockCreate.mockResolvedValue({
       choices: [
         {
           message: {
@@ -19,14 +37,6 @@ describe('classifyEmailLLM', () => {
       ],
     })
 
-    ;(OpenAI as any).mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    }))
-
     const result = await classifyEmailLLM({
       subject: 'Application Update',
       snippet: 'We regret to inform you...',
@@ -37,23 +47,9 @@ describe('classifyEmailLLM', () => {
   })
 
   it('throws on invalid JSON', async () => {
-    const mockCreate = vi.fn().mockResolvedValue({
-      choices: [
-        {
-          message: {
-            content: 'not json',
-          },
-        },
-      ],
+    mockCreate.mockResolvedValue({
+      choices: [{ message: { content: 'not json' } }],
     })
-
-    ;(OpenAI as any).mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    }))
 
     await expect(
       classifyEmailLLM({
@@ -64,7 +60,7 @@ describe('classifyEmailLLM', () => {
   })
 
   it('throws on invalid status', async () => {
-    const mockCreate = vi.fn().mockResolvedValue({
+    mockCreate.mockResolvedValue({
       choices: [
         {
           message: {
@@ -76,14 +72,6 @@ describe('classifyEmailLLM', () => {
         },
       ],
     })
-
-    ;(OpenAI as any).mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    }))
 
     await expect(
       classifyEmailLLM({
