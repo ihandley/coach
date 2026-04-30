@@ -177,12 +177,11 @@ export function JobsPageClient() {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => (
-          <span
-            data-testid="job-status"
-            className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}
-          >
-            {row.original.status}
-          </span>
+          <JobStatusSelect
+            jobId={row.original.id}
+            initialStatus={row.original.status}
+            variant="popover"
+          />
         ),
       },
       {
@@ -476,12 +475,11 @@ export function JobsPageClient() {
                     <tr data-testid="job-details">
                       <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
                         <div><strong>Company:</strong> {row.original.company}</div>
-                        <div><strong>Status:</strong> <span
-            data-testid="job-status"
-            className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(row.original.status)}`}
-          >
-            {row.original.status}
-          </span></div>
+                        <div><strong>Status:</strong> <JobStatusSelect
+                            jobId={row.original.id}
+                            initialStatus={row.original.status}
+                            variant="inline"
+                          /></div>
                         <div><strong>Score:</strong> {row.original.score}</div>
                         {row.original.sourceUrl && (
                           <a
