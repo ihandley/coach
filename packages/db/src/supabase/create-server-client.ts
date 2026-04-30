@@ -1,18 +1,18 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseEnv } from "./env";
 
 export function createServerClient(): SupabaseClient {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const { url, key } = getSupabaseEnv();
 
-  if (!supabaseUrl) {
-    throw new Error("Missing SUPABASE_URL");
+  if (!url) {
+    throw new Error("Missing Supabase URL for current APP_ENV");
   }
 
-  if (!supabaseServiceRoleKey) {
-    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+  if (!key) {
+    throw new Error("Missing Supabase Service Role Key for current APP_ENV");
   }
 
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+  return createClient(url, key, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

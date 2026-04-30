@@ -7,31 +7,52 @@ async function seed() {
   await supabase.from('jobs').delete().neq('id', '');
 
   // Insert deterministic test data
-  await supabase.from('jobs').insert([
+  await supabase.from('jobs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+  const { error } = await supabase.from('jobs').insert([
     {
-      id: 'job-1',
+      id: 'dd3c5749-9c8c-4516-824b-4f09679088b8',
       title: 'Staff Software Engineer',
       company: 'Torus',
-      description: 'Test job 1',
+      source_url: 'https://example.com/torus-staff-software-engineer',
+      source_text: 'Staff Software Engineer job posting from Torus',
+      status: 'saved',
       created_at: '2024-01-01',
     },
     {
-      id: 'job-2',
+      id: '231aad1a-24c6-43e2-a1c8-d31d9ddb1d89',
       title: 'Senior Backend Engineer',
       company: 'Bloomlogic',
-      description: 'Test job 2',
+      source_url: 'https://example.com/acme-platform-engineer',
+      source_text: 'Platform Engineer job posting from Acme',
+      status: 'rejected',
       created_at: '2024-01-02',
     },
     {
-      id: 'job-3',
+      id: '21892539-c8e1-4e5b-9bb5-2f820d206fc2',
       title: 'Full Stack Engineer',
       company: 'Remi',
-      description: 'Test job 3',
+      source_url: 'https://example.com/old-role',
+      source_text: 'Old archived role job posting',
+      status: 'archived',
       created_at: '2024-01-03',
     },
   ]);
 
-  console.log('E2E seed complete');
+  if (error) {
+    throw error;
+  }
+
+  const { data, error: readError } = await supabase
+    .from('jobs')
+    .select('id,title,company,status');
+
+  if (readError) {
+    throw readError;
+  }
+
+  console.log('E2E seed complete', data);
+
 }
 
 seed()
