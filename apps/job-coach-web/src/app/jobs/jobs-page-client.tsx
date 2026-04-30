@@ -38,7 +38,7 @@ type RankedJob = {
 
 export function JobsPageClient() {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
-    new Set(["saved", "applied", "interviewing", "offer"])
+    new Set(["saved", "applied", "interviewing", "offer", "rejected", "archived"])
   );
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
