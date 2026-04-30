@@ -38,7 +38,7 @@ type RankedJob = {
 
 export function JobsPageClient() {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
-    new Set(["saved", "applied", "interviewing", "offer", "rejected", "archived"])
+    new Set(["saved", "applied", "interviewing", "offer", "rejected"])
   );
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
@@ -204,15 +204,83 @@ export function JobsPageClient() {
               href={url}
               target="_blank"
               className="text-blue-600 underline"
+              onClick={(e) => e.stopPropagation()}
             >
               Link
             </a>
           );
         },
       },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const job = row.original;
+
+          async function updateStatus(status: string) {
+            const prevJobs = jobs;
+
+            setJobs(
+              jobs.map((j) => (j.id === job.id ? { ...j, status } : j))
+            );
+
+            try {
+              const res = await fetch(`/api/jobs/${job.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status }),
+              });
+
+              if (!res.ok) {
+                throw new Error("Status update failed");
+              }
+            } catch (err) {
+              console.error("Update failed", err);
+              setJobs(prevJobs);
+            }
+          }
+
+          return (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="text-green-600 text-xs underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateStatus("applied");
+                }}
+              >
+                Apply
+              </button>
+
+              <button
+                type="button"
+                className="text-yellow-600 text-xs underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateStatus("saved");
+                }}
+              >
+                Maybe
+              </button>
+
+              <button
+                type="button"
+                className="text-red-600 text-xs underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateStatus("archived");
+                }}
+              >
+                Ignore
+              </button>
+            </div>
+          );
+        },
+      },
       
     ],
-    [selectedJobIds]
+    [selectedJobIds, jobs]
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -406,7 +474,7 @@ export function JobsPageClient() {
                   </tr>
                   {expandedId === row.original.id && (
                     <tr data-testid="job-details">
-                      <td colSpan={6} className="bg-gray-50 px-4 py-3 text-sm">
+                      <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
                         <div><strong>Company:</strong> {row.original.company}</div>
                         <div><strong>Status:</strong> <span
             data-testid="job-status"
