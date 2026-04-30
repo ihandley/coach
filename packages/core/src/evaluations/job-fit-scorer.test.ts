@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { InMemoryJobRepository } from "../jobs/in-memory-job-repository.ts";
-import { createInMemoryJobEvaluationRepository } from "./in-memory-job-evaluation-repository.ts";
-import { createInMemoryResumeProfileRepository } from "../resumes/in-memory-resume-profile-repository.ts";
-import { createJobFitScorer } from "./job-fit-scorer.ts";
+import { InMemoryJobRepository } from "../jobs/in-memory-job-repository";
+import { createInMemoryJobEvaluationRepository } from "./in-memory-job-evaluation-repository";
+import { createInMemoryResumeProfileRepository } from "../resumes/in-memory-resume-profile-repository";
+import { createJobFitScorer } from "./job-fit-scorer";
 
 describe("createJobFitScorer", () => {
     it("throws when the job does not exist", async () => {

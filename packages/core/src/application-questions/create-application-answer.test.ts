@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createApplicationAnswer } from "./create-application-answer.ts";
+import { createApplicationAnswer } from "./create-application-answer";
 
 describe("createApplicationAnswer", () => {
     it("creates an application answer from question, resume context, and job context", async () => {

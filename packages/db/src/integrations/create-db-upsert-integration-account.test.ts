@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbUpsertIntegrationAccount } from "./create-db-upsert-integration-account.ts";
+import { createDbUpsertIntegrationAccount } from "./create-db-upsert-integration-account";
 
 describe("createDbUpsertIntegrationAccount", () => {
     it("upserts the integration account", async () => {

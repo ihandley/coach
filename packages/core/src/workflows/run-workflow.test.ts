@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createInMemoryWorkflowRunRepository } from "./in-memory-workflow-run-repository.ts";
-import { runWorkflow } from "./run-workflow.ts";
+import { createInMemoryWorkflowRunRepository } from "./in-memory-workflow-run-repository";
+import { runWorkflow } from "./run-workflow";
 
 describe("runWorkflow", () => {
     it("runs all workflow steps and marks the run as succeeded", async () => {

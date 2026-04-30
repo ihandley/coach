@@ -1,4 +1,4 @@
-import type { ResumeProfile, ResumeVersion } from "./types.ts";
+import type { ResumeProfile, ResumeVersion } from "./types";
 
 type ResumeProfileRepository = {
     getResumeProfileById(resumeProfileId: string): Promise<ResumeProfile | null>;

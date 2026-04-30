@@ -1,7 +1,7 @@
-import type { JobRecord } from "../jobs/types.ts";
-import type { GmailMessage } from "./gmail-message-types.ts";
-import { extractGmailUpdate } from "./extract-gmail-update.ts";
-import { matchGmailMessageToJob } from "./match-gmail-message-to-job.ts";
+import type { JobRecord } from "../jobs/types";
+import type { GmailMessage } from "./gmail-message-types";
+import { extractGmailUpdate } from "./extract-gmail-update";
+import { matchGmailMessageToJob } from "./match-gmail-message-to-job";
 
 export function createGmailCandidateUpdate({
     message,

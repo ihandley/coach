@@ -1,4 +1,4 @@
-import type { ExportRequest, ExportResult } from "./types.ts";
+import type { ExportRequest, ExportResult } from "./types";
 
 type ExportHandler = (request: ExportRequest) => Promise<ExportResult>;
 

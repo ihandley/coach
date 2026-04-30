@@ -2,7 +2,7 @@ import type {
     NormalizedResume,
     ResumeSource,
     ResumeVersion,
-} from "./types.ts";
+} from "./types";
 
 export function createInMemoryResumeVersionRepository() {
     const versions: ResumeVersion[] = [];

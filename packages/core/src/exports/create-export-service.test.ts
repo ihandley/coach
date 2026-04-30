@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createExportService } from "./create-export-service.ts";
+import { createExportService } from "./create-export-service";
 
 describe("createExportService", () => {
     it("renders a resume export", async () => {

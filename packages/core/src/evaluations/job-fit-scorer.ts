@@ -3,8 +3,8 @@ import type {
     EvaluationReasoning,
     JobEvaluationRecord,
     RecommendationCategory,
-} from "./types.ts";
-import { RECOMMENDATION_CATEGORIES } from "./types.ts";
+} from "./types";
+import { RECOMMENDATION_CATEGORIES } from "./types";
 
 type Job = {
     id: string;

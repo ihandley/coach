@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createReviewableGmailUpdate } from "./create-reviewable-gmail-update.ts";
+import { createReviewableGmailUpdate } from "./create-reviewable-gmail-update";
 
 describe("createReviewableGmailUpdate", () => {
     it("wraps a Gmail candidate update with review metadata", () => {

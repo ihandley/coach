@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbGetIntegrationAccount } from "./create-db-get-integration-account.ts";
+import { createDbGetIntegrationAccount } from "./create-db-get-integration-account";
 
 describe("createDbGetIntegrationAccount", () => {
     it("returns null when no integration exists", async () => {

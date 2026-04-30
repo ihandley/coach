@@ -1,6 +1,6 @@
-import { loadEnvFromKeychain } from "../env/load-env.ts";
-import { DbJobRepository } from "./db-job-repository.ts";
-import { createServerClient } from "../supabase/create-server-client.ts";
+import { loadEnvFromKeychain } from "../env/load-env";
+import { DbJobRepository } from "./db-job-repository";
+import { createServerClient } from "../supabase/create-server-client";
 
 async function main() {
   loadEnvFromKeychain();

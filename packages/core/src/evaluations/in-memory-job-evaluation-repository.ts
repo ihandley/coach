@@ -1,7 +1,7 @@
 import type {
     CreateJobEvaluationInput,
     JobEvaluationRecord,
-} from "./types.ts";
+} from "./types";
 
 function createId(): string {
     return crypto.randomUUID();

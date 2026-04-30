@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbGenerateTailoringSuggestions } from "./create-db-generate-tailoring-suggestions.ts";
+import { createDbGenerateTailoringSuggestions } from "./create-db-generate-tailoring-suggestions";
 
 describe("createDbGenerateTailoringSuggestions", () => {
     it("creates a DB-backed tailoring suggestion service", async () => {

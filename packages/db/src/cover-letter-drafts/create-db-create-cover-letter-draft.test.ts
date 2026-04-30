@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbCreateCoverLetterDraft } from "./create-db-create-cover-letter-draft.ts";
+import { createDbCreateCoverLetterDraft } from "./create-db-create-cover-letter-draft";
 
 describe("createDbCreateCoverLetterDraft", () => {
     it("creates a cover letter draft through the repository", async () => {

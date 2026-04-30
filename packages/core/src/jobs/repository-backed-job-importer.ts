@@ -1,10 +1,10 @@
-import type { JobRepository } from "./job-repository.ts";
+import type { JobRepository } from "./job-repository";
 import {
     JobImporter,
     type ExtractJob,
     type FetchPage,
     type SavedImportedJob,
-} from "./job-importer.ts";
+} from "./job-importer";
 
 export type RepositoryBackedJobImporterDependencies = {
     repository: JobRepository;

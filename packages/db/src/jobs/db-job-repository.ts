@@ -8,7 +8,7 @@ import type {
   ListJobsInput,
   UpdateJobStatusInput,
 } from "@coach/core";
-import { mapJobRow } from "./map-job-row.ts";
+import { mapJobRow } from "./map-job-row";
 
 export class DbJobRepository implements JobRepository {
   private readonly supabase: SupabaseClient;

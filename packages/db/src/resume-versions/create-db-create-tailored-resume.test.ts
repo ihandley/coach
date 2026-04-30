@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbCreateTailoredResume } from "./create-db-create-tailored-resume.ts";
+import { createDbCreateTailoredResume } from "./create-db-create-tailored-resume";
 
 describe("createDbCreateTailoredResume", () => {
     it("creates a DB-backed tailored resume service", async () => {

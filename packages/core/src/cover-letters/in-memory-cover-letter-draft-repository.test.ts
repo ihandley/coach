@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { InMemoryCoverLetterDraftRepository } from "./in-memory-cover-letter-draft-repository.ts";
+import { InMemoryCoverLetterDraftRepository } from "./in-memory-cover-letter-draft-repository";
 
 describe("InMemoryCoverLetterDraftRepository", () => {
     it("stores and returns created cover letter drafts", async () => {

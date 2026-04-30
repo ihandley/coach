@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { JOB_STATUSES } from "./types.ts";
-import { InMemoryJobRepository } from "./in-memory-job-repository.ts";
+import { JOB_STATUSES } from "./types";
+import { InMemoryJobRepository } from "./in-memory-job-repository";
 
 import {
   JobTracker,
   InvalidJobStatusError,
   JobNotFoundError,
-} from "./job-tracker.ts";
+} from "./job-tracker";
 
 describe("JOB_STATUSES", () => {
   it("defines the controlled job status vocabulary", () => {

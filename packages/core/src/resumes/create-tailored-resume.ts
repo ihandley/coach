@@ -3,7 +3,7 @@ import type {
     ResumeVersion,
     TailoredResume,
     TailoringSuggestion,
-} from "./types.ts";
+} from "./types";
 
 function isPriority(value: unknown): value is "low" | "medium" | "high" {
     return value === "low" || value === "medium" || value === "high";

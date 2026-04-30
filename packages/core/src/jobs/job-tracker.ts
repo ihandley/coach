@@ -1,5 +1,5 @@
-import type { JobRepository } from "./job-repository.ts";
-import type { JobTrackerService } from "./job-tracker-service.ts";
+import type { JobRepository } from "./job-repository";
+import type { JobTrackerService } from "./job-tracker-service";
 import type {
   AddApplicationEventInput,
   ApplicationEventRecord,
@@ -8,8 +8,8 @@ import type {
   UpdateJobStatusInput,
   CreateJobInput,
   ListJobsInput,
-} from "./types.ts";
-import { JOB_STATUSES } from "./types.ts";
+} from "./types";
+import { JOB_STATUSES } from "./types";
 
 export class InvalidJobStatusError extends Error {
   constructor(status: string) {

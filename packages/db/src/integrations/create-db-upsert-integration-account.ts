@@ -1,4 +1,4 @@
-import type { IntegrationAccount, IntegrationProvider } from "./integration-types.ts";
+import type { IntegrationAccount, IntegrationProvider } from "./integration-types";
 
 export function createDbUpsertIntegrationAccount({
     db,

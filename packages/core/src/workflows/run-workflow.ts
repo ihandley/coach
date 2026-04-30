@@ -1,4 +1,4 @@
-import type { WorkflowRunRepository } from "./types.ts";
+import type { WorkflowRunRepository } from "./types";
 
 export type WorkflowStepDefinition = {
     stepKey: string;

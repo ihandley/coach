@@ -4,7 +4,7 @@ import {
     InvalidExtractedJobDataError,
     InvalidJobImportUrlError,
     type SavedImportedJob,
-} from "./job-importer.ts";
+} from "./job-importer";
 
 describe("JobImporter.importJobFromUrl", () => {
     it("rejects an invalid URL before attempting any external work", async () => {

@@ -1,4 +1,4 @@
-import type { JobRepository } from "./job-repository.ts";
+import type { JobRepository } from "./job-repository";
 import type {
   AddApplicationEventInput,
   ApplicationEventRecord,
@@ -7,13 +7,13 @@ import type {
   JobStatus,
   ListJobsInput,
   UpdateJobStatusInput,
-} from "./types.ts";
-import { JOB_STATUSES } from "./types.ts";
+} from "./types";
+import { JOB_STATUSES } from "./types";
 
 import {
   InvalidJobStatusError,
   JobNotFoundError,
-} from "./job-tracker.ts";
+} from "./job-tracker";
 
 function isJobStatus(value: string): value is JobStatus {
   return JOB_STATUSES.includes(value as JobStatus);

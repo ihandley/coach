@@ -5,7 +5,7 @@ import type {
   JobRecord,
   ListJobsInput,
   UpdateJobStatusInput,
-} from "./types.ts";
+} from "./types";
 
 export interface JobRepository {
   createJob(input: CreateJobInput): Promise<JobRecord>;

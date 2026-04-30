@@ -1,5 +1,5 @@
-import { loadEnvFromKeychain } from "../env/load-env.ts";
-import { createDbJobImporter } from "./create-db-job-importer.ts";
+import { loadEnvFromKeychain } from "../env/load-env";
+import { createDbJobImporter } from "./create-db-job-importer";
 import { fetchJobPageAsDependency, extractJobStub } from "@coach/ai";
 
 async function main() {

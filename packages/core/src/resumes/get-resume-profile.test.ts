@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createCreateResumeProfile } from "./create-resume-profile.ts";
-import { createCreateResumeVersion } from "./create-resume-version.ts";
-import { createGetResumeProfile } from "./get-resume-profile.ts";
-import { createInMemoryResumeProfileRepository } from "./in-memory-resume-profile-repository.ts";
-import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository.ts";
+import { createCreateResumeProfile } from "./create-resume-profile";
+import { createCreateResumeVersion } from "./create-resume-version";
+import { createGetResumeProfile } from "./get-resume-profile";
+import { createInMemoryResumeProfileRepository } from "./in-memory-resume-profile-repository";
+import { createInMemoryResumeVersionRepository } from "./in-memory-resume-version-repository";
 
 describe("createGetResumeProfile", () => {
     it("returns a resume profile and its current version", async () => {

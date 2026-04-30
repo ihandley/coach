@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDbWorkflowRunRepository } from "./db-workflow-run-repository.ts";
+import { createDbWorkflowRunRepository } from "./db-workflow-run-repository";
 
 describe("createDbWorkflowRunRepository", () => {
     it("creates and updates workflow runs and steps", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDbCreateResumeVersion } from "./create-db-create-resume-version.ts";
+import { createDbCreateResumeVersion } from "./create-db-create-resume-version";
 
 describe("createDbCreateResumeVersion", () => {
     it("creates the next resume version and updates the profile current version", async () => {

@@ -4,7 +4,7 @@ import { InMemoryJobRepository } from "@coach/core";
 import { createInMemoryJobEvaluationRepository } from "@coach/core";
 import { createInMemoryResumeProfileRepository } from "@coach/core";
 
-import { createDbJobFitScorer } from "./create-db-job-fit-scorer.ts";
+import { createDbJobFitScorer } from "./create-db-job-fit-scorer";
 
 describe("createDbJobFitScorer", () => {
     it("creates a scorer backed by the provided repositories", async () => {

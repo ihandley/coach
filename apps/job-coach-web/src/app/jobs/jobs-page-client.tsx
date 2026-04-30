@@ -33,10 +33,10 @@ type RankedJob = {
   sourceUrl?: string;
   createdAt: string;
   updatedAt: string;
-  score: number;
+  score?: number;
 };
 
-export function JobsPageClient({ jobs: initialJobs }: { jobs: Job[] }) {
+export function JobsPageClient({ jobs: initialJobs }: { jobs: RankedJob[] }) {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
     new Set(["saved", "applied", "interviewing", "offer"])
   );
@@ -90,7 +90,7 @@ export function JobsPageClient({ jobs: initialJobs }: { jobs: Job[] }) {
         accessorKey: "score",
         header: "Match",
         cell: (info) => {
-          const value = Math.round(info.getValue<number>() * 100);
+          const value = Math.round((info.getValue<number>() ?? 0) * 100);
           return (
             <div className="flex items-center justify-end gap-2">
               <div className="w-20 h-2 bg-gray-200 rounded">

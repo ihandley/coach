@@ -3,8 +3,8 @@ import {
     type ExtractJob,
     type FetchPage,
 } from "@coach/core";
-import { createServerClient } from "../supabase/create-server-client.ts";
-import { DbJobRepository } from "./db-job-repository.ts";
+import { createServerClient } from "../supabase/create-server-client";
+import { DbJobRepository } from "./db-job-repository";
 
 export function createDbJobImporter(dependencies: {
     fetchPage: FetchPage;
