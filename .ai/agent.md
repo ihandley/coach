@@ -141,3 +141,7 @@ Use short, idiomatic branch names:
 - Prefer meaningful words over truncation
 - Do not repeat `issue` or the issue number twice
 - Avoid generic names like `fix`, `updates`, or `changes`
+
+- Never use `apply_patch`. Use Python scripts to create or modify files instead.
+- In CODING MODE: Only output executable shell commands. No explanations.
+- Prefer `python3` over `python` for all scripts.

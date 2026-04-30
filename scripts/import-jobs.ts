@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { classifyEmailLLM, isAboveConfidenceThreshold } from "../server/utils/classify-email-llm";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -37,6 +38,27 @@ function normalizedCreatedAt(job: any): string {
     : new Date().toISOString();
 }
 
+
+
+async function classifyStatusWithLLM(job: any): Promise<string> {
+  const subject = `${job.company ?? ""} ${job.title ?? ""}`.trim();
+  const snippet =
+    job.description ?? job.rawDescription ?? job.notes ?? "";
+
+  try {
+    const result = await classifyEmailLLM({
+      subject,
+      snippet,
+    });
+
+    if (isAboveConfidenceThreshold(result)) {
+      if (result.status === "none") return "saved";
+      return result.status;
+    }
+  } catch {}
+
+  return mapStatus(job.status);
+}
 function mapStatus(status: unknown) {
   if (typeof status !== "string" || status.trim() === "") return "saved";
 
@@ -82,7 +104,7 @@ async function main() {
       title: job.title ?? "Unknown",
       source_url: job.url ?? "",
       source_text: job.description ?? job.rawDescription ?? job.notes ?? "",
-      status: mapStatus(job.status),
+      status: await classifyStatusWithLLM(job),
       created_at: normalizedCreatedAt(job),
     });
 
