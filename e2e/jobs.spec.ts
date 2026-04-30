@@ -31,22 +31,40 @@ test('clicking a job row does not navigate to a job detail route', async ({ page
 test('filters jobs by status', async ({ page }) => {
   await page.goto('/jobs');
 
-  const select = page.locator('select');
-  await expect(select).toBeVisible();
+  const rejectedChip = page.getByRole('button', { name: 'rejected' });
+  await expect(rejectedChip).toBeVisible();
 
   const statuses = page.locator('[data-testid="job-status"]');
-  await expect(statuses.first()).toBeVisible();
 
-  const statusToFilter = (await statuses.first().innerText()).trim();
+  for (const status of await statuses.allTextContents()) {
+    expect(status.trim().toLowerCase()).not.toBe('rejected');
+  }
 
-  await select.selectOption(statusToFilter);
+  await rejectedChip.click();
 
-  const filteredStatuses = page.locator('[data-testid="job-status"]');
-  const count = await filteredStatuses.count();
+  await expect(page.locator('[data-testid="job-status"]').filter({ hasText: 'rejected' }).first()).toBeVisible();
+});
 
-  expect(count).toBeGreaterThan(0);
+test('status chips show and hide matching jobs', async ({ page }) => {
+  await page.goto('/jobs');
 
-  for (let i = 0; i < count; i++) {
-    await expect(filteredStatuses.nth(i)).toHaveText(statusToFilter);
+  const rejectedChip = page.getByRole('button', { name: 'rejected' });
+  await expect(rejectedChip).toBeVisible();
+
+  await rejectedChip.click();
+  await expect(page.locator('[data-testid="job-status"]').filter({ hasText: 'rejected' }).first()).toBeVisible();
+
+  await rejectedChip.click();
+  await expect(page.locator('[data-testid="job-status"]').filter({ hasText: 'rejected' })).toHaveCount(0);
+});
+
+test('status chips can show all seeded statuses', async ({ page }) => {
+  await page.goto('/jobs');
+
+  for (const status of ['rejected', 'archived']) {
+    const chip = page.getByRole('button', { name: status });
+    await expect(chip).toBeVisible();
+    await chip.click();
+    await expect(page.locator('[data-testid="job-status"]').filter({ hasText: status }).first()).toBeVisible();
   }
 });

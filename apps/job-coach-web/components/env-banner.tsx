@@ -1,5 +1,5 @@
 export function EnvBanner() {
-  const env = process.env.NEXT_PUBLIC_APP_ENV;
+  const env = process.env.NEXT_PUBLIC_APP_ENV || "development";
 
   if (env !== "development") return null;
 
