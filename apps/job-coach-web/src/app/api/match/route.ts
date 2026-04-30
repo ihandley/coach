@@ -1,17 +1,11 @@
+import { normalizedResumeToText } from "@/server/match/normalized-resume-to-text";
 import { calculateFit } from "../../../server/match/calculate-fit";
 import {
     createServerClient,
     DbJobRepository,
 } from "@coach/db";
 
-function normalizedResumeToText(normalizedResume: any): string {
-    const parts = [];
 
-    if (normalizedResume.basics) {
-        parts.push(normalizedResume.basics.fullName);
-        parts.push(normalizedResume.basics.headline);
-        parts.push(normalizedResume.basics.summary);
-    }
 
     if (normalizedResume.skills) {
         parts.push(normalizedResume.skills.join(" "));
