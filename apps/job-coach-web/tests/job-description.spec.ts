@@ -8,8 +8,8 @@ test("expanded job row shows job description toggle", async ({ page }) => {
 
   await rows.first().click();
 
-  await expect(page.getByRole("button", { name: "Structured" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Raw" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Original Posting" })).toBeVisible();
 });
 
 test("job description can toggle between structured and raw views", async ({ page }) => {
@@ -20,9 +20,9 @@ test("job description can toggle between structured and raw views", async ({ pag
 
   await rows.first().click();
 
-  await page.getByRole("button", { name: "Raw" }).click();
-  await expect(page.getByRole("button", { name: "Raw" })).toBeVisible();
+  await page.getByRole("button", { name: "Original Posting" }).click();
+  await expect(page.getByRole("button", { name: "Original Posting" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Structured" }).click();
-  await expect(page.getByRole("button", { name: "Structured" })).toBeVisible();
+  await page.getByRole("button", { name: "Overview" }).click();
+  await expect(page.getByRole("button", { name: "Overview" })).toBeVisible();
 });

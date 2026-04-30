@@ -1,3 +1,5 @@
+import { DEV_JOBS } from "../../../dev-fixtures/jobs";
+
 import {
   createServerClient,
   DbJobRepository,
@@ -39,6 +41,7 @@ export async function GET() {
       company: job.company,
       status: job.status,
       sourceUrl: job.sourceUrl,
+      sourceText: job.sourceText,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       score: matchMap.get(job.id) ?? 0,
