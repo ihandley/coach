@@ -18,12 +18,14 @@ test("can ignore a job and it disappears from the default view", async ({
 }) => {
   await page.goto("/jobs");
 
-  const firstRow = page.locator('[data-testid="job-row"]').first();
-  await expect(firstRow).toBeVisible();
+  const targetRow = page
+    .locator('[data-testid="job-row"]')
+    .filter({ hasText: "Staff Software Engineer" });
+  await expect(targetRow).toBeVisible();
 
-  const ignoredTitle = await firstRow.getByText("Staff Software Engineer").innerText();
+  const ignoredTitle = "Staff Software Engineer";
 
-  await firstRow.getByRole("button", { name: "Ignore" }).click();
+  await targetRow.getByRole("button", { name: "Ignore" }).click();
 
   await expect(page.getByText(ignoredTitle)).toHaveCount(0);
 });
