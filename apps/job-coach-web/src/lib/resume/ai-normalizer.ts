@@ -27,7 +27,13 @@ export async function normalizeResumeWithAi(
       {
         role: "system",
         content:
-          "Return only JSON with basics{name,email,phone?}, skills:string[], experience:{title,company,location?,startDate?,endDate?,bullets:string[]}[], education:{school,degree?,field?,startYear?,endYear?,details:string[]}[], rawText:string.",
+          [
+            "Return only JSON with basics{name,email,phone?}, skills:string[], experience:{title,company,location?,startDate?,endDate?,bullets:string[]}[], education:{school,degree?,field?,startYear?,endYear?,details:string[]}[], rawText:string.",
+            "For experience, every company/role heading in the source text must become exactly one separate experience[] item.",
+            "Headings commonly look like `Company — Title (Start – End)`. In that case company is the text before the dash, title is the text after the dash, and dates come from the parenthesized range.",
+            "Do not merge bullets from later companies into earlier companies. Attach each bullet only to the nearest preceding company/role heading.",
+            "For education, every school line must become a separate education[] item. Do not merge multiple schools into one education entry.",
+          ].join(" "),
       },
       {
         role: "user",

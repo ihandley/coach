@@ -53,14 +53,26 @@ test("uploads, previews, and deletes a structured resume", async ({ page }) => {
     mimeType: "application/pdf",
     buffer: buildPdfBuffer([
       "Ian Handley",
-      "ian@example.com",
-      "Skills",
-      "TypeScript, React",
-      "Experience",
-      "Senior Engineer at Acme",
-      "- Built reliable import workflows",
+      "Senior Software Engineer — Go, Distributed Systems, Cloud (AWS/GCP) — Open to Remote",
+      "Spanish Fork, UT • ianhandley@gmail.com • (605) 415-2577",
+      "CORE SKILLS",
+      "Languages: Go, C#, JavaScript, Python",
+      "PROFESSIONAL EXPERIENCE",
+      "Equifax — Senior Software Engineer (Jan 2023 – Apr 2026)",
+      "• Owned Go-based backend services supporting high-volume chargeback systems",
+      "Optilogic — Senior Software Engineer (Sep 2022 – Nov 2022)",
+      "• Developed microservices and APIs supporting supply chain optimization platforms",
+      "Nu Skin — Senior Software Engineer (Aug 2019 – Aug 2022)",
+      "• Maintained messaging platform processing large-scale business-critical transactions",
+      "ActiveCare — System Engineer (May 2013 – Aug 2019)",
+      "• Architected big-data platform processing millions of insurance claims",
+      "United States Air Force — Data Integrity Analyst (Jul 2008 – Oct 2011)",
+      "• Improved aircraft maintenance data accuracy",
+      "Computer Research, Inc. — Software Engineer (Jan 2002 – Aug 2005)",
+      "• Built financial systems supporting trading platforms using SQL Server",
       "Education",
-      "University of Utah - BS Computer Science",
+      "University of Colorado, Denver — Bachelor’s Degree, Sociology",
+      "Community College of the Air Force — Associate of Applied Science, Avionics",
     ]),
   });
 
@@ -70,10 +82,16 @@ test("uploads, previews, and deletes a structured resume", async ({ page }) => {
   await page.getByRole("button", { name: `Preview ${filename}` }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ian Handley" })).toBeVisible();
-  await expect(page.getByText("ian@example.com")).toBeVisible();
-  await expect(page.getByText("TypeScript")).toBeVisible();
-  await expect(page.getByText("Senior Engineer at Acme")).toBeVisible();
-  await expect(page.getByText("University of Utah")).toBeVisible();
+  await expect(page.getByText("ianhandley@gmail.com")).toBeVisible();
+  await expect(page.getByText("Go", { exact: true })).toBeVisible();
+  await expect(page.getByText("Senior Software Engineer at Equifax")).toBeVisible();
+  await expect(page.getByText("Senior Software Engineer at Optilogic")).toBeVisible();
+  await expect(page.getByText("Senior Software Engineer at Nu Skin")).toBeVisible();
+  await expect(page.getByText("System Engineer at ActiveCare")).toBeVisible();
+  await expect(page.getByText("Data Integrity Analyst at United States Air Force")).toBeVisible();
+  await expect(page.getByText("Software Engineer at Computer Research, Inc.")).toBeVisible();
+  await expect(page.getByText("University of Colorado, Denver")).toBeVisible();
+  await expect(page.getByText("Community College of the Air Force")).toBeVisible();
   await expect(page.getByText(/"rawText"/)).toHaveCount(0);
 
   await page.getByRole("button", { name: "Close" }).click();
