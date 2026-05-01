@@ -20,8 +20,16 @@ export async function POST(req: Request) {
   const db = createServerClient();
   const input = await req.json();
   const normalizedResume = input.normalizedResume;
+  const source = input.source ?? { kind: "manual", label: "Baseline Resume" };
 
-  if (!normalizedResume || typeof normalizedResume !== "object") {
+  if (
+    !normalizedResume ||
+    typeof normalizedResume !== "object" ||
+    !source ||
+    typeof source !== "object" ||
+    typeof source.kind !== "string" ||
+    typeof source.label !== "string"
+  ) {
     return NextResponse.json(
       { error: "INVALID_RESUME_PROFILE_INPUT" },
       { status: 400 },
@@ -32,7 +40,7 @@ export async function POST(req: Request) {
     .from("resume_profiles")
     .insert({
       name: input.name || `Resume ${new Date().toISOString().slice(0, 10)}`,
-      source: input.source ?? { kind: "import", label: "pdf" },
+      source,
       normalized_resume: normalizedResume,
     })
     .select("*")
@@ -43,14 +51,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
-  const { data: version, error: versionError } = await db
+  let { data: version, error: versionError } = await db
     .from("resume_versions")
     .insert({
       resume_profile_id: profile.id,
+      version_number: 1,
+      kind: "baseline",
+      source_kind: source.kind,
+      source_label: source.label,
       normalized_resume: normalizedResume,
     })
     .select("*")
     .single();
+
+  if (versionError?.code === "PGRST204") {
+    const fallback = await db
+      .from("resume_versions")
+      .insert({
+        resume_profile_id: profile.id,
+        normalized_resume: normalizedResume,
+      })
+      .select("*")
+      .single();
+
+    version = fallback.data;
+    versionError = fallback.error;
+  }
 
   if (versionError) {
     console.error("resume_versions insert failed:", versionError);

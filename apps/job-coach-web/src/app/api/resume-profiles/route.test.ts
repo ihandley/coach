@@ -133,6 +133,10 @@ describe("POST /api/resume-profiles", () => {
         op: "insert",
         payload: {
           resume_profile_id: "profile-123",
+          version_number: 1,
+          kind: "baseline",
+          source_kind: "manual",
+          source_label: "Baseline Resume",
           normalized_resume: normalizedResume,
         },
       },

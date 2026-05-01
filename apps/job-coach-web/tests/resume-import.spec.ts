@@ -77,6 +77,57 @@ test("uploads, previews, and deletes a structured resume", async ({ page }) => {
   await expect(page.getByText(/"rawText"/)).toHaveCount(0);
 
   await page.getByRole("button", { name: "Close" }).click();
+
+  await page.goto("/jobs/00000000-0000-4000-8000-000000000001");
+  await expect(page.getByLabel("Resume")).toContainText(filename);
+  await page.getByLabel("Resume").selectOption({ label: filename });
+  await page.getByRole("button", { name: "Tailor Resume" }).click();
+  await expect(page.getByText(`Tailor Resume completed for ${filename}`)).toBeVisible();
+
+  await page.goto("/resumes");
   await page.getByRole("button", { name: `Delete ${filename}` }).click();
   await expect(page.getByText(filename)).toHaveCount(0);
+});
+
+test("invalid file type shows an error", async ({ page }) => {
+  await page.goto("/resumes");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "resume.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Ian Handley\nTypeScript"),
+  });
+
+  await page.getByRole("button", { name: "Import" }).click();
+
+  await expect(page.getByText("Please upload a PDF resume.")).toBeVisible();
+});
+
+test("empty PDF shows an error", async ({ page }) => {
+  await page.goto("/resumes");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "empty-resume.pdf",
+    mimeType: "application/pdf",
+    buffer: buildPdfBuffer([]),
+  });
+
+  await page.getByRole("button", { name: "Import" }).click();
+
+  await expect(
+    page.getByText("We could not find any resume text in that PDF."),
+  ).toBeVisible();
+});
+
+test("malformed PDF shows an error", async ({ page }) => {
+  await page.goto("/resumes");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "broken-resume.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\nnot actually a readable pdf"),
+  });
+
+  await page.getByRole("button", { name: "Import" }).click();
+
+  await expect(
+    page.getByText("We could not read that PDF. Please upload a valid PDF resume."),
+  ).toBeVisible();
 });

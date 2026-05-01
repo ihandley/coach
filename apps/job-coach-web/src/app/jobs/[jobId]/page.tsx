@@ -1,4 +1,5 @@
 import { JobStatusSelect } from "./job-status-select";
+import { ResumeTailorPanel } from "./resume-tailor-panel";
 import { notFound } from "next/navigation";
 
 type Job = {
@@ -43,6 +44,8 @@ export default async function JobDetailPage({
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <JobStatusSelect jobId={job.id} initialStatus={job.status} />
       </div>
+
+      <ResumeTailorPanel jobId={job.id} />
 
       {job.sourceUrl ? (
         <a href={job.sourceUrl} target="_blank" className="text-blue-600 underline">
