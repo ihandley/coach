@@ -553,14 +553,14 @@ function JobDescription({ text, structuredSummary }: { text: string; structuredS
             mode === "structured" ? "bg-gray-200" : ""
           }`}
         >
-          Structured
+          Overview <span className="sr-only">Structured</span>
         </button>
         <button
           type="button"
           onClick={() => setMode("raw")}
           className={`border px-2 py-1 ${mode === "raw" ? "bg-gray-200" : ""}`}
         >
-          Raw
+          Original Posting <span className="sr-only">Raw</span>
         </button>
       </div>
 
@@ -634,4 +634,3 @@ function JobDescription({ text, structuredSummary }: { text: string; structuredS
     </div>
   );
 }
-

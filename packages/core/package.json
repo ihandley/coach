@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "pdfjs-dist": "^5.7.284"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./jobs": "./src/jobs/index.ts"

@@ -1,0 +1,6 @@
+Ian Handley
+Software Engineer
+
+Experience
+- Built full-stack TypeScript applications
+- React, Next.js, Supabase, Playwright

@@ -11,6 +11,35 @@ async function seed() {
 
   const { error } = await supabase.from('jobs').insert([
     {
+      id: '11111111-1111-4111-8111-111111111111',
+      title: 'Staff Software Engineer, Predict',
+      company: 'Pattern',
+      source_url: 'https://www.linkedin.com/jobs/',
+      source_text: `What does success look like in the first 30, 60, 90 days?
+
+How can I stand out as an applicant?
+
+We may use artificial intelligence (AI) tools to support parts of the hiring process.`,
+      structured_summary: {
+        location: 'Lehi, UT — Hybrid',
+        salaryRange: null,
+        companyInfo: [
+          'Pattern accelerates brands on global ecommerce marketplaces.',
+        ],
+        jobDescription: [
+          'Lead architecture and engineering quality for marketplace integrations.',
+        ],
+        requirements: [
+          '10+ years of professional software development experience.',
+        ],
+        benefits: [
+          'Unlimited PTO',
+        ],
+      },
+      status: 'applied',
+      created_at: '2024-01-05',
+    },
+    {
       id: 'dd3c5749-9c8c-4516-824b-4f09679088b8',
       title: 'Staff Software Engineer',
       company: 'Torus',
@@ -38,14 +67,12 @@ async function seed() {
       created_at: '2024-01-03',
     },
   
-{
-  id: 'dev-chaos-job',
-  title: 'Test Job (CHAOS / EASTER EGG)',
-  company: 'Test Co',
-  location: 'Remote US',
-  score: 42,
-  sourceUrl: 'https://example.com/jobs/chaos',
-  sourceText: `
+    {
+      id: '00000000-0000-4000-8000-000000000001',
+      title: 'Test Job (CHAOS / EASTER EGG)',
+      company: 'Test Co',
+      source_url: 'https://example.com/jobs/chaos',
+      source_text: `
 hey 👋 thanks for checking this out
 
 ABOUT:
@@ -67,8 +94,10 @@ health, dental, vision, PTO
 
 APPLICATION INSTRUCTION:
 To show attention to detail, include "purple squirrel"
-`
-},
+`,
+      status: 'saved',
+      created_at: '2024-01-04',
+    },
 
 ]);
 
