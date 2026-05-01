@@ -24,8 +24,8 @@ describe("importResumeFromText", () => {
       text: "Software Engineer with experience in TypeScript and React.",
     });
 
-    expect(result.profile.name).toBe("Imported Resume");
-    expect(result.profile.currentVersionId).toBeDefined();
-    expect(result.version.normalizedResume.rawText).toContain("Software Engineer");
+    expect((result as any).profile.name).toBe("Imported Resume");
+    expect((result as any).profile.currentVersionId).toBeDefined();
+    expect((result as any).version.normalizedResume.rawText).toContain("Software Engineer");
   });
 });

@@ -1,8 +1,4 @@
-import * as fs from "node:fs";
-
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-
-import { createImportResumeFromText } from "./import-resume-from-text";
 
 type PdfjsWorkerGlobal = typeof globalThis & {
   pdfjsWorker?: unknown;
@@ -23,7 +19,15 @@ async function ensurePdfWorker() {
   }
 }
 
-function normalizeExtractedText(text: string) {
+function toPdfData(input: ArrayBuffer | Uint8Array | Buffer) {
+  if (input instanceof ArrayBuffer) {
+    return new Uint8Array(input);
+  }
+
+  return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
+}
+
+export function normalizeExtractedPdfText(text: string) {
   return text
     .replace(/\u0000/g, "")
     .replace(/\u00ad/g, "")
@@ -34,14 +38,15 @@ function normalizeExtractedText(text: string) {
     .trim();
 }
 
-async function extractPdfText(buffer: Buffer) {
+export async function extractPdfText(input: ArrayBuffer | Uint8Array | Buffer) {
   await ensurePdfWorker();
 
   const loadingTask = getDocument({
-    data: new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength),
+    data: toPdfData(input),
     disableFontFace: true,
     useWorkerFetch: false,
   });
+
   const pdf = await loadingTask.promise;
   const pages: string[] = [];
 
@@ -73,32 +78,14 @@ async function extractPdfText(buffer: Buffer) {
         pageLines.push(text);
         currentY = typeof y === "number" ? y : currentY;
       }
+      const pageText = pageLines.join("");
 
-      pages.push(pageLines.join(""));
+      pages.push(pageText);
       page.cleanup();
     }
   } finally {
     await pdf.destroy();
   }
 
-  return normalizeExtractedText(pages.join("\n\n"));
-}
-
-export function createImportResumeFromPdf(deps: {
-  importResumeFromText: ReturnType<typeof createImportResumeFromText>;
-}) {
-  const { importResumeFromText } = deps;
-
-  return async function importResumeFromPdf(input: {
-    name: string;
-    filePath: string;
-  }) {
-    const buffer = fs.readFileSync(input.filePath);
-    const text = await extractPdfText(buffer);
-
-    return importResumeFromText({
-      name: input.name,
-      text,
-    });
-  };
+  return normalizeExtractedPdfText(pages.join("\n\n"));
 }

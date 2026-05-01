@@ -38,14 +38,12 @@ async function seed() {
       created_at: '2024-01-03',
     },
   
-{
-  id: 'dev-chaos-job',
-  title: 'Test Job (CHAOS / EASTER EGG)',
-  company: 'Test Co',
-  location: 'Remote US',
-  score: 42,
-  sourceUrl: 'https://example.com/jobs/chaos',
-  sourceText: `
+    {
+      id: '00000000-0000-4000-8000-000000000001',
+      title: 'Test Job (CHAOS / EASTER EGG)',
+      company: 'Test Co',
+      source_url: 'https://example.com/jobs/chaos',
+      source_text: `
 hey 👋 thanks for checking this out
 
 ABOUT:
@@ -67,8 +65,10 @@ health, dental, vision, PTO
 
 APPLICATION INSTRUCTION:
 To show attention to detail, include "purple squirrel"
-`
-},
+`,
+      status: 'saved',
+      created_at: '2024-01-04',
+    },
 
 ]);
 
