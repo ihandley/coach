@@ -7,22 +7,7 @@ import {
 
 
 
-    if (normalizedResume.skills) {
-        parts.push(normalizedResume.skills.join(" "));
-    }
-
-    if (normalizedResume.experience) {
-        for (const exp of normalizedResume.experience) {
-            parts.push(exp.company);
-            parts.push(exp.title);
-            if (exp.highlights) {
-                parts.push(exp.highlights.join(" "));
-            }
-        }
-    }
-
-    return parts.filter(Boolean).join(" ");
-}
+    
 
 export async function POST(request: Request) {
     const body = await request.json();

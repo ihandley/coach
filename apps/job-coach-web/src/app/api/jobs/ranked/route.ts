@@ -1,9 +1,8 @@
-import { DEV_JOBS } from "../../../dev-fixtures/jobs";
-
 import {
   createServerClient,
   DbJobRepository,
 } from "@coach/db";
+
 
 export async function GET() {
   let db;
@@ -42,6 +41,7 @@ export async function GET() {
       status: job.status,
       sourceUrl: job.sourceUrl,
       sourceText: job.sourceText,
+      structuredSummary: job.structuredSummary,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       score: matchMap.get(job.id) ?? 0,

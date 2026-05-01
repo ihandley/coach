@@ -21,6 +21,7 @@ export class DbJobRepository implements JobRepository {
         title: input.title,
         source_url: input.sourceUrl,
         source_text: input.sourceText,
+        structured_summary: input.structuredSummary,
         status: input.status,
       })
       .select(`
@@ -29,6 +30,7 @@ export class DbJobRepository implements JobRepository {
         title,
         source_url,
         source_text,
+        structured_summary,
         status,
         created_at,
         updated_at
@@ -51,6 +53,7 @@ export class DbJobRepository implements JobRepository {
         title,
         source_url,
         source_text,
+        structured_summary,
         status,
         created_at,
         updated_at
@@ -78,6 +81,7 @@ export class DbJobRepository implements JobRepository {
         title,
         source_url,
         source_text,
+        structured_summary,
         status,
         created_at,
         updated_at
@@ -105,6 +109,7 @@ export class DbJobRepository implements JobRepository {
         title,
         source_url,
         source_text,
+        structured_summary,
         status,
         created_at,
         updated_at
@@ -147,6 +152,7 @@ export class DbJobRepository implements JobRepository {
         title,
         source_url,
         source_text,
+        structured_summary,
         status,
         created_at,
         updated_at

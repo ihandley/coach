@@ -1,5 +1,6 @@
 import { cleanJobText, extractJobFields } from "@coach/core";
 import { createDbJobImporter, DbJobRepository, createServerClient } from "@coach/db";
+import { generateStructuredSummary } from "@/server/ai/structured-job-summary";
 import { fetchJobPageAsDependency, extractJobStub } from "@coach/ai";
 
 function isNonEmptyString(value: unknown): value is string {
@@ -51,11 +52,20 @@ export async function POST(request: Request) {
     if (isNonEmptyString(body?.sourceText)) {
         const repo = new DbJobRepository(db);
 
+        let structuredSummary = null;
+
+        try {
+            structuredSummary = await generateStructuredSummary(body.sourceText);
+        } catch (e) {
+            console.error("AI summary failed", e);
+        }
+
         const job = await repo.createJob({
             company: "Unknown",
             title: "Imported Job",
             sourceUrl: "",
             sourceText: body.sourceText,
+            structuredSummary,
             status: "saved",
         });
 

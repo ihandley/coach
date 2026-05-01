@@ -32,12 +32,14 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { jobId: string } }
+  context: { params: Promise<{ jobId: string }> },
 ) {
   const body = await req.json();
+  const { jobId } = await context.params;
+  const jobRepository = createJobRepository();
 
   const job = await jobRepository.updateJobStatus({
-    jobId: params.jobId,
+    jobId,
     status: body.status,
     event: {
       type: "status_changed",

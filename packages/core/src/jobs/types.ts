@@ -20,6 +20,7 @@ export type JobRecord = {
   title: string;
   sourceUrl: string;
   sourceText: string;
+  structuredSummary?: any;
   status: JobStatus;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,7 @@ export type CreateJobInput = {
   title: string;
   sourceUrl: string;
   sourceText: string;
+  structuredSummary?: any;
   status: JobStatus;
 };
 
