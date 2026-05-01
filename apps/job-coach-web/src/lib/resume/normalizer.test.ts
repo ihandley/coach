@@ -53,11 +53,17 @@ University of Utah - BS Computer Science`);
 
     expect(result).toEqual({
       basics: {
+        fullName: "Ian Handley",
         name: "Ian Handley",
         email: "ian@example.com",
         phone: "(555) 123-4567",
       },
-      skills: expect.arrayContaining(["TypeScript", "React", "SQL"]),
+      skills: [
+        {
+          category: "Skills",
+          items: expect.arrayContaining(["TypeScript", "React", "SQL"]),
+        },
+      ],
       experience: [
         {
           title: "Senior Engineer",
@@ -79,6 +85,7 @@ University of Utah - BS Computer Science`);
   it("returns empty arrays and string fields when text has no sections", () => {
     expect(normalizeResumeText("")).toEqual({
       basics: {
+        fullName: "",
         name: "",
         email: "",
       },
@@ -92,8 +99,40 @@ University of Utah - BS Computer Science`);
   it("keeps each extracted resume company and school as separate entries", () => {
     const result = normalizeResumeText(ianResumeExtractedText);
 
+    expect(result.basics).toMatchObject({
+      fullName: "Ian Handley",
+      name: "Ian Handley",
+      headline:
+        "Senior Software Engineer — Go, Distributed Systems, Cloud (AWS/GCP) — Open to Remote",
+      email: "ianhandley@gmail.com",
+      phone: "(605) 415-2577",
+      location: "Spanish Fork, UT",
+      linkedin: "linkedin.com/in/ianrhandley",
+      summary:
+        "Senior Software Engineer with 20+ years building and owning backend systems and distributed architectures.",
+    });
     expect(result.experience).toHaveLength(6);
     expect(result.education).toHaveLength(2);
+    expect(result.skills).toEqual(
+      expect.arrayContaining([
+        {
+          category: "Languages",
+          items: expect.arrayContaining(["Go", "C#", "JavaScript", "Python"]),
+        },
+        {
+          category: "Systems",
+          items: expect.arrayContaining([
+            "Distributed Systems",
+            "Microservices",
+            "Messaging",
+          ]),
+        },
+        {
+          category: "Cloud",
+          items: expect.arrayContaining(["AWS", "GCP", "Azure"]),
+        },
+      ]),
+    );
     expect(result.experience).toMatchObject([
       {
         company: "Equifax",
@@ -140,6 +179,11 @@ University of Utah - BS Computer Science`);
       "Developed microservices and APIs supporting supply chain optimization platforms",
       "Designed containerized services (Docker/Kubernetes) improving deployment consistency",
     ]);
+    const bulletCount = result.experience.reduce(
+      (count, entry) => count + entry.bullets.length,
+      0,
+    );
+    expect(bulletCount).toBe(12);
     expect(result.education).toMatchObject([
       {
         school: "University of Colorado, Denver",
@@ -152,5 +196,43 @@ University of Utah - BS Computer Science`);
         field: "Avionics",
       },
     ]);
+  });
+
+  it("deduplicates skill strings globally and prefers categorized groups", () => {
+    const result = normalizeResumeText(`Ian Handley
+ian@example.com
+
+Core Skills
+Languages: TypeScript, Node.js, SQL
+Databases: SQL, PostgreSQL
+Tools: Node.js, Docker
+
+Experience
+Engineer at Acme
+- Built services with Node.js and SQL`);
+
+    const skillStrings = result.skills.flatMap((group) => group.items);
+    const normalizedSkillStrings = skillStrings.map((skill) => skill.toLowerCase());
+
+    expect(normalizedSkillStrings).toHaveLength(
+      new Set(normalizedSkillStrings).size,
+    );
+    expect(result.skills.map((group) => group.category)).not.toContain("Skills");
+    expect(result.skills).toEqual(
+      expect.arrayContaining([
+        {
+          category: "Languages",
+          items: ["TypeScript"],
+        },
+        {
+          category: "Databases",
+          items: ["SQL", "PostgreSQL"],
+        },
+        {
+          category: "Tools",
+          items: ["Node.js", "Docker"],
+        },
+      ]),
+    );
   });
 });

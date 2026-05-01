@@ -54,9 +54,12 @@ test("uploads, previews, and deletes a structured resume", async ({ page }) => {
     buffer: buildPdfBuffer([
       "Ian Handley",
       "Senior Software Engineer — Go, Distributed Systems, Cloud (AWS/GCP) — Open to Remote",
-      "Spanish Fork, UT • ianhandley@gmail.com • (605) 415-2577",
+      "Spanish Fork, UT • ianhandley@gmail.com • (605) 415-2577 • linkedin.com/in/ianrhandley",
+      "SUMMARY",
+      "Senior Software Engineer building backend systems.",
       "CORE SKILLS",
-      "Languages: Go, C#, JavaScript, Python",
+      "Languages: Go, C#, JavaScript, Python • Systems: Distributed Systems, Microservices, Messaging",
+      "Cloud: AWS, GCP, Azure",
       "PROFESSIONAL EXPERIENCE",
       "Equifax — Senior Software Engineer (Jan 2023 – Apr 2026)",
       "• Owned Go-based backend services supporting high-volume chargeback systems",
@@ -82,7 +85,20 @@ test("uploads, previews, and deletes a structured resume", async ({ page }) => {
   await page.getByRole("button", { name: `Preview ${filename}` }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ian Handley" })).toBeVisible();
+  await expect(
+    page.getByText(/Senior Software Engineer.*Open to Remote/),
+  ).toBeVisible();
+  await expect(page.getByText("Spanish Fork, UT")).toBeVisible();
   await expect(page.getByText("ianhandley@gmail.com")).toBeVisible();
+  await expect(page.getByText("linkedin.com/in/ianrhandley")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Senior Software Engineer building backend systems.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Languages" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Systems" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cloud" })).toBeVisible();
   await expect(page.getByText("Go", { exact: true })).toBeVisible();
   await expect(page.getByText("Senior Software Engineer at Equifax")).toBeVisible();
   await expect(page.getByText("Senior Software Engineer at Optilogic")).toBeVisible();

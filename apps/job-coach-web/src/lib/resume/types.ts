@@ -1,7 +1,17 @@
 export type ResumeBasics = {
+  fullName: string;
   name: string;
+  headline?: string;
   email: string;
   phone?: string;
+  location?: string;
+  linkedin?: string;
+  summary?: string;
+};
+
+export type ResumeSkillGroup = {
+  category: string;
+  items: string[];
 };
 
 export type ResumeExperience = {
@@ -24,7 +34,7 @@ export type ResumeEducation = {
 
 export type NormalizedResume = {
   basics: ResumeBasics;
-  skills: string[];
+  skills: ResumeSkillGroup[];
   experience: ResumeExperience[];
   education: ResumeEducation[];
   rawText: string;

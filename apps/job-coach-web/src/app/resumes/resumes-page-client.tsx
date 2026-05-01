@@ -21,11 +21,16 @@ type PreviewResume = {
 
 type StructuredResume = {
   basics?: {
+    fullName?: string;
     name?: string;
+    headline?: string;
     email?: string;
     phone?: string;
+    location?: string;
+    linkedin?: string;
+    summary?: string;
   };
-  skills?: string[];
+  skills?: Array<string | { category?: string; items?: string[] }>;
   experience?: Array<{
     title?: string;
     company?: string;
@@ -43,6 +48,34 @@ type StructuredResume = {
     details?: string[];
   }>;
 };
+
+function getSkillGroups(skills?: StructuredResume["skills"]) {
+  if (!skills?.length) {
+    return [];
+  }
+
+  if (skills.every((skill) => typeof skill === "string")) {
+    return [
+      {
+        category: "Skills",
+        items: skills.filter((skill): skill is string => typeof skill === "string"),
+      },
+    ];
+  }
+
+  return skills
+    .map((skill) => {
+      if (typeof skill === "string") {
+        return { category: "Skills", items: [skill] };
+      }
+
+      return {
+        category: skill.category || "Skills",
+        items: skill.items?.filter(Boolean) ?? [],
+      };
+    })
+    .filter((group) => group.items.length > 0);
+}
 
 function DownloadIcon() {
   return (
@@ -200,6 +233,8 @@ export default function FilesPageClient() {
     return resume.source?.label || resume.name;
   }
 
+  const previewSkillGroups = getSkillGroups(previewData?.skills);
+
   return (
     <div className="space-y-8">
       {/* Import */}
@@ -330,31 +365,64 @@ export default function FilesPageClient() {
                 <div className="space-y-6">
                   <header className="border-b pb-4">
                     <h3 className="text-2xl font-semibold text-gray-950">
-                      {previewData.basics?.name || previewResume.name}
+                      {previewData.basics?.fullName ||
+                        previewData.basics?.name ||
+                        previewResume.name}
                     </h3>
+                    {previewData.basics?.headline && (
+                      <p className="mt-1 text-base text-gray-700">
+                        {previewData.basics.headline}
+                      </p>
+                    )}
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                      {previewData.basics?.location && (
+                        <span>{previewData.basics.location}</span>
+                      )}
                       {previewData.basics?.email && (
                         <span>{previewData.basics.email}</span>
                       )}
                       {previewData.basics?.phone && (
                         <span>{previewData.basics.phone}</span>
                       )}
+                      {previewData.basics?.linkedin && (
+                        <span>{previewData.basics.linkedin}</span>
+                      )}
                     </div>
                   </header>
+
+                  {previewData.basics?.summary && (
+                    <section>
+                      <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                        Summary
+                      </h4>
+                      <p className="mt-2 text-sm leading-6 text-gray-700">
+                        {previewData.basics.summary}
+                      </p>
+                    </section>
+                  )}
 
                   <section>
                     <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                       Skills
                     </h4>
-                    {previewData.skills?.length ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {previewData.skills.map((skill) => (
-                          <span
-                            key={skill}
-                            className="rounded border border-gray-200 bg-gray-50 px-2.5 py-1 text-sm text-gray-700"
-                          >
-                            {skill}
-                          </span>
+                    {previewSkillGroups.length ? (
+                      <div className="mt-3 space-y-3">
+                        {previewSkillGroups.map((group) => (
+                          <div key={group.category}>
+                            <h5 className="text-sm font-medium text-gray-800">
+                              {group.category}
+                            </h5>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {group.items.map((skill) => (
+                                <span
+                                  key={`${group.category}-${skill}`}
+                                  className="rounded border border-gray-200 bg-gray-50 px-2.5 py-1 text-sm text-gray-700"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     ) : (
