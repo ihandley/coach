@@ -511,6 +511,11 @@ export function JobsPageClient() {
                     <tr data-testid="job-details">
                       <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
                         <JobDescription text={row.original.sourceText || ""} structuredSummary={row.original.structuredSummary} />
+
+                        <div className="mt-4 border-t pt-4 space-y-3">
+                          <ResumeTailor jobId={row.original.id} />
+                        </div>
+
                         {row.original.sourceUrl && (
                           <a
                             href={row.original.sourceUrl}
@@ -631,6 +636,87 @@ function JobDescription({ text, structuredSummary }: { text: string; structuredS
             </div>
           );
         })()}      </div>
+    </div>
+  );
+}
+
+function ResumeTailor({ jobId }: { jobId: string }) {
+  const [resumes, setResumes] = useState<{ id: string; name: string }[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/resume-profiles')
+      .then((res) => res.json())
+      .then((data) =>
+        setResumes(data.map((r: any) => ({
+          id: r.id,
+          name: r.name || r.title || 'Untitled Resume'
+        })))
+      )
+      .catch(() => setResumes([]));
+  }, []);
+
+  async function handleGenerate() {
+    if (!selectedResumeId) return;
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch(`/api/resume-profiles/${selectedResumeId}/tailored-resumes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          sourceResumeVersionId: selectedResumeId,
+        }),
+      });
+
+      const data = await res.json();
+      setResult(
+        JSON.stringify(data.suggestions ?? data, null, 2)
+      );
+    } catch (err) {
+      console.error(err);
+      setResult('Failed to generate tailored resume.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <select
+          value={selectedResumeId ?? ''}
+          onChange={(e) => setSelectedResumeId(e.target.value)}
+          className="border rounded px-2 py-1 text-sm"
+        >
+          <option value="">Select resume...</option>
+          {resumes.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={!selectedResumeId || loading}
+          className="btn-primary text-sm disabled:opacity-50"
+        >
+          {loading ? 'Generating...' : 'Tailor Resume'}
+        </button>
+      </div>
+
+      {result && (
+        <div className="rounded border bg-white p-3 whitespace-pre-wrap text-sm">
+          {result}
+        </div>
+      )}
     </div>
   );
 }
