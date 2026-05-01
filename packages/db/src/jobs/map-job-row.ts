@@ -6,6 +6,7 @@ type JobRow = {
   title: string;
   source_url: string;
   source_text: string;
+  structured_summary: unknown | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -18,6 +19,7 @@ export function mapJobRow(row: JobRow): JobRecord {
     title: row.title,
     sourceUrl: row.source_url,
     sourceText: row.source_text,
+    structuredSummary: row.structured_summary ?? null,
     status: row.status as JobRecord["status"],
     createdAt: row.created_at,
     updatedAt: row.updated_at,

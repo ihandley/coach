@@ -36,6 +36,16 @@ function formatRawText(text: string) {
   ));
 }
 
+function extractLocation(text: string): string | null {
+  const match = text.match(/\b(Remote|Hybrid|On-site|Orem|Provo|Lehi|Salt Lake City|Utah|CA|California|NY|New York|TX|Texas)\b/i);
+  return match ? match[0] : null;
+}
+
+function extractSalary(text: string): string | null {
+  const match = text.match(/\$[0-9,]+\s*(?:-|–|to)\s*\$[0-9,]+(?:\s*(?:per year|\/year|annually|\/hr|per hour))?/i);
+  return match ? match[0] : null;
+}
+
 function parseStructured(text: string) {
   return [
     {
@@ -55,9 +65,11 @@ type RankedJob = {
   company: string;
   status: string;
   sourceUrl?: string;
+  sourceText?: string | null;
   createdAt: string;
   updatedAt: string;
   score: number;
+  structuredSummary?: any;
 };
 
 export function JobsPageClient() {
@@ -498,17 +510,7 @@ export function JobsPageClient() {
                   {expandedId === row.original.id && (
                     <tr data-testid="job-details">
                       <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
-                        <div><strong>Company:</strong> {row.original.company}</div>
-                        <div><strong>Status:</strong> <JobStatusSelect
-                            jobId={row.original.id}
-                            initialStatus={row.original.status}
-                            variant="inline"
-                          /></div>
-                        <div className="mb-2">
-                          <strong>Score:</strong> {row.original.score}
-                        </div>
-
-                        <JobDescription text={row.original.sourceText || ""} />
+                        <JobDescription text={row.original.sourceText || ""} structuredSummary={row.original.structuredSummary} />
                         {row.original.sourceUrl && (
                           <a
                             href={row.original.sourceUrl}
@@ -534,10 +536,12 @@ export function JobsPageClient() {
 }
 
 
-function JobDescription({ text }: { text: string }) {
+function JobDescription({ text, structuredSummary }: { text: string; structuredSummary?: any }) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
   const safeText = text || "No job description available.";
   const structured = parseStructured(safeText);
+  const location = extractLocation(safeText);
+  const salary = extractSalary(safeText);
 
   return (
     <div className="mt-4 border-t pt-4">
@@ -560,21 +564,73 @@ function JobDescription({ text }: { text: string }) {
         </button>
       </div>
 
-      <div className="max-h-96 overflow-y-auto text-sm">
+      <div className="96 overflow-y-auto text-sm">
         {mode === "raw" && formatRawText(safeText)}
 
-        {mode === "structured" &&
-          structured.map((section, i) => (
-            <div key={i} className="mb-4">
-              <h4 className="mb-1 font-semibold">{section.title}</h4>
-              <ul className="ml-5 list-disc">
-                {section.content.map((item, j) => (
-                  <li key={j}>{item}</li>
-                ))}
-              </ul>
+        {mode === "structured" && (() => {
+          const summary = structuredSummary;
+
+          if (!summary) {
+            return (
+              <div className="text-sm text-muted-foreground">
+                No structured summary available yet. Use Raw view for the original posting.
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex max-w-3xl flex-col gap-4">
+              <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
+                {summary.location && <div>📍 {summary.location}</div>}
+                <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
+              </div>
+
+              {summary.companyInfo?.length > 0 && (
+                <div>
+                  <h4 className="mb-1 font-semibold">Company</h4>
+                  <ul className="ml-5 list-disc">
+                    {summary.companyInfo.map((item: string, i: number) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {summary.jobDescription?.length > 0 && (
+                <div>
+                  <h4 className="mb-1 font-semibold">Description</h4>
+                  <ul className="ml-5 list-disc">
+                    {summary.jobDescription.map((item: string, i: number) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {summary.requirements?.length > 0 && (
+                <div>
+                  <h4 className="mb-1 font-semibold">Requirements</h4>
+                  <ul className="ml-5 list-disc">
+                    {summary.requirements.map((item: string, i: number) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {summary.benefits?.length > 0 && (
+                <div>
+                  <h4 className="mb-1 font-semibold">Benefits</h4>
+                  <ul className="ml-5 list-disc">
+                    {summary.benefits.map((item: string, i: number) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          ))}
-      </div>
+          );
+        })()}      </div>
     </div>
   );
 }
