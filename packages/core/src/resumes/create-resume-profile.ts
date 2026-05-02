@@ -11,6 +11,13 @@ type CreateResumeProfileInput = {
     normalizedResume: NormalizedResume;
 };
 
+export type CreateResumeProfile = (
+    input: CreateResumeProfileInput,
+) => Promise<{
+    profile: ResumeProfile;
+    version: ResumeVersion;
+}>;
+
 type ResumeProfileRepository = {
     createResumeProfile(input: {
         name: string;
@@ -24,6 +31,7 @@ type ResumeVersionRepository = {
         id?: string;
         profileId: string;
         versionNumber: number;
+        kind: "baseline";
         source: ResumeSource;
         normalizedResume: NormalizedResume;
     }): Promise<ResumeVersion>;
@@ -49,6 +57,7 @@ export function createCreateResumeProfile({
             id: versionId,
             profileId: profile.id,
             versionNumber: 1,
+            kind: "baseline",
             source: input.source,
             normalizedResume: input.normalizedResume,
         });

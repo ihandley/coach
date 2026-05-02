@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+
 type StructuredJobSummary = {
   location: string | null;
   salaryRange: string | null;
@@ -8,9 +9,18 @@ type StructuredJobSummary = {
   benefits: string[];
 };
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+function getClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is required to generate structured summaries");
+  }
+
+  return new OpenAI({ apiKey });
+}
 
 export async function generateStructuredSummary(text: string): Promise<StructuredJobSummary> {
+  const client = getClient();
   const response = await client.chat.completions.create({
     model: "gpt-4.1-mini",
     response_format: { type: "json_object" },

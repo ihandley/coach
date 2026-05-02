@@ -1,42 +1,40 @@
-import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+// ✅ THIS is the correct DB
+import { db } from "../apps/job-coach-web/src/server/db";
+
+import { createDbCreateResumeProfile } from "../packages/db/src/resume-profiles/create-db-create-resume-profile";
 
 async function main() {
-  const filePath = path.resolve(
-    process.env.HOME!,
-    "code/github/opencode/data/job-coach/resume.json",
-  );
+  const filePath = path.resolve(process.argv[2]);
 
-  const raw = fs.readFileSync(filePath, "utf-8");
-  const resume = JSON.parse(raw);
+  const text = fs.readFileSync(filePath, "utf-8");
 
-  const { data, error } = await supabase
-    .from("resume_profiles")
-    .insert({
-      name: "Imported Resume",
-      source: {
-        kind: "import",
-        label: "OpenCode import",
+  const createResumeProfile = createDbCreateResumeProfile({
+    db,
+  });
+
+  const result = await createResumeProfile({
+    name: "Imported Resume",
+    source: {
+      kind: "import",
+      label: "text-import",
+    },
+    normalizedResume: {
+      basics: {
+        fullName: "",
+        headline: "",
+        summary: text.slice(0, 500),
       },
-      normalized_resume: {
-        rawText: JSON.stringify(resume, null, 2),
-      },
-    })
-    .select("id, name")
-    .single();
+      skills: [],
+      experience: [],
+      education: [],
+      rawText: text,
+    },
+  });
 
-  if (error) {
-    console.error(error);
-    process.exit(1);
-  }
-
-  console.log("Imported:", data);
+  console.log(result);
 }
 
 main();
