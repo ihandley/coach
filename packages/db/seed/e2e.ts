@@ -1,9 +1,14 @@
 import { createServerClient } from '../src/supabase/create-server-client';
+import { loadEnvFromKeychain } from '../src/env/load-env';
 
 async function seed() {
+  loadEnvFromKeychain();
+
   const supabase = createServerClient();
 
   // Clear existing data
+  await supabase.from('resume_versions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('resume_profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('jobs').delete().neq('id', '');
 
   // Insert deterministic test data
@@ -66,7 +71,6 @@ We may use artificial intelligence (AI) tools to support parts of the hiring pro
       status: 'archived',
       created_at: '2024-01-03',
     },
-  
     {
       id: '00000000-0000-4000-8000-000000000001',
       title: 'Test Job (CHAOS / EASTER EGG)',
@@ -98,11 +102,62 @@ To show attention to detail, include "purple squirrel"
       status: 'saved',
       created_at: '2024-01-04',
     },
-
-]);
+  ]);
 
   if (error) {
     throw error;
+  }
+
+  const resumeProfileId = '11111111-1111-4111-8111-111111111111';
+  const resumeVersionId = '22222222-2222-4222-8222-222222222222';
+  const normalizedResume = {
+    basics: {
+      fullName: 'Test Candidate',
+      headline: 'Senior Software Engineer',
+      summary: 'Builds TypeScript services, Postgres systems, and production APIs.',
+    },
+    skills: ['TypeScript', 'Postgres', 'APIs'],
+    experience: [
+      {
+        company: 'Example Co',
+        title: 'Senior Software Engineer',
+        highlights: ['Built reliable backend services'],
+      },
+    ],
+    education: [],
+  };
+
+  const { error: profileError } = await supabase.from('resume_profiles').insert({
+    id: resumeProfileId,
+    name: 'E2E Resume',
+    source: {
+      kind: 'manual',
+      label: 'E2E seed',
+    },
+    normalized_resume: normalizedResume,
+  });
+
+  if (profileError) {
+    throw profileError;
+  }
+
+  const { error: versionError } = await supabase.from('resume_versions').insert({
+    id: resumeVersionId,
+    resume_profile_id: resumeProfileId,
+    normalized_resume: normalizedResume,
+  });
+
+  if (versionError) {
+    throw versionError;
+  }
+
+  const { error: currentVersionError } = await supabase
+    .from('resume_profiles')
+    .update({ current_version_id: resumeVersionId })
+    .eq('id', resumeProfileId);
+
+  if (currentVersionError) {
+    throw currentVersionError;
   }
 
   const { data, error: readError } = await supabase

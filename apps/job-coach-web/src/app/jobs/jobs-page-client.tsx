@@ -72,6 +72,12 @@ type RankedJob = {
   structuredSummary?: any;
 };
 
+type ResumeProfile = {
+  id: string;
+  name: string;
+  currentVersionId: string;
+};
+
 export function JobsPageClient() {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
     new Set(["saved", "applied", "interviewing", "offer", "rejected"])
@@ -511,6 +517,11 @@ export function JobsPageClient() {
                     <tr data-testid="job-details">
                       <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
                         <JobDescription text={row.original.sourceText || ""} structuredSummary={row.original.structuredSummary} />
+
+                        <div className="mt-4 border-t pt-4 space-y-3">
+                          <ResumeTailor jobId={row.original.id} />
+                        </div>
+
                         {row.original.sourceUrl && (
                           <a
                             href={row.original.sourceUrl}
@@ -631,6 +642,107 @@ function JobDescription({ text, structuredSummary }: { text: string; structuredS
             </div>
           );
         })()}      </div>
+    </div>
+  );
+}
+function ResumeTailor({ jobId }: { jobId: string }) {
+  const [resumes, setResumes] = useState<ResumeProfile[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<unknown[] | null>(null);
+  const [tailorError, setTailorError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/resume-profiles')
+      .then((res) => res.json())
+      .then((data) =>
+        setResumes(data.map((r: any) => ({
+          id: r.id,
+          name: r.name || 'Untitled Resume',
+          currentVersionId: r.currentVersionId || r.current_version_id || '',
+        })))
+      )
+      .catch(() => setResumes([]));
+  }, []);
+
+  const canTailor = Boolean(selectedProfile?.currentVersionId);
+
+  async function handleGenerate() {
+    if (!selectedProfile?.currentVersionId) return;
+
+    setLoading(true);
+    setSuggestions(null);
+    setTailorError(null);
+
+    try {
+      const res = await fetch(`/api/resume-profiles/${selectedProfile.id}/tailored-resumes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          sourceResumeVersionId: selectedProfile.currentVersionId,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || 'Unable to generate tailored resume.');
+      }
+
+      setSuggestions(data.suggestions ?? []);
+    } catch (err) {
+      console.error(err);
+      setTailorError('Unable to generate tailored resume.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <select
+          aria-label="Resume profile"
+          value={selectedProfile?.id ?? ''}
+          onChange={(e) => {
+            const profile = resumes.find((resume) => resume.id === e.target.value);
+            setSelectedProfile(profile ?? null);
+          }}
+          className="border rounded px-2 py-1 text-sm"
+        >
+          <option value="">Select resume...</option>
+          {resumes.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={!canTailor || loading}
+          className="btn-primary text-sm disabled:opacity-50"
+        >
+          {loading ? 'Generating...' : 'Tailor Resume'}
+        </button>
+      </div>
+
+      {!canTailor && (
+        <p className="text-sm text-gray-600">Import a resume to enable tailoring</p>
+      )}
+
+      {tailorError && (
+        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {tailorError}
+        </div>
+      )}
+
+      {suggestions && (
+        <pre className="rounded border bg-white p-3 whitespace-pre-wrap text-sm">
+          {JSON.stringify(suggestions, null, 2)}
+        </pre>
+      )}
     </div>
   );
 }
