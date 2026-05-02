@@ -52,7 +52,7 @@ const createTailoredResume = createDbCreateTailoredResume({
             const db = createServerClient();
             const { data, error } = await db
                 .from("resume_versions")
-                .select("id,resume_profile_id,version_number,normalized_resume")
+                .select("id,resume_profile_id,normalized_resume")
                 .eq("id", resumeVersionId)
                 .maybeSingle();
 
@@ -64,7 +64,7 @@ const createTailoredResume = createDbCreateTailoredResume({
                 ? {
                     id: data.id,
                     profileId: data.resume_profile_id,
-                    versionNumber: data.version_number ?? 1,
+                    versionNumber: 1,
                     normalizedResume: data.normalized_resume,
                 }
                 : null;
@@ -80,7 +80,7 @@ const createTailoredResume = createDbCreateTailoredResume({
             normalizedResume: unknown;
         }) {
             const db = createServerClient();
-            const { data, error } = await db
+            let { data, error } = await db
                 .from("resume_versions")
                 .insert({
                     resume_profile_id: input.profileId,
@@ -92,6 +92,20 @@ const createTailoredResume = createDbCreateTailoredResume({
                 })
                 .select("id,resume_profile_id,normalized_resume")
                 .single();
+
+            if (error?.code === "PGRST204" || error?.code === "42703") {
+                const fallback = await db
+                    .from("resume_versions")
+                    .insert({
+                        resume_profile_id: input.profileId,
+                        normalized_resume: input.normalizedResume,
+                    })
+                    .select("id,resume_profile_id,normalized_resume")
+                    .single();
+
+                data = fallback.data;
+                error = fallback.error;
+            }
 
             if (error) {
                 throw error;

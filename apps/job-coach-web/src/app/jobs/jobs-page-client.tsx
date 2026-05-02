@@ -684,7 +684,7 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(data?.error || 'Unable to generate tailored resume.');
       }
