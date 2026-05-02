@@ -5,13 +5,17 @@
   "scripts": {
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "dev:job-coach": "echo 'Job Coach DEV — http://localhost:3000' && APP_ENV=development NEXT_PUBLIC_APP_ENV=development PORT=3000 pnpm --filter job-coach-web dev",
-    "prd:job-coach": "echo 'Job Coach PRD — http://localhost:3001' && APP_ENV=production NEXT_PUBLIC_APP_ENV=production PORT=3001 pnpm --filter job-coach-web start",
-    "build:job-coach:prd": "echo '🔴 Building Job Coach PRD' && APP_ENV=production pnpm --filter job-coach-web build",
+    "dev:job-coach": "echo 'Job Coach DEV \u2014 http://localhost:3000' && APP_ENV=development NEXT_PUBLIC_APP_ENV=development PORT=3000 pnpm --filter job-coach-web dev",
+    "prd:job-coach": "echo 'Job Coach PRD \u2014 http://localhost:3001' && APP_ENV=production NEXT_PUBLIC_APP_ENV=production PORT=3001 pnpm --filter job-coach-web start",
+    "build:job-coach:prd": "echo '\ud83d\udd34 Building Job Coach PRD' && APP_ENV=production pnpm --filter job-coach-web build",
     "db:reset:dev": "APP_ENV=development pnpm tsx scripts/require-dev-env.ts && supabase db reset",
     "db:reset": "APP_ENV=development pnpm tsx scripts/require-dev-env.ts && supabase db reset",
     "db:export:prd": "APP_ENV=production pnpm tsx scripts/export-data.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --check",
+    "format:write": "prettier . --write"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
