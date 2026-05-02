@@ -154,3 +154,96 @@ node_modules/
 *.sql
 fix-*.py
 dev-*.sql
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Dependencies
+node_modules/
+bower_components/
+jspm_packages/
+web_modules/
+
+# Package manager / npm artifacts
+.npm/
+*.tgz
+.yarn-integrity
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# TypeScript / lint / coverage caches
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+coverage/
+*.lcov
+.nyc_output/
+lib-cov/
+
+# Test and build outputs
+.next/
+out/
+dist/
+.turbo/
+test-results/
+playwright-report/
+.vscode-test/
+
+# Framework caches and generated output
+.cache/
+.parcel-cache/
+.nuxt/
+.svelte-kit/
+.vuepress/dist/
+.temp/
+**/.vitepress/dist/
+**/.vitepress/cache/
+.docusaurus/
+.firebase/
+.serverless/
+.fusebox/
+.dynamodb/
+
+# Tooling / local system files
+.DS_Store
+.ai/.DS_Store
+.grunt/
+.lock-wscript
+build/Release/
+.node_repl_history
+.tern-port
+
+# Generated app files
+apps/job-coach-web/next-env.d.ts
+
+# Local backups and scratch artifacts
+backups/
+*.sql
+fix-*.py
+dev-*.sql
