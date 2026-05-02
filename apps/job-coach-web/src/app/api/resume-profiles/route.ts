@@ -40,12 +40,18 @@ export async function POST(request: Request) {
 export async function GET() {
     const { data, error } = await db
         .from("resume_profiles")
-        .select("*")
+        .select("id,name,current_version_id")
         .order("created_at", { ascending: false });
 
     if (error) {
         return Response.json({ error: error.message }, { status: 500 });
     }
 
-    return Response.json(data);
+    return Response.json(
+        (data ?? []).map((profile) => ({
+            id: profile.id,
+            name: profile.name,
+            currentVersionId: profile.current_version_id ?? "",
+        })),
+    );
 }

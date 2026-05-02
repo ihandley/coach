@@ -72,6 +72,12 @@ type RankedJob = {
   structuredSummary?: any;
 };
 
+type ResumeProfile = {
+  id: string;
+  name: string;
+  currentVersionId: string;
+};
+
 export function JobsPageClient() {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
     new Set(["saved", "applied", "interviewing", "offer", "rejected"])
@@ -641,10 +647,11 @@ function JobDescription({ text, structuredSummary }: { text: string; structuredS
 }
 
 function ResumeTailor({ jobId }: { jobId: string }) {
-  const [resumes, setResumes] = useState<{ id: string; name: string }[]>([]);
-  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [resumes, setResumes] = useState<ResumeProfile[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<unknown[] | null>(null);
+  const [tailorError, setTailorError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/resume-profiles')
@@ -652,35 +659,41 @@ function ResumeTailor({ jobId }: { jobId: string }) {
       .then((data) =>
         setResumes(data.map((r: any) => ({
           id: r.id,
-          name: r.name || r.title || 'Untitled Resume'
+          name: r.name || 'Untitled Resume',
+          currentVersionId: r.currentVersionId || r.current_version_id || '',
         })))
       )
       .catch(() => setResumes([]));
   }, []);
 
+  const canTailor = Boolean(selectedProfile?.currentVersionId);
+
   async function handleGenerate() {
-    if (!selectedResumeId) return;
+    if (!selectedProfile?.currentVersionId) return;
 
     setLoading(true);
-    setResult(null);
+    setSuggestions(null);
+    setTailorError(null);
 
     try {
-      const res = await fetch(`/api/resume-profiles/${selectedResumeId}/tailored-resumes`, {
+      const res = await fetch(`/api/resume-profiles/${selectedProfile.id}/tailored-resumes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jobId,
-          sourceResumeVersionId: selectedResumeId,
+          sourceResumeVersionId: selectedProfile.currentVersionId,
         }),
       });
 
       const data = await res.json();
-      setResult(
-        JSON.stringify(data.suggestions ?? data, null, 2)
-      );
+      if (!res.ok) {
+        throw new Error(data?.error || 'Unable to generate tailored resume.');
+      }
+
+      setSuggestions(data.suggestions ?? []);
     } catch (err) {
       console.error(err);
-      setResult('Failed to generate tailored resume.');
+      setTailorError('Unable to generate tailored resume.');
     } finally {
       setLoading(false);
     }
@@ -690,8 +703,12 @@ function ResumeTailor({ jobId }: { jobId: string }) {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <select
-          value={selectedResumeId ?? ''}
-          onChange={(e) => setSelectedResumeId(e.target.value)}
+          aria-label="Resume profile"
+          value={selectedProfile?.id ?? ''}
+          onChange={(e) => {
+            const profile = resumes.find((resume) => resume.id === e.target.value);
+            setSelectedProfile(profile ?? null);
+          }}
           className="border rounded px-2 py-1 text-sm"
         >
           <option value="">Select resume...</option>
@@ -705,19 +722,28 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={!selectedResumeId || loading}
+          disabled={!canTailor || loading}
           className="btn-primary text-sm disabled:opacity-50"
         >
           {loading ? 'Generating...' : 'Tailor Resume'}
         </button>
       </div>
 
-      {result && (
-        <div className="rounded border bg-white p-3 whitespace-pre-wrap text-sm">
-          {result}
+      {!canTailor && (
+        <p className="text-sm text-gray-600">Import a resume to enable tailoring</p>
+      )}
+
+      {tailorError && (
+        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {tailorError}
         </div>
+      )}
+
+      {suggestions && (
+        <pre className="rounded border bg-white p-3 whitespace-pre-wrap text-sm">
+          {JSON.stringify(suggestions, null, 2)}
+        </pre>
       )}
     </div>
   );
 }
-
