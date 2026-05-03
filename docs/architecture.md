@@ -1,4 +1,3 @@
-
 ## Database Access Pattern
 
 This system uses a **Supabase-backed repository pattern with a Kysely-like interface**.
@@ -40,4 +39,3 @@ Domain (core)
 - Domain logic must remain DB-agnostic
 - Do NOT introduce direct Supabase calls in core/domain
 - Do NOT introduce real Kysely unless the entire stack is migrated
-

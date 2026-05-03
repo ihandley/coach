@@ -26,9 +26,7 @@ export default async function IntegrationsPage() {
 
   const updatesFound = emails.filter(
     (email: any) =>
-      email.detectedStatus &&
-      email.currentStatus &&
-      email.currentStatus !== email.detectedStatus
+      email.detectedStatus && email.currentStatus && email.currentStatus !== email.detectedStatus,
   ).length;
 
   return (
@@ -39,9 +37,15 @@ export default async function IntegrationsPage() {
       </div>
 
       <div className="space-y-2 rounded bg-gray-100 p-2 text-xs">
-        <div><strong>Scanned:</strong> {totalScanned}</div>
-        <div><strong>Matched:</strong> {totalMatched}</div>
-        <div><strong>New updates:</strong> {updatesFound}</div>
+        <div>
+          <strong>Scanned:</strong> {totalScanned}
+        </div>
+        <div>
+          <strong>Matched:</strong> {totalMatched}
+        </div>
+        <div>
+          <strong>New updates:</strong> {updatesFound}
+        </div>
       </div>
 
       {emails.length === 0 ? (

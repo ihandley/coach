@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 import { JOB_STATUSES } from "./types";
 import { InMemoryJobRepository } from "./in-memory-job-repository";
 
-import {
-  JobTracker,
-  InvalidJobStatusError,
-  JobNotFoundError,
-} from "./job-tracker";
+import { JobTracker, InvalidJobStatusError, JobNotFoundError } from "./job-tracker";
 
 describe("JOB_STATUSES", () => {
   it("defines the controlled job status vocabulary", () => {
@@ -238,9 +234,7 @@ describe("JobTracker.getJobById", () => {
   it("throws when the job does not exist", async () => {
     const tracker = new JobTracker(new InMemoryJobRepository());
 
-    await expect(() => tracker.getJobById("missing-id")).rejects.toThrow(
-      JobNotFoundError,
-    );
+    await expect(() => tracker.getJobById("missing-id")).rejects.toThrow(JobNotFoundError);
   });
 });
 
@@ -256,9 +250,7 @@ describe("InMemoryJobRepository.findJobBySourceUrl", () => {
       status: "saved",
     });
 
-    const found = await repository.findJobBySourceUrl(
-      "https://example.com/jobs/123",
-    );
+    const found = await repository.findJobBySourceUrl("https://example.com/jobs/123");
 
     expect(found).toEqual(created);
   });
@@ -266,9 +258,7 @@ describe("InMemoryJobRepository.findJobBySourceUrl", () => {
   it("returns null when no job exists for the source URL", async () => {
     const repository = new InMemoryJobRepository();
 
-    const found = await repository.findJobBySourceUrl(
-      "https://example.com/jobs/missing",
-    );
+    const found = await repository.findJobBySourceUrl("https://example.com/jobs/missing");
 
     expect(found).toBeNull();
   });

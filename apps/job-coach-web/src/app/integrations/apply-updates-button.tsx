@@ -25,13 +25,13 @@ export function RefreshButton() {
         (email: any) =>
           email.detectedStatus &&
           email.currentStatus &&
-          email.currentStatus !== email.detectedStatus
+          email.currentStatus !== email.detectedStatus,
       ).length;
 
       setMessage(
         updatesFound > 0
           ? `Found ${updatesFound} new update${updatesFound === 1 ? "" : "s"}.`
-          : "No new updates found."
+          : "No new updates found.",
       );
 
       setTimeout(() => location.reload(), 700);
@@ -57,9 +57,7 @@ export function RefreshButton() {
         </div>
       ) : null}
 
-      {message ? (
-        <div className="text-xs text-gray-600">{message}</div>
-      ) : null}
+      {message ? <div className="text-xs text-gray-600">{message}</div> : null}
     </div>
   );
 }

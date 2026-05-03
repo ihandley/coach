@@ -6,19 +6,16 @@ function getAppEnv(): AppEnv {
   const appEnv = process.env.APP_ENV ?? "development";
 
   if (appEnv !== "development" && appEnv !== "production") {
-    throw new Error(
-      `Invalid APP_ENV "${appEnv}". Expected "development" or "production".`,
-    );
+    throw new Error(`Invalid APP_ENV "${appEnv}". Expected "development" or "production".`);
   }
 
   return appEnv;
 }
 
 function getSecret(account: string): string {
-  return execSync(
-    `security find-generic-password -a "$USER" -s "${account}" -w`,
-    { encoding: "utf8" },
-  ).trim();
+  return execSync(`security find-generic-password -a "$USER" -s "${account}" -w`, {
+    encoding: "utf8",
+  }).trim();
 }
 
 export function loadEnvFromKeychain(): void {

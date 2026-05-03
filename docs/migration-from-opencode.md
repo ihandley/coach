@@ -31,15 +31,15 @@ Those concepts are useful for inventory and migration context, but they are not 
 
 ## Canonical replacement mapping
 
-| Legacy OpenCode concept | New Job Coach replacement |
-| --- | --- |
-| Agent | App/server orchestration + explicit workflows |
-| Skill | Typed service/module in `packages/core`, `packages/db`, or `apps/job-coach-web/src/server` |
-| Command | Normal scripts, tests, or app/API entry points |
-| Prompt routing | Explicit workflow steps and application logic |
-| File-based canonical state | Database-backed structured persistence |
-| Hidden runtime behavior | Visible server composition and API routes |
-| Ad hoc artifact creation | Deterministic export pipeline with tracked artifacts |
+| Legacy OpenCode concept    | New Job Coach replacement                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| Agent                      | App/server orchestration + explicit workflows                                              |
+| Skill                      | Typed service/module in `packages/core`, `packages/db`, or `apps/job-coach-web/src/server` |
+| Command                    | Normal scripts, tests, or app/API entry points                                             |
+| Prompt routing             | Explicit workflow steps and application logic                                              |
+| File-based canonical state | Database-backed structured persistence                                                     |
+| Hidden runtime behavior    | Visible server composition and API routes                                                  |
+| Ad hoc artifact creation   | Deterministic export pipeline with tracked artifacts                                       |
 
 ## What is retired
 

@@ -12,10 +12,7 @@ type SignalRule = {
   sectionTarget: string;
   jobTerms: string[];
   resumeTerms: string[];
-  suggestedContent(input: {
-    job: TailoringJob;
-    resume: NormalizedResume;
-  }): string;
+  suggestedContent(input: { job: TailoringJob; resume: NormalizedResume }): string;
   rationale: string;
   relatedJobRequirements: string[];
   priority: "low" | "medium" | "high";
@@ -46,22 +43,14 @@ function resumeToText(resume: NormalizedResume): string {
 }
 
 function jobToText(job: TailoringJob): string {
-  return normalizeText([
-    job.title,
-    job.company,
-    job.sourceText,
-    job.structuredSummary,
-  ]);
+  return normalizeText([job.title, job.company, job.sourceText, job.structuredSummary]);
 }
 
 function includesAny(haystack: string, needles: string[]) {
   return needles.some((needle) => haystack.includes(needle.toLowerCase()));
 }
 
-function getOriginalContent(
-  resume: NormalizedResume,
-  sectionTarget: string,
-): string {
+function getOriginalContent(resume: NormalizedResume, sectionTarget: string): string {
   if (sectionTarget === "summary") {
     return resume.basics.summary;
   }
@@ -113,13 +102,7 @@ const signalRules: SignalRule[] = [
       "core data pipeline",
       "66 trillion data points",
     ],
-    resumeTerms: [
-      "distributed",
-      "massive data",
-      "data-intensive",
-      "data pipeline",
-      "high-volume",
-    ],
+    resumeTerms: ["distributed", "massive data", "data-intensive", "data pipeline", "high-volume"],
     suggestedContent: () =>
       "Add a quantified bullet showing ownership of a high-volume backend service, data pipeline, or distributed integration, including reliability or throughput impact.",
     rationale:
@@ -137,8 +120,7 @@ const signalRules: SignalRule[] = [
     sectionTarget: "skills",
     jobTerms: ["database design", "data modeling"],
     resumeTerms: ["database design", "data modeling"],
-    suggestedContent: ({ resume }) =>
-      `${resume.skills.join(", ")}, database design, data modeling`,
+    suggestedContent: ({ resume }) => `${resume.skills.join(", ")}, database design, data modeling`,
     rationale:
       "The baseline skills mention PostgreSQL but do not mirror the database design and data modeling language in the posting.",
     relatedJobRequirements: ["database design", "data modeling"],

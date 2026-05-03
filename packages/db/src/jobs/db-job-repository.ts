@@ -11,7 +11,7 @@ import type {
 import { mapJobRow } from "./map-job-row";
 
 export class DbJobRepository implements JobRepository {
-  constructor(private readonly supabase: SupabaseClient) { }
+  constructor(private readonly supabase: SupabaseClient) {}
 
   async createJob(input: CreateJobInput): Promise<JobRecord> {
     const { data, error } = await this.supabase
@@ -24,7 +24,8 @@ export class DbJobRepository implements JobRepository {
         structured_summary: input.structuredSummary,
         status: input.status,
       })
-      .select(`
+      .select(
+        `
         id,
         company,
         title,
@@ -34,7 +35,8 @@ export class DbJobRepository implements JobRepository {
         status,
         created_at,
         updated_at
-      `)
+      `,
+      )
       .single();
 
     if (error) {
@@ -47,7 +49,8 @@ export class DbJobRepository implements JobRepository {
   async getJobById(jobId: string): Promise<JobRecord | null> {
     const { data, error } = await this.supabase
       .from("jobs")
-      .select(`
+      .select(
+        `
         id,
         company,
         title,
@@ -57,7 +60,8 @@ export class DbJobRepository implements JobRepository {
         status,
         created_at,
         updated_at
-      `)
+      `,
+      )
       .eq("id", jobId)
       .maybeSingle();
 
@@ -75,7 +79,8 @@ export class DbJobRepository implements JobRepository {
   async findJobBySourceUrl(sourceUrl: string): Promise<JobRecord | null> {
     const { data, error } = await this.supabase
       .from("jobs")
-      .select(`
+      .select(
+        `
         id,
         company,
         title,
@@ -85,7 +90,8 @@ export class DbJobRepository implements JobRepository {
         status,
         created_at,
         updated_at
-      `)
+      `,
+      )
       .eq("source_url", sourceUrl)
       .maybeSingle();
 
@@ -103,7 +109,8 @@ export class DbJobRepository implements JobRepository {
   async listJobs(input?: ListJobsInput): Promise<JobRecord[]> {
     let query = this.supabase
       .from("jobs")
-      .select(`
+      .select(
+        `
         id,
         company,
         title,
@@ -113,7 +120,8 @@ export class DbJobRepository implements JobRepository {
         status,
         created_at,
         updated_at
-      `)
+      `,
+      )
       .order("updated_at", { ascending: false });
 
     if (input?.status) {
@@ -125,9 +133,7 @@ export class DbJobRepository implements JobRepository {
     }
 
     if (input?.keyword) {
-      query = query.or(
-        `company.ilike.%${input.keyword}%,title.ilike.%${input.keyword}%`,
-      );
+      query = query.or(`company.ilike.%${input.keyword}%,title.ilike.%${input.keyword}%`);
     }
 
     const { data, error } = await query;
@@ -146,7 +152,8 @@ export class DbJobRepository implements JobRepository {
         status: input.status,
       })
       .eq("id", input.jobId)
-      .select(`
+      .select(
+        `
         id,
         company,
         title,
@@ -156,7 +163,8 @@ export class DbJobRepository implements JobRepository {
         status,
         created_at,
         updated_at
-      `)
+      `,
+      )
       .single();
 
     if (error) {
@@ -164,13 +172,11 @@ export class DbJobRepository implements JobRepository {
     }
 
     if (input.event) {
-      const { error: eventError } = await this.supabase
-        .from("application_events")
-        .insert({
-          job_id: input.jobId,
-          type: input.event.type,
-          note: input.event.note,
-        });
+      const { error: eventError } = await this.supabase.from("application_events").insert({
+        job_id: input.jobId,
+        type: input.event.type,
+        note: input.event.note,
+      });
 
       if (eventError) {
         throw eventError;
@@ -180,9 +186,7 @@ export class DbJobRepository implements JobRepository {
     return mapJobRow(data);
   }
 
-  async addApplicationEvent(
-    input: AddApplicationEventInput,
-  ): Promise<ApplicationEventRecord> {
+  async addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord> {
     const { data, error } = await this.supabase
       .from("application_events")
       .insert({
@@ -190,13 +194,15 @@ export class DbJobRepository implements JobRepository {
         type: input.type,
         note: input.note,
       })
-      .select(`
+      .select(
+        `
       id,
       job_id,
       type,
       note,
       created_at
-    `)
+    `,
+      )
       .single();
 
     if (error) {
@@ -212,18 +218,18 @@ export class DbJobRepository implements JobRepository {
     };
   }
 
-  async listApplicationEvents(
-    jobId: string,
-  ): Promise<ApplicationEventRecord[]> {
+  async listApplicationEvents(jobId: string): Promise<ApplicationEventRecord[]> {
     const { data, error } = await this.supabase
       .from("application_events")
-      .select(`
+      .select(
+        `
         id,
         job_id,
         type,
         note,
         created_at
-      `)
+      `,
+      )
       .eq("job_id", jobId)
       .order("created_at", { ascending: true });
 

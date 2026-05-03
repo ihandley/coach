@@ -1,7 +1,4 @@
-import {
-  createServerClient,
-  DbJobRepository,
-} from "@coach/db";
+import { createServerClient, DbJobRepository } from "@coach/db";
 
 export function normalizeRankedScore(score: unknown) {
   if (typeof score !== "number" || Number.isNaN(score)) {
@@ -32,12 +29,10 @@ export async function GET() {
 
   const jobs = await jobRepo.listJobs();
 
-  const { data: matches } = await db
-    .from("job_matches")
-    .select("job_id, score");
+  const { data: matches } = await db.from("job_matches").select("job_id, score");
 
   const matchMap = new Map(
-    (matches || []).map((m: any) => [m.job_id, normalizeRankedScore(m.score)])
+    (matches || []).map((m: any) => [m.job_id, normalizeRankedScore(m.score)]),
   );
 
   const ranked = jobs

@@ -11,13 +11,13 @@ test("expanded job row shows detail tabs and the tailoring action", async ({ pag
   const tabRow = page.getByTestId("job-details-tab-row");
   await expect(tabRow.getByRole("tab", { name: "Structured View" })).toBeVisible();
   await expect(tabRow.getByRole("tab", { name: "Original Posting" })).toBeVisible();
-  await expect(
-    tabRow.getByRole("button", { name: "Tailor Resume" }),
-  ).toBeVisible();
+  await expect(tabRow.getByRole("button", { name: "Tailor Resume" })).toBeVisible();
   await expect(page.getByLabel("Resume profile")).toHaveCount(0);
 });
 
-test("job description can switch between structured and original posting tabs", async ({ page }) => {
+test("job description can switch between structured and original posting tabs", async ({
+  page,
+}) => {
   await page.goto("/jobs");
 
   const rows = page.locator('[data-testid="job-row"]');

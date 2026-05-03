@@ -244,9 +244,7 @@ export default function FilesPageClient() {
 
   async function handleDownload(resume: Resume) {
     const resumeVersionId =
-      resume.currentVersion?.id ||
-      resume.currentVersionId ||
-      resume.current_version_id;
+      resume.currentVersion?.id || resume.currentVersionId || resume.current_version_id;
 
     if (!resumeVersionId) {
       setError("No resume version available to export.");
@@ -293,10 +291,7 @@ export default function FilesPageClient() {
   }
 
   function getResumeDisplayName(resume: Resume) {
-    if (
-      resume.currentVersion?.kind === "tailored" &&
-      resume.currentVersion.source?.label
-    ) {
+    if (resume.currentVersion?.kind === "tailored" && resume.currentVersion.source?.label) {
       return resume.currentVersion.source.label;
     }
 
@@ -310,100 +305,82 @@ export default function FilesPageClient() {
       {/* Import */}
       <div>
         <h2 className="mb-4 text-lg font-semibold">Import Files</h2>
-        <ImportDropzone
-          file={file}
-          setFile={setFile}
-          onImport={handleImport}
-          loading={loading}
-        />
-        {error && (
-          <p className="mt-3 text-sm text-red-600">{error}</p>
-        )}
+        <ImportDropzone file={file} setFile={setFile} onImport={handleImport} loading={loading} />
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </div>
 
       {/* List */}
       <div className="rounded-lg border bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold">Files</h2>
 
-        {files.length === 0 && (
-          <p className="text-gray-500">No files yet.</p>
-        )}
+        {files.length === 0 && <p className="text-gray-500">No files yet.</p>}
 
         <div className="space-y-3">
           {files.map((r) => {
             const displayName = getResumeDisplayName(r);
 
             return (
-            <div
-              key={r.id}
-              className="flex items-center justify-between rounded border p-3"
-            >
-              <div>
-                <div className="flex items-center gap-2 font-medium">
-                  <span>{displayName}</span>
-                  <button
-                    type="button"
-                    onClick={() => handlePreview(r)}
-                    className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                    aria-label={`Preview ${displayName}`}
-                    title="Preview"
-                  >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
+              <div key={r.id} className="flex items-center justify-between rounded border p-3">
+                <div>
+                  <div className="flex items-center gap-2 font-medium">
+                    <span>{displayName}</span>
+                    <button
+                      type="button"
+                      onClick={() => handlePreview(r)}
+                      className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                      aria-label={`Preview ${displayName}`}
+                      title="Preview"
                     >
-                      <circle cx="11" cy="11" r="7" />
-                      <path d="m20 20-3.5-3.5" />
-                    </svg>
-                  </button>
-                  {r.isBaseline && (
-                    <span className="ml-2 text-xs text-blue-600">
-                      BASELINE
-                    </span>
-                  )}
-                  {r.currentVersion?.kind === "tailored" && (
-                    <span className="ml-2 text-xs text-green-700">
-                      TAILORED
-                    </span>
-                  )}
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                      >
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="m20 20-3.5-3.5" />
+                      </svg>
+                    </button>
+                    {r.isBaseline && <span className="ml-2 text-xs text-blue-600">BASELINE</span>}
+                    {r.currentVersion?.kind === "tailored" && (
+                      <span className="ml-2 text-xs text-green-700">TAILORED</span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(r.createdAt ?? r.created_at ?? "").toLocaleString()}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {new Date(r.createdAt ?? r.created_at ?? "").toLocaleString()}
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDownload(r)}
-                  disabled={downloadingId === r.id}
-                  aria-label={`Download ${displayName}`}
-                  className="inline-flex items-center gap-1.5 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <DownloadIcon />
-                  {downloadingId === r.id ? "Exporting..." : "Download"}
-                </button>
-
-                {!r.isBaseline && (
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleDelete(r.id)}
-                    disabled={deletingId === r.id}
-                    aria-label={`Delete ${displayName}`}
-                    className="inline-flex items-center gap-1.5 rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => handleDownload(r)}
+                    disabled={downloadingId === r.id}
+                    aria-label={`Download ${displayName}`}
+                    className="inline-flex items-center gap-1.5 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <TrashIcon />
-                    {deletingId === r.id ? "Deleting..." : "Delete"}
+                    <DownloadIcon />
+                    {downloadingId === r.id ? "Exporting..." : "Download"}
                   </button>
-                )}
+
+                  {!r.isBaseline && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(r.id)}
+                      disabled={deletingId === r.id}
+                      aria-label={`Delete ${displayName}`}
+                      className="inline-flex items-center gap-1.5 rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <TrashIcon />
+                      {deletingId === r.id ? "Deleting..." : "Delete"}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
             );
           })}
         </div>
@@ -433,9 +410,7 @@ export default function FilesPageClient() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              {previewLoading && (
-                <p className="text-sm text-gray-500">Loading preview...</p>
-              )}
+              {previewLoading && <p className="text-sm text-gray-500">Loading preview...</p>}
 
               {!previewLoading && previewData && (
                 <div className="space-y-6">
@@ -446,23 +421,13 @@ export default function FilesPageClient() {
                         previewResume.name}
                     </h3>
                     {previewData.basics?.headline && (
-                      <p className="mt-1 text-base text-gray-700">
-                        {previewData.basics.headline}
-                      </p>
+                      <p className="mt-1 text-base text-gray-700">{previewData.basics.headline}</p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                      {previewData.basics?.location && (
-                        <span>{previewData.basics.location}</span>
-                      )}
-                      {previewData.basics?.email && (
-                        <span>{previewData.basics.email}</span>
-                      )}
-                      {previewData.basics?.phone && (
-                        <span>{previewData.basics.phone}</span>
-                      )}
-                      {previewData.basics?.linkedin && (
-                        <span>{previewData.basics.linkedin}</span>
-                      )}
+                      {previewData.basics?.location && <span>{previewData.basics.location}</span>}
+                      {previewData.basics?.email && <span>{previewData.basics.email}</span>}
+                      {previewData.basics?.phone && <span>{previewData.basics.phone}</span>}
+                      {previewData.basics?.linkedin && <span>{previewData.basics.linkedin}</span>}
                     </div>
                   </header>
 
@@ -485,9 +450,7 @@ export default function FilesPageClient() {
                       <div className="mt-3 space-y-3">
                         {previewSkillGroups.map((group) => (
                           <div key={group.category}>
-                            <h5 className="text-sm font-medium text-gray-800">
-                              {group.category}
-                            </h5>
+                            <h5 className="text-sm font-medium text-gray-800">{group.category}</h5>
                             <div className="mt-2 flex flex-wrap gap-2">
                               {group.items.map((skill) => (
                                 <span

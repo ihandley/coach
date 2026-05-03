@@ -8,14 +8,10 @@ test("can apply to a job from row action", async ({ page }) => {
 
   await firstRow.getByRole("button", { name: "Apply" }).click();
 
-  await expect(firstRow.locator('[data-testid="job-status"]')).toContainText(
-    "applied",
-  );
+  await expect(firstRow.locator('[data-testid="job-status"]')).toContainText("applied");
 });
 
-test("can ignore a job and it disappears from the default view", async ({
-  page,
-}) => {
+test("can ignore a job and it disappears from the default view", async ({ page }) => {
   await page.goto("/jobs");
 
   const targetRow = page

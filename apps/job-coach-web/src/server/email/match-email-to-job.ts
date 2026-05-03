@@ -1,11 +1,6 @@
 import { extractDomain } from "./extract-domain";
 
-const ATS_DOMAINS = [
-  "ashbyhq.com",
-  "greenhouse.io",
-  "lever.co",
-  "workday.com",
-];
+const ATS_DOMAINS = ["ashbyhq.com", "greenhouse.io", "lever.co", "workday.com"];
 
 function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -13,7 +8,7 @@ function normalize(s: string) {
 
 export function matchEmailToJob(
   email: { subject: string; snippet: string; from: string },
-  jobs: { id: string; company: string; title: string; status?: string }[]
+  jobs: { id: string; company: string; title: string; status?: string }[],
 ) {
   const text = `${email.subject} ${email.snippet}`.toLowerCase();
   const domain = extractDomain(email.from);

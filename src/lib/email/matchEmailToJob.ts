@@ -17,15 +17,10 @@ export type MatchResult = {
   signals: string[];
 };
 
-const ATS_DOMAINS = [
-  'ashbyhq.com',
-  'greenhouse.io',
-  'lever.co',
-  'workday.com',
-];
+const ATS_DOMAINS = ["ashbyhq.com", "greenhouse.io", "lever.co", "workday.com"];
 
 function normalize(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, "");
 }
 
 function tokenOverlap(a: string, b: string) {
@@ -42,7 +37,7 @@ function tokenOverlap(a: string, b: string) {
 
 function extractDomain(from: string) {
   const match = from.match(/@([^>]+)/);
-  return match ? match[1].toLowerCase() : '';
+  return match ? match[1].toLowerCase() : "";
 }
 
 export function matchEmailToJob(email: Email, jobs: Job[]): MatchResult | null {
@@ -59,24 +54,24 @@ export function matchEmailToJob(email: Email, jobs: Job[]): MatchResult | null {
 
     if (normalizedContent.includes(normalizedCompany)) {
       score += 0.4;
-      signals.push('company');
+      signals.push("company");
     }
 
     const domain = extractDomain(email.from);
     if (domain && domain.includes(normalizedCompany)) {
       score += 0.3;
-      signals.push('domain');
+      signals.push("domain");
     }
 
-    if (ATS_DOMAINS.some(d => domain.includes(d))) {
+    if (ATS_DOMAINS.some((d) => domain.includes(d))) {
       score += 0.2;
-      signals.push('ats');
+      signals.push("ats");
     }
 
     const overlap = tokenOverlap(job.title, content);
     if (overlap > 0.3) {
       score += overlap * 0.5;
-      signals.push('title');
+      signals.push("title");
     }
 
     if (!best || score > best.score) {

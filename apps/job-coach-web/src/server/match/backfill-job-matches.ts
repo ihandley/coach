@@ -47,9 +47,7 @@ async function getLatestResumeText(db: SupabaseClient) {
 
   return {
     resumeProfileId: profile.id,
-    resumeText: version?.normalized_resume
-      ? normalizedResumeToText(version.normalized_resume)
-      : "",
+    resumeText: version?.normalized_resume ? normalizedResumeToText(version.normalized_resume) : "",
   };
 }
 

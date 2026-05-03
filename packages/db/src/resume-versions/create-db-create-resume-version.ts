@@ -4,11 +4,11 @@ import { createDbResumeProfileRepository } from "../resume-profiles/db-resume-pr
 import { createDbResumeVersionRepository } from "./db-resume-version-repository";
 
 export function createDbCreateResumeVersion({ db }: { db: any }) {
-    const resumeProfiles = createDbResumeProfileRepository({ db });
-    const resumeVersions = createDbResumeVersionRepository({ db });
+  const resumeProfiles = createDbResumeProfileRepository({ db });
+  const resumeVersions = createDbResumeVersionRepository({ db });
 
-    return createCreateResumeVersion({
-        resumeProfiles,
-        resumeVersions,
-    });
+  return createCreateResumeVersion({
+    resumeProfiles,
+    resumeVersions,
+  });
 }

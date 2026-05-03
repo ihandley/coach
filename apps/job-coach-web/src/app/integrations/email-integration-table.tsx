@@ -35,24 +35,18 @@ function statusValue(status?: string | null) {
 
 function hasStatusChange(email: EmailRow) {
   return Boolean(
-    email.detectedStatus &&
-      email.currentStatus &&
-      email.currentStatus !== email.detectedStatus,
+    email.detectedStatus && email.currentStatus && email.currentStatus !== email.detectedStatus,
   );
 }
 
 export function EmailIntegrationTable({ emails }: { emails: EmailRow[] }) {
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "date", desc: true },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "date", desc: true }]);
   const [detectedFilter, setDetectedFilter] = useState("all");
 
   const filteredEmails = useMemo(() => {
     if (detectedFilter === "all") return emails;
 
-    return emails.filter(
-      (email) => statusValue(email.detectedStatus) === detectedFilter,
-    );
+    return emails.filter((email) => statusValue(email.detectedStatus) === detectedFilter);
   }, [emails, detectedFilter]);
 
   const columns = useMemo<ColumnDef<EmailRow>[]>(
@@ -66,9 +60,7 @@ export function EmailIntegrationTable({ emails }: { emails: EmailRow[] }) {
           return av - bv;
         },
         cell: ({ row }) =>
-          row.original.date
-            ? new Date(row.original.date).toLocaleDateString()
-            : "",
+          row.original.date ? new Date(row.original.date).toLocaleDateString() : "",
       },
       {
         accessorKey: "subject",
@@ -96,9 +88,7 @@ export function EmailIntegrationTable({ emails }: { emails: EmailRow[] }) {
                   </a>
                 </div>
               </div>
-              <div className="mt-1 max-w-xl text-xs text-gray-500">
-                {email.snippet}
-              </div>
+              <div className="mt-1 max-w-xl text-xs text-gray-500">{email.snippet}</div>
             </div>
           );
         },
@@ -110,14 +100,11 @@ export function EmailIntegrationTable({ emails }: { emails: EmailRow[] }) {
       {
         id: "matchedJob",
         header: "Matched Job",
-        accessorFn: (row) =>
-          `${row.matchedJobCompany || ""} ${row.matchedJobTitle || ""}`,
+        accessorFn: (row) => `${row.matchedJobCompany || ""} ${row.matchedJobTitle || ""}`,
         cell: ({ row }) => (
           <div>
             <div>{row.original.matchedJobCompany}</div>
-            <div className="text-xs text-gray-500">
-              {row.original.matchedJobTitle}
-            </div>
+            <div className="text-xs text-gray-500">{row.original.matchedJobTitle}</div>
           </div>
         ),
       },
@@ -140,9 +127,7 @@ export function EmailIntegrationTable({ emails }: { emails: EmailRow[] }) {
         id: "change",
         header: "Change",
         accessorFn: (row) =>
-          hasStatusChange(row)
-            ? `${row.currentStatus} → ${row.detectedStatus}`
-            : "no change",
+          hasStatusChange(row) ? `${row.currentStatus} → ${row.detectedStatus}` : "no change",
         cell: ({ row }) =>
           hasStatusChange(row.original) ? (
             <span className="text-orange-600">
@@ -207,10 +192,7 @@ export function EmailIntegrationTable({ emails }: { emails: EmailRow[] }) {
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                       {sortDirection === "asc" ? " ↑" : null}
                       {sortDirection === "desc" ? " ↓" : null}
                     </th>

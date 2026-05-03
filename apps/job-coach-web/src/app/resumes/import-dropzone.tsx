@@ -2,12 +2,7 @@
 
 import { useRef } from "react";
 
-export default function ImportDropzone({
-  file,
-  setFile,
-  onImport,
-  loading,
-}: any) {
+export default function ImportDropzone({ file, setFile, onImport, loading }: any) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleClick() {
@@ -29,24 +24,15 @@ export default function ImportDropzone({
           onDragOver={(e) => e.preventDefault()}
           className="flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed p-10 text-center hover:bg-gray-50"
         >
-          <p className="text-sm text-gray-600">
-            Drag & drop your resume or cover letter (PDF)
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            or click to upload
-          </p>
+          <p className="text-sm text-gray-600">Drag & drop your resume or cover letter (PDF)</p>
+          <p className="text-xs text-gray-400 mt-1">or click to upload</p>
         </div>
       ) : (
         <div className="flex items-center justify-between">
-          <div className="text-sm">
-            📄 {file.name}
-          </div>
+          <div className="text-sm">📄 {file.name}</div>
 
           <div className="space-x-2">
-            <button
-              onClick={() => setFile(null)}
-              className="text-sm text-gray-500"
-            >
+            <button onClick={() => setFile(null)} className="text-sm text-gray-500">
               Remove
             </button>
 

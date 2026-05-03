@@ -1,8 +1,4 @@
-export function classifyEmail(input: {
-  subject: string;
-  snippet: string;
-  from?: string;
-}) {
+export function classifyEmail(input: { subject: string; snippet: string; from?: string }) {
   const text = `${input.subject} ${input.snippet}`.toLowerCase();
 
   // REJECTED (strong signals)
@@ -31,19 +27,13 @@ export function classifyEmail(input: {
 
   // INTERVIEWING (tightened)
   if (
-    (
-      text.includes("interview") ||
-      text.includes("schedule") ||
-      text.includes("next steps")
-    ) &&
-    (
-      text.includes("recruiter") ||
+    (text.includes("interview") || text.includes("schedule") || text.includes("next steps")) &&
+    (text.includes("recruiter") ||
       text.includes("hiring") ||
       text.includes("team") ||
       text.includes("candidate") ||
       text.includes("position") ||
-      text.includes("role")
-    )
+      text.includes("role"))
   ) {
     return "interviewing";
   }

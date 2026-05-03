@@ -29,7 +29,5 @@ export function isRecentlyCreated(date: string, now = new Date()) {
 export const formatJobUpdatedDate = formatJobDate;
 
 export function sortJobsByUpdatedDate(jobs: JobListItem[]) {
-  return [...jobs].sort((first, second) =>
-    second.updatedAt.localeCompare(first.updatedAt),
-  );
+  return [...jobs].sort((first, second) => second.updatedAt.localeCompare(first.updatedAt));
 }

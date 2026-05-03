@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { extractJobStub } from "./extract-job-stub";
 
 describe("extractJobStub", () => {
-    it("extracts company, title, and raw description from greenhouse-style html", async () => {
-        const result = await extractJobStub({
-            url: "https://example.com/jobs/123",
-            html: `
+  it("extracts company, title, and raw description from greenhouse-style html", async () => {
+    const result = await extractJobStub({
+      url: "https://example.com/jobs/123",
+      html: `
         <html>
           <head>
             <meta property="og:title" content="Principal Software Engineer" />
@@ -26,20 +26,20 @@ describe("extractJobStub", () => {
           </body>
         </html>
       `,
-        });
-
-        expect(result.company).toBe("Stable Kernel");
-        expect(result.title).toBe("Principal Software Engineer");
-        expect(result.location).toBe("Atlanta, GA");
-        expect(result.rawDescription).toContain("About the Role:");
-        expect(result.rawDescription).toContain("Build APIs and distributed systems.");
-        expect(result.rawDescription).toContain("- Rust");
     });
 
-    it("falls back to Unknown when company or title cannot be found", async () => {
-        const result = await extractJobStub({
-            url: "https://example.com/jobs/123",
-            html: `
+    expect(result.company).toBe("Stable Kernel");
+    expect(result.title).toBe("Principal Software Engineer");
+    expect(result.location).toBe("Atlanta, GA");
+    expect(result.rawDescription).toContain("About the Role:");
+    expect(result.rawDescription).toContain("Build APIs and distributed systems.");
+    expect(result.rawDescription).toContain("- Rust");
+  });
+
+  it("falls back to Unknown when company or title cannot be found", async () => {
+    const result = await extractJobStub({
+      url: "https://example.com/jobs/123",
+      html: `
         <html>
           <body>
             <div class="job__description body">
@@ -50,10 +50,10 @@ describe("extractJobStub", () => {
           </body>
         </html>
       `,
-        });
-
-        expect(result.company).toBe("Unknown");
-        expect(result.title).toBe("Unknown");
-        expect(result.rawDescription).toContain("Hello world");
     });
+
+    expect(result.company).toBe("Unknown");
+    expect(result.title).toBe("Unknown");
+    expect(result.rawDescription).toContain("Hello world");
+  });
 });

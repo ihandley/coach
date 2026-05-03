@@ -26,9 +26,7 @@ function makeNormalizedResume(overrides: Partial<NormalizedResume> = {}) {
   } satisfies NormalizedResume;
 }
 
-function createImportHarness(options?: {
-  normalizeResume?: () => Promise<NormalizedResume>;
-}) {
+function createImportHarness(options?: { normalizeResume?: () => Promise<NormalizedResume> }) {
   const resumeProfiles = createInMemoryResumeProfileRepository();
   const resumeVersions = createInMemoryResumeVersionRepository();
 
@@ -37,8 +35,7 @@ function createImportHarness(options?: {
     resumeVersions,
   });
 
-  const normalizeResume =
-    options?.normalizeResume ?? (async () => makeNormalizedResume());
+  const normalizeResume = options?.normalizeResume ?? (async () => makeNormalizedResume());
 
   return createImportResumeFromText({
     createResumeProfile,

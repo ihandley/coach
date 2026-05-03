@@ -6,8 +6,7 @@ import type {
 } from "./types";
 
 const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
-const phonePattern =
-  /(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}/;
+const phonePattern = /(?:\+?1[\s.-]?)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}/;
 
 const knownSkills = [
   "TypeScript",
@@ -63,11 +62,7 @@ function sectionLines(lines: string[], heading: string) {
     return [];
   }
 
-  const end = lines.findIndex(
-    (line, index) =>
-      index > start &&
-      sectionHeadingPattern.test(line),
-  );
+  const end = lines.findIndex((line, index) => index > start && sectionHeadingPattern.test(line));
 
   return lines.slice(start + 1, end < 0 ? undefined : end);
 }
@@ -119,11 +114,7 @@ function extractSummary(lines: string[]) {
 }
 
 function extractLinkedin(rawText: string) {
-  return (
-    rawText.match(
-      /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[A-Z0-9._%/-]+/i,
-    )?.[0] ?? ""
-  );
+  return rawText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[A-Z0-9._%/-]+/i)?.[0] ?? "";
 }
 
 function extractLocation(lines: string[], email: string, phone?: string, linkedin?: string) {
@@ -141,13 +132,7 @@ function extractLocation(lines: string[], email: string, phone?: string, linkedi
   const location = contactLine
     .split(/[•|]/)
     .map((part) => part.trim())
-    .find(
-      (part) =>
-        part &&
-        part !== email &&
-        part !== phone &&
-        !/linkedin\.com\/in\//i.test(part),
-    );
+    .find((part) => part && part !== email && part !== phone && !/linkedin\.com\/in\//i.test(part));
 
   if (location) {
     return location;
@@ -177,11 +162,7 @@ function splitSkills(value: string) {
     .filter((skill) => skill.length > 1 && skill.length < 60);
 }
 
-function pushSkillGroup(
-  groups: Map<string, string[]>,
-  category: string,
-  skills: string[],
-) {
+function pushSkillGroup(groups: Map<string, string[]>, category: string, skills: string[]) {
   const normalizedCategory = category.trim() || "Skills";
   const existing = groups.get(normalizedCategory) ?? [];
   groups.set(normalizedCategory, unique([...existing, ...skills]));
@@ -216,10 +197,7 @@ function globallyDedupSkillGroups(groups: Map<string, string[]>) {
   const orderedGroups = hasCategorizedSkills
     ? categorizedGroups
     : [...categorizedGroups, ...fallbackGroups];
-  const selectedSkills = new Map<
-    string,
-    { category: string; item: string; rank: number }
-  >();
+  const selectedSkills = new Map<string, { category: string; item: string; rank: number }>();
 
   for (const [category, items] of orderedGroups) {
     for (const item of items) {
@@ -272,9 +250,7 @@ function extractSkills(rawText: string, lines: string[]) {
   }
 
   const discoveredSkills = knownSkills.filter((skill) =>
-    new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(
-      rawText,
-    ),
+    new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(rawText),
   );
   const explicitSkillNames = new Set(
     Array.from(groups.values())
@@ -308,9 +284,7 @@ function splitDateRange(value?: string) {
     };
   }
 
-  const [startDate, endDate] = value
-    .split(/\s+(?:-|–|—)\s+/)
-    .map((part) => part.trim());
+  const [startDate, endDate] = value.split(/\s+(?:-|–|—)\s+/).map((part) => part.trim());
 
   return {
     ...(startDate ? { startDate } : {}),
@@ -319,9 +293,7 @@ function splitDateRange(value?: string) {
 }
 
 function parseExperienceHeading(line: string) {
-  const match = line.match(
-    /^(.+?)\s+(?:—|–|-)\s+(.+?)(?:\s*\(([^)]+)\))?$/,
-  );
+  const match = line.match(/^(.+?)\s+(?:—|–|-)\s+(.+?)(?:\s*\(([^)]+)\))?$/);
 
   if (!match) {
     return null;
@@ -355,9 +327,7 @@ function parseCompactExperienceHeading(line: string) {
 }
 
 function parseAtExperienceHeading(line: string) {
-  const [title, company] = line
-    .split(/\s+(?:at|@)\s+/i)
-    .map((part) => part.trim());
+  const [title, company] = line.split(/\s+(?:at|@)\s+/i).map((part) => part.trim());
 
   if (!title || !company) {
     return null;
@@ -461,9 +431,7 @@ function buildEducation(lines: string[]) {
 
   return educationLines
     .map((line) => {
-      const explicitParts = line
-        .split(/\s+(?:—|–|-)\s+/)
-        .map((part) => part.trim());
+      const explicitParts = line.split(/\s+(?:—|–|-)\s+/).map((part) => part.trim());
       const compactMatch = line.match(
         /^(.+?)\s+((?:Bachelor|Bachelor's|Bachelor’s|Bachelor s|Associate|Master|Master's|Master’s|Doctor|PhD|B\.?S\.?|M\.?S\.?|A\.?A\.?|A\.?S\.?).*)$/,
       );
@@ -473,9 +441,7 @@ function buildEducation(lines: string[]) {
           : compactMatch
             ? [compactMatch[1]?.trim() ?? line, compactMatch[2]?.trim()]
             : explicitParts;
-      const [degree, field] = (credential ?? "")
-        .split(/\s*,\s+/, 2)
-        .map((part) => part.trim());
+      const [degree, field] = (credential ?? "").split(/\s*,\s+/, 2).map((part) => part.trim());
 
       return {
         school,

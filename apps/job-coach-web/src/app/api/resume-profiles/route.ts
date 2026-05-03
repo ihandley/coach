@@ -26,9 +26,7 @@ export async function GET() {
   if (currentVersionIds.length > 0) {
     const { data: versions, error: versionsError } = await db
       .from("resume_versions")
-      .select(
-        "id, resume_profile_id, version_number, kind, source_kind, source_label, created_at",
-      )
+      .select("id, resume_profile_id, version_number, kind, source_kind, source_label, created_at")
       .in("id", currentVersionIds);
 
     if (versionsError) {
@@ -55,7 +53,7 @@ export async function GET() {
       ...profile,
       currentVersionId: profile.current_version_id ?? "",
       currentVersion: profile.current_version_id
-        ? currentVersionsById.get(profile.current_version_id) ?? null
+        ? (currentVersionsById.get(profile.current_version_id) ?? null)
         : null,
     })),
   );
@@ -75,10 +73,7 @@ export async function POST(req: Request) {
     typeof source.kind !== "string" ||
     typeof source.label !== "string"
   ) {
-    return NextResponse.json(
-      { error: "INVALID_RESUME_PROFILE_INPUT" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "INVALID_RESUME_PROFILE_INPUT" }, { status: 400 });
   }
 
   const { data: profile, error: profileError } = await db

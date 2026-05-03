@@ -1,4 +1,3 @@
-
 export type StructuredJobSummary = {
   location: string | null;
   salaryRange: string | null;

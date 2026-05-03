@@ -19,7 +19,7 @@ export async function listRecentEmails() {
   const auth = new google.auth.OAuth2(
     readKeychainValue("GOOGLE_CLIENT_ID"),
     readKeychainValue("GOOGLE_CLIENT_SECRET"),
-    "http://localhost:3000/api/integrations/email/callback"
+    "http://localhost:3000/api/integrations/email/callback",
   );
 
   auth.setCredentials({
@@ -58,8 +58,7 @@ export async function listRecentEmails() {
       const llm = await classifyEmailLLM({ subject, snippet });
       const fallback = classifyEmail({ subject, snippet, from });
 
-      const detectedStatus =
-        llm.confidence > 0.7 ? llm.status : fallback;
+      const detectedStatus = llm.confidence > 0.7 ? llm.status : fallback;
       const matchedJob = matchEmailToJob({ subject, snippet, from }, jobs);
 
       return {
@@ -77,7 +76,7 @@ export async function listRecentEmails() {
         confidence: llm.confidence,
         currentStatus: matchedJob?.status || null,
       };
-    })
+    }),
   );
 
   // Do not auto-apply during preview mode.

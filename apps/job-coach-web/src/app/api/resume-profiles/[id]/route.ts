@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@coach/db";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const db = createServerClient();
@@ -23,17 +20,11 @@ export async function GET(
     return NextResponse.json({ error: "Resume profile not found" }, { status: 404 });
   }
 
-  const versionQuery = db
-    .from("resume_versions")
-    .select("*")
-    .eq("resume_profile_id", id);
+  const versionQuery = db.from("resume_versions").select("*").eq("resume_profile_id", id);
 
   const { data: currentVersion, error: versionError } = profile.current_version_id
     ? await versionQuery.eq("id", profile.current_version_id).maybeSingle()
-    : await versionQuery
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    : await versionQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
 
   if (versionError) {
     return NextResponse.json({ error: versionError.message }, { status: 500 });
@@ -59,5 +50,4 @@ export async function GET(
           : currentVersion.normalized_resume,
     },
   });
-
 }

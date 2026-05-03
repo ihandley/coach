@@ -6,10 +6,7 @@ import { extractPdfText } from "@/lib/resume/pdf-parser";
 export const runtime = "nodejs";
 
 function isPdf(file: File) {
-  return (
-    file.type === "application/pdf" ||
-    file.name.toLowerCase().endsWith(".pdf")
-  );
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 }
 
 async function normalizeResumeForImport(text: string) {
@@ -37,10 +34,7 @@ export async function POST(req: Request) {
   }
 
   if (!isPdf(file)) {
-    return NextResponse.json(
-      { error: "Please upload a PDF resume." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Please upload a PDF resume." }, { status: 400 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -71,10 +65,7 @@ export async function POST(req: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "AI resume normalization failed",
+        error: error instanceof Error ? error.message : "AI resume normalization failed",
       },
       { status: 502 },
     );

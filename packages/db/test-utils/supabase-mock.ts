@@ -39,9 +39,7 @@ export function createSupabaseMock() {
             eq(_: string, value: string) {
               const existing = store.get(value);
 
-              const updated = existing
-                ? { ...existing, ...input }
-                : null;
+              const updated = existing ? { ...existing, ...input } : null;
 
               if (updated) store.set(value, updated);
 

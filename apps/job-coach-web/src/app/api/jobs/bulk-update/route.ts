@@ -10,10 +10,7 @@ export async function POST(request: Request) {
     const { ids, status } = await request.json();
 
     if (!Array.isArray(ids) || ids.length === 0 || !status) {
-      return Response.json(
-        { error: "INVALID_BULK_UPDATE_INPUT" },
-        { status: 400 }
-      );
+      return Response.json({ error: "INVALID_BULK_UPDATE_INPUT" }, { status: 400 });
     }
 
     const jobRepository = createJobRepository();
@@ -23,8 +20,8 @@ export async function POST(request: Request) {
         jobRepository.updateJobStatus({
           jobId,
           status,
-        })
-      )
+        }),
+      ),
     );
 
     return Response.json({ success: true });

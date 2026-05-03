@@ -61,10 +61,9 @@ describe("GET /api/resume-profiles/:id", () => {
     });
 
     const { GET } = await import("./route");
-    const response = await GET(
-      new Request("http://localhost/api/resume-profiles/profile-123"),
-      { params: Promise.resolve({ id: "profile-123" }) },
-    );
+    const response = await GET(new Request("http://localhost/api/resume-profiles/profile-123"), {
+      params: Promise.resolve({ id: "profile-123" }),
+    });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
