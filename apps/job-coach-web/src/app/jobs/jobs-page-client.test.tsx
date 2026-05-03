@@ -81,6 +81,16 @@ describe("JobsPageClient", () => {
         });
       }
 
+      if (url === "/api/jobs" && init?.method === "POST") {
+        return jsonResponse(
+          {
+            id: "job-new",
+            title: "Imported Job",
+          },
+          { status: 201 },
+        );
+      }
+
       if (url === "/api/jobs/job-1" && init?.method === "DELETE") {
         return deleteShouldFail
           ? jsonResponse({ error: "Unable to delete job." }, { status: 500 })

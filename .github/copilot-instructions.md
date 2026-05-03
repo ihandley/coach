@@ -3,6 +3,7 @@
 Use AGENTS.md as the primary repository guidance.
 
 Key rules:
+
 - Keep changes small and issue-scoped.
 - Use origin/main as the source of truth for existing behavior.
 - Do not restore older implementations from stale branches.
