@@ -57,6 +57,8 @@ export function JobsPageClient() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
 
@@ -77,16 +79,33 @@ export function JobsPageClient() {
   }
 
   async function handleImport() {
-    if (!url) return;
+    if (!url || isImporting) return;
 
-    await fetch("/api/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sourceUrl: url }),
-    });
+    setIsImporting(true);
+    setError(null);
+    setImportSuccess(null);
 
-    await load();
-    setUrl("");
+    try {
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceUrl: url }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Import job failed.");
+      }
+
+      await load();
+      setUrl("");
+      setImportSuccess("Job imported successfully.");
+      window.setTimeout(() => setImportSuccess(null), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Unable to import job.");
+    } finally {
+      setIsImporting(false);
+    }
   }
 
   async function handleDeleteJob(jobId: string) {
@@ -309,17 +328,24 @@ export function JobsPageClient() {
         <div className="flex gap-2">
           <input
             value={url}
+            disabled={isImporting}
             onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                void handleImport();
+              }
+            }}
             placeholder="Paste job URL"
             className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
           <button
             onClick={handleImport}
-            disabled={!url}
+            disabled={!url || isImporting}
             className="btn-primary disabled:opacity-50"
           >
-            Import
+            {isImporting ? "Importing…" : "Import"}
           </button>
+          {importSuccess ? <p className="text-sm text-green-600">{importSuccess}</p> : null}
         </div>
       </div>
 
