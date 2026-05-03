@@ -78,6 +78,13 @@ type ResumeProfile = {
   currentVersionId: string;
 };
 
+type TailoredResumeResult = {
+  id: string;
+  name: string;
+  profileId: string;
+  versionId: string;
+};
+
 export function JobsPageClient() {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
     new Set(["saved", "applied", "interviewing", "offer", "rejected"])
@@ -516,22 +523,7 @@ export function JobsPageClient() {
                   {expandedId === row.original.id && (
                     <tr data-testid="job-details">
                       <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
-                        <JobDescription text={row.original.sourceText || ""} structuredSummary={row.original.structuredSummary} />
-
-                        <div className="mt-4 border-t pt-4 space-y-3">
-                          <ResumeTailor jobId={row.original.id} />
-                        </div>
-
-                        {row.original.sourceUrl && (
-                          <a
-                            href={row.original.sourceUrl}
-                            target="_blank"
-                            className="text-blue-600 underline"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            View Job Posting
-                          </a>
-                        )}
+                        <JobDetailsPanel job={row.original} />
                       </td>
                     </tr>
                   )}
@@ -547,122 +539,213 @@ export function JobsPageClient() {
 }
 
 
-function JobDescription({ text, structuredSummary }: { text: string; structuredSummary?: any }) {
+function JobDetailsPanel({ job }: { job: RankedJob }) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
-  const safeText = text || "No job description available.";
-  const structured = parseStructured(safeText);
-  const location = extractLocation(safeText);
-  const salary = extractSalary(safeText);
+  const [showResumeTailor, setShowResumeTailor] = useState(false);
+  const structuredPanelId = `job-${job.id}-structured-view`;
+  const rawPanelId = `job-${job.id}-original-posting`;
+  const safeText = job.sourceText || "No job description available.";
+
+  const tabClassName = (active: boolean) =>
+    `rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+      active
+        ? "border-slate-900 bg-slate-900 text-white"
+        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+    }`;
 
   return (
     <div className="mt-4 border-t pt-4">
-      <div className="mb-3 flex gap-2">
+      <div
+        data-testid="job-details-tab-row"
+        className="flex flex-wrap items-center justify-between gap-3"
+      >
+        <div
+          role="tablist"
+          aria-label="Job detail views"
+          className="flex items-center gap-2"
+        >
+          <button
+            id={`${structuredPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "structured"}
+            aria-controls={structuredPanelId}
+            onClick={() => setMode("structured")}
+            className={tabClassName(mode === "structured")}
+          >
+            Structured View
+          </button>
+          <button
+            id={`${rawPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "raw"}
+            aria-controls={rawPanelId}
+            onClick={() => setMode("raw")}
+            className={tabClassName(mode === "raw")}
+          >
+            Original Posting
+          </button>
+        </div>
+
         <button
           type="button"
-          onClick={() => setMode("structured")}
-          className={`border px-2 py-1 ${
-            mode === "structured" ? "bg-gray-200" : ""
-          }`}
+          aria-expanded={showResumeTailor}
+          aria-controls={`resume-tailor-panel-${job.id}`}
+          onClick={() => setShowResumeTailor(true)}
+          className="btn-primary text-sm"
         >
-          Overview <span className="sr-only">Structured</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("raw")}
-          className={`border px-2 py-1 ${mode === "raw" ? "bg-gray-200" : ""}`}
-        >
-          Original Posting <span className="sr-only">Raw</span>
+          Tailor Resume
         </button>
       </div>
 
-      <div className="96 overflow-y-auto text-sm">
-        {mode === "raw" && formatRawText(safeText)}
+      {showResumeTailor && <ResumeTailor jobId={job.id} />}
 
-        {mode === "structured" && (() => {
-          const summary = structuredSummary;
+      <div className="mt-4 max-h-96 overflow-y-auto text-sm">
+        {mode === "raw" ? (
+          <div
+            id={rawPanelId}
+            role="tabpanel"
+            aria-labelledby={`${rawPanelId}-tab`}
+          >
+            {formatRawText(safeText)}
+          </div>
+        ) : (
+          <div
+            id={structuredPanelId}
+            role="tabpanel"
+            aria-labelledby={`${structuredPanelId}-tab`}
+          >
+            <JobDescription structuredSummary={job.structuredSummary} />
+          </div>
+        )}
+      </div>
 
-          if (!summary) {
-            return (
-              <div className="text-sm text-muted-foreground">
-                No structured summary available yet. Use Raw view for the original posting.
-              </div>
-            );
-          }
+      {job.sourceUrl && (
+        <a
+          href={job.sourceUrl}
+          target="_blank"
+          className="mt-4 inline-block text-blue-600 underline"
+          onClick={(event) => event.stopPropagation()}
+        >
+          View Job Posting
+        </a>
+      )}
+    </div>
+  );
+}
 
-          return (
-            <div className="flex max-w-3xl flex-col gap-4">
-              <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
-                {summary.location && <div>📍 {summary.location}</div>}
-                <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
-              </div>
+function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
+  const summary = structuredSummary;
 
-              {summary.companyInfo?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Company</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.companyInfo.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  if (!summary) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No structured summary available yet. Use Original Posting view for the
+        original posting.
+      </div>
+    );
+  }
 
-              {summary.jobDescription?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Description</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.jobDescription.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  return (
+    <div className="flex max-w-3xl flex-col gap-4">
+      <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
+        {summary.location && <div>📍 {summary.location}</div>}
+        <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
+      </div>
 
-              {summary.requirements?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Requirements</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.requirements.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+      {summary.companyInfo?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Company</h4>
+          <ul className="ml-5 list-disc">
+            {summary.companyInfo.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-              {summary.benefits?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Benefits</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.benefits.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          );
-        })()}      </div>
+      {summary.jobDescription?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Description</h4>
+          <ul className="ml-5 list-disc">
+            {summary.jobDescription.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {summary.requirements?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Requirements</h4>
+          <ul className="ml-5 list-disc">
+            {summary.requirements.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {summary.benefits?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Benefits</h4>
+          <ul className="ml-5 list-disc">
+            {summary.benefits.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
 function ResumeTailor({ jobId }: { jobId: string }) {
   const [resumes, setResumes] = useState<ResumeProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<unknown[] | null>(null);
+  const [createdTailoredResume, setCreatedTailoredResume] =
+    useState<TailoredResumeResult | null>(null);
   const [tailorError, setTailorError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isCurrent = true;
+
     fetch('/api/resume-profiles')
-      .then((res) => res.json())
-      .then((data) =>
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !Array.isArray(data)) {
+          throw new Error('Unable to load resume profiles.');
+        }
+
+        return data;
+      })
+      .then((data) => {
+        if (!isCurrent) return;
+
         setResumes(data.map((r: any) => ({
           id: r.id,
           name: r.name || 'Untitled Resume',
           currentVersionId: r.currentVersionId || r.current_version_id || '',
-        })))
-      )
-      .catch(() => setResumes([]));
+        })));
+      })
+      .catch(() => {
+        if (!isCurrent) return;
+
+        setResumes([]);
+        setTailorError('Unable to load resume profiles.');
+      })
+      .finally(() => {
+        if (!isCurrent) return;
+
+        setLoadingProfiles(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
   }, []);
 
   const canTailor = Boolean(selectedProfile?.currentVersionId);
@@ -671,7 +754,7 @@ function ResumeTailor({ jobId }: { jobId: string }) {
     if (!selectedProfile?.currentVersionId) return;
 
     setLoading(true);
-    setSuggestions(null);
+    setCreatedTailoredResume(null);
     setTailorError(null);
 
     try {
@@ -689,7 +772,19 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         throw new Error(data?.error || 'Unable to generate tailored resume.');
       }
 
-      setSuggestions(data.suggestions ?? []);
+      const tailoredResume = data?.tailoredResume;
+
+      if (
+        !tailoredResume ||
+        typeof tailoredResume.id !== 'string' ||
+        typeof tailoredResume.name !== 'string' ||
+        typeof tailoredResume.profileId !== 'string' ||
+        typeof tailoredResume.versionId !== 'string'
+      ) {
+        throw new Error('Tailored resume response was missing resume details.');
+      }
+
+      setCreatedTailoredResume(tailoredResume);
     } catch (err) {
       console.error(err);
       setTailorError('Unable to generate tailored resume.');
@@ -699,24 +794,33 @@ function ResumeTailor({ jobId }: { jobId: string }) {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <select
-          aria-label="Resume profile"
-          value={selectedProfile?.id ?? ''}
-          onChange={(e) => {
-            const profile = resumes.find((resume) => resume.id === e.target.value);
-            setSelectedProfile(profile ?? null);
-          }}
-          className="border rounded px-2 py-1 text-sm"
-        >
-          <option value="">Select resume...</option>
-          {resumes.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
+    <div
+      id={`resume-tailor-panel-${jobId}`}
+      className="mt-3 space-y-3 rounded-md border border-gray-200 bg-white p-3 shadow-sm"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex-1 text-sm font-medium text-gray-700">
+          Resume profile
+          <select
+            aria-label="Resume profile"
+            value={selectedProfile?.id ?? ''}
+            onChange={(e) => {
+              const profile = resumes.find((resume) => resume.id === e.target.value);
+              setSelectedProfile(profile ?? null);
+            }}
+            disabled={loadingProfiles || resumes.length === 0}
+            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+          >
+            <option value="">
+              {loadingProfiles ? 'Loading resumes...' : 'Select resume...'}
             </option>
-          ))}
-        </select>
+            {resumes.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <button
           type="button"
@@ -724,12 +828,18 @@ function ResumeTailor({ jobId }: { jobId: string }) {
           disabled={!canTailor || loading}
           className="btn-primary text-sm disabled:opacity-50"
         >
-          {loading ? 'Generating...' : 'Tailor Resume'}
+          {loading ? 'Generating...' : 'Generate Tailored Resume'}
         </button>
       </div>
 
-      {!canTailor && (
-        <p className="text-sm text-gray-600">Import a resume to enable tailoring</p>
+      {!loadingProfiles && resumes.length === 0 && (
+        <p className="text-sm text-gray-600">Import a resume to enable tailoring.</p>
+      )}
+
+      {selectedProfile && !selectedProfile.currentVersionId && (
+        <p className="text-sm text-gray-600">
+          Selected resume has no current version. Import a resume version before tailoring.
+        </p>
       )}
 
       {tailorError && (
@@ -738,10 +848,13 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         </div>
       )}
 
-      {suggestions && (
-        <pre className="rounded border bg-white p-3 whitespace-pre-wrap text-sm">
-          {JSON.stringify(suggestions, null, 2)}
-        </pre>
+      {createdTailoredResume && (
+        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+          Tailored resume created:{' '}
+          <a href="/resumes" className="font-medium underline">
+            {createdTailoredResume.name}
+          </a>
+        </div>
       )}
     </div>
   );

@@ -53,6 +53,7 @@ export type ResumeVersion = {
 };
 
 export type TailoredResume = {
+    profile: ResumeProfile;
     version: ResumeVersion;
     suggestions: TailoringSuggestion[];
 };

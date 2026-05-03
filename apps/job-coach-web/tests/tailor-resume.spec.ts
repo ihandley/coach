@@ -11,13 +11,22 @@ test('can tailor a resume from job row', async ({ page }) => {
 
   await rows.first().click();
 
+  await expect(page.getByLabel('Resume profile')).toHaveCount(0);
+
+  await page
+    .getByTestId('job-details-tab-row')
+    .getByRole('button', { name: 'Tailor Resume' })
+    .click();
+
   const select = page.getByLabel('Resume profile');
   await expect(select).toBeVisible();
   await expect(select.locator(`option[value="${resumeProfileId}"]`)).toHaveText('E2E Resume');
 
+  const button = page.getByRole('button', { name: 'Generate Tailored Resume' });
+  await expect(button).toBeDisabled();
+
   await select.selectOption(resumeProfileId);
 
-  const button = page.getByRole('button', { name: /tailor resume/i });
   await expect(button).toBeEnabled();
 
   const requestPromise = page.waitForRequest((request) => {
@@ -44,5 +53,12 @@ test('can tailor a resume from job row', async ({ page }) => {
   const response = await responsePromise;
   expect(response.ok()).toBeTruthy();
 
-  await expect(page.locator('pre')).toContainText('[');
+  await expect(
+    page.getByText(/Tailored resume created:\s*E2E Resume - Pattern/),
+  ).toBeVisible();
+
+  await page.getByRole('link', { name: 'E2E Resume - Pattern' }).click();
+  await expect(page).toHaveURL(/\/resumes$/);
+  await expect(page.getByText('E2E Resume', { exact: true })).toBeVisible();
+  await expect(page.getByText('E2E Resume - Pattern', { exact: true })).toBeVisible();
 });

@@ -3,6 +3,13 @@ import {
   DbJobRepository,
 } from "@coach/db";
 
+export function normalizeRankedScore(score: unknown) {
+  if (typeof score !== "number" || Number.isNaN(score)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(score / 100, 1));
+}
 
 export async function GET() {
   let db;
@@ -30,7 +37,7 @@ export async function GET() {
     .select("job_id, score");
 
   const matchMap = new Map(
-    (matches || []).map((m: any) => [m.job_id, m.score])
+    (matches || []).map((m: any) => [m.job_id, normalizeRankedScore(m.score)])
   );
 
   const ranked = jobs

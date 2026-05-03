@@ -8,6 +8,15 @@ type Resume = {
   name: string;
   createdAt?: string;
   created_at?: string;
+  currentVersionId?: string;
+  current_version_id?: string;
+  currentVersion?: {
+    id?: string;
+    kind?: string;
+    source?: {
+      label?: string;
+    };
+  } | null;
   isBaseline?: boolean;
   source?: {
     label?: string;
@@ -125,6 +134,7 @@ export default function FilesPageClient() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function loadFiles() {
@@ -225,12 +235,72 @@ export default function FilesPageClient() {
     };
   }, [previewResume]);
 
-  function handleDownload(id: string) {
-    window.location.href = `/api/resume-profiles/${id}/preview?download=1`;
+  function getExportFilename(response: Response, fallbackName: string) {
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = disposition.match(/filename="([^"]+)"/);
+
+    return match?.[1] ?? `${fallbackName}.pdf`;
+  }
+
+  async function handleDownload(resume: Resume) {
+    const resumeVersionId =
+      resume.currentVersion?.id ||
+      resume.currentVersionId ||
+      resume.current_version_id;
+
+    if (!resumeVersionId) {
+      setError("No resume version available to export.");
+      return;
+    }
+
+    const displayName = getResumeDisplayName(resume);
+
+    setDownloadingId(resume.id);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/exports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentType: "resume",
+          format: "pdf",
+          resumeProfileId: resume.id,
+          resumeVersionId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error ?? "Export failed");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = getExportFilename(res, displayName);
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Export failed");
+    } finally {
+      setDownloadingId(null);
+    }
   }
 
   function getResumeDisplayName(resume: Resume) {
-    return resume.source?.label || resume.name;
+    if (
+      resume.currentVersion?.kind === "tailored" &&
+      resume.currentVersion.source?.label
+    ) {
+      return resume.currentVersion.source.label;
+    }
+
+    return resume.name || resume.source?.label || "Untitled Resume";
   }
 
   const previewSkillGroups = getSkillGroups(previewData?.skills);
@@ -297,6 +367,11 @@ export default function FilesPageClient() {
                       BASELINE
                     </span>
                   )}
+                  {r.currentVersion?.kind === "tailored" && (
+                    <span className="ml-2 text-xs text-green-700">
+                      TAILORED
+                    </span>
+                  )}
                 </div>
                 <div className="text-sm text-gray-500">
                   {new Date(r.createdAt ?? r.created_at ?? "").toLocaleString()}
@@ -306,12 +381,13 @@ export default function FilesPageClient() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => handleDownload(r.id)}
+                  onClick={() => handleDownload(r)}
+                  disabled={downloadingId === r.id}
                   aria-label={`Download ${displayName}`}
-                  className="inline-flex items-center gap-1.5 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  className="inline-flex items-center gap-1.5 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <DownloadIcon />
-                  Download
+                  {downloadingId === r.id ? "Exporting..." : "Download"}
                 </button>
 
                 {!r.isBaseline && (

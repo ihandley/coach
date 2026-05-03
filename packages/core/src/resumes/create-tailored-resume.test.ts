@@ -57,7 +57,7 @@ function makeInvalidSuggestions(): unknown {
 }
 
 describe("createCreateTailoredResume", () => {
-    it("creates a new tailored resume version with lineage to the source version and job", async () => {
+    it("creates a separate tailored profile and leaves the source profile unchanged", async () => {
         const resumeProfiles = createInMemoryResumeProfileRepository();
         const resumeVersions = createInMemoryResumeVersionRepository();
 
@@ -80,6 +80,12 @@ describe("createCreateTailoredResume", () => {
         });
 
         const createTailoredResume = createCreateTailoredResume({
+            jobs: {
+                getJobById: async () => ({
+                    id: "job-123",
+                    company: "Pattern",
+                }),
+            },
             resumeProfiles,
             resumeVersions,
             generateTailoringSuggestions: async () => makeSuggestions(),
@@ -91,21 +97,33 @@ describe("createCreateTailoredResume", () => {
             sourceResumeVersionId: "version-1",
         });
 
-        expect(result.version.profileId).toBe("profile-1");
-        expect(result.version.versionNumber).toBe(2);
+        expect(result.profile.id).not.toBe("profile-1");
+        expect(result.profile.name).toBe("Jane Doe Resume - Pattern");
+        expect(result.profile.currentVersionId).toBe(result.version.id);
+        expect(result.version.profileId).toBe(result.profile.id);
+        expect(result.version.versionNumber).toBe(1);
         expect(result.version.kind).toBe("tailored");
+        expect(result.version.source.label).toBe("Jane Doe Resume - Pattern");
         expect(result.version.lineage).toEqual({
             sourceResumeVersionId: "version-1",
             sourceJobId: "job-123",
         });
         expect(result.suggestions).toHaveLength(1);
 
-        const versions =
+        const sourceProfile = await resumeProfiles.getResumeProfileById("profile-1");
+        const sourceVersions =
             await resumeVersions.listResumeVersionsByProfileId("profile-1");
+        const tailoredVersions =
+            await resumeVersions.listResumeVersionsByProfileId(result.profile.id);
 
-        expect(versions).toHaveLength(2);
-        expect(versions[0]?.id).toBe("version-1");
-        expect(versions[1]?.id).toBe(result.version.id);
+        expect(sourceProfile).toEqual({
+            id: "profile-1",
+            name: "Jane Doe Resume",
+            currentVersionId: "version-1",
+        });
+        expect(sourceVersions).toHaveLength(1);
+        expect(sourceVersions[0]?.id).toBe("version-1");
+        expect(tailoredVersions).toEqual([result.version]);
     });
 
     it("throws when the source resume version does not exist", async () => {
@@ -119,6 +137,12 @@ describe("createCreateTailoredResume", () => {
         });
 
         const createTailoredResume = createCreateTailoredResume({
+            jobs: {
+                getJobById: async () => ({
+                    id: "job-123",
+                    company: "Pattern",
+                }),
+            },
             resumeProfiles,
             resumeVersions,
             generateTailoringSuggestions: async () => makeSuggestions(),
@@ -162,6 +186,12 @@ describe("createCreateTailoredResume", () => {
         });
 
         const createTailoredResume = createCreateTailoredResume({
+            jobs: {
+                getJobById: async () => ({
+                    id: "job-123",
+                    company: "Pattern",
+                }),
+            },
             resumeProfiles,
             resumeVersions,
             generateTailoringSuggestions: async () => makeSuggestions(),
@@ -176,7 +206,7 @@ describe("createCreateTailoredResume", () => {
         ).rejects.toThrow("RESUME_VERSION_PROFILE_MISMATCH");
     });
 
-    it("creates a new tailored version on repeated runs instead of mutating history", async () => {
+    it("creates a new tailored profile on repeated runs instead of mutating the source", async () => {
         const resumeProfiles = createInMemoryResumeProfileRepository();
         const resumeVersions = createInMemoryResumeVersionRepository();
 
@@ -199,6 +229,12 @@ describe("createCreateTailoredResume", () => {
         });
 
         const createTailoredResume = createCreateTailoredResume({
+            jobs: {
+                getJobById: async () => ({
+                    id: "job-123",
+                    company: "Pattern",
+                }),
+            },
             resumeProfiles,
             resumeVersions,
             generateTailoringSuggestions: async () => makeSuggestions(),
@@ -217,14 +253,24 @@ describe("createCreateTailoredResume", () => {
         });
 
         expect(first.version.id).not.toBe(second.version.id);
-        expect(first.version.versionNumber).toBe(2);
-        expect(second.version.versionNumber).toBe(3);
+        expect(first.profile.id).not.toBe(second.profile.id);
+        expect(first.version.profileId).toBe(first.profile.id);
+        expect(second.version.profileId).toBe(second.profile.id);
+        expect(first.version.versionNumber).toBe(1);
+        expect(second.version.versionNumber).toBe(1);
 
-        const versions =
+        const sourceProfile = await resumeProfiles.getResumeProfileById("profile-1");
+        const sourceVersions =
             await resumeVersions.listResumeVersionsByProfileId("profile-1");
+        const firstTailoredVersions =
+            await resumeVersions.listResumeVersionsByProfileId(first.profile.id);
+        const secondTailoredVersions =
+            await resumeVersions.listResumeVersionsByProfileId(second.profile.id);
 
-        expect(versions).toHaveLength(3);
-        expect(versions.map((version) => version.versionNumber)).toEqual([1, 2, 3]);
+        expect(sourceProfile?.currentVersionId).toBe("version-1");
+        expect(sourceVersions).toHaveLength(1);
+        expect(firstTailoredVersions).toEqual([first.version]);
+        expect(secondTailoredVersions).toEqual([second.version]);
     });
 
     it("throws when generated tailoring suggestions are malformed", async () => {
@@ -250,6 +296,12 @@ describe("createCreateTailoredResume", () => {
         });
 
         const createTailoredResume = createCreateTailoredResume({
+            jobs: {
+                getJobById: async () => ({
+                    id: "job-123",
+                    company: "Pattern",
+                }),
+            },
             resumeProfiles,
             resumeVersions,
             generateTailoringSuggestions: async () => makeInvalidSuggestions() as never,

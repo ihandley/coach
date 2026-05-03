@@ -1,11 +1,5 @@
 import { createHash } from "node:crypto";
 import { createExport, createExportService, type ExportFormat } from "@coach/core";
-import {
-    createDbExportedArtifactRepository,
-    createDbGetCoverLetterDraft,
-    createDbResumeProfileRepository,
-    createDbResumeVersionRepository,
-} from "@coach/db";
 import { createServerClient } from "@coach/db";
 import { renderApplicationPacketDocx } from "./application-packet-docx-renderer";
 import { renderApplicationPacketPdf } from "./application-packet-pdf-renderer";
@@ -24,6 +18,177 @@ function size(buffer: ArrayBuffer) {
 
 function fileExtension(format: ExportFormat) {
     return format;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object"
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function getString(value: unknown) {
+    return typeof value === "string" && value.trim().length > 0
+        ? value
+        : undefined;
+}
+
+function getStringArray(value: unknown) {
+    return Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === "string")
+        : [];
+}
+
+function createResumeExportContent(profile: any, version: any) {
+    const normalizedResume = asRecord(version?.normalizedResume);
+    const basics = asRecord(normalizedResume.basics);
+    const versionSource = asRecord(version?.source);
+    const experience = Array.isArray(normalizedResume.experience)
+        ? normalizedResume.experience
+            .map((item) => {
+                const record = asRecord(item);
+                const bullets = [
+                    ...getStringArray(record.bullets),
+                    ...getStringArray(record.highlights),
+                ];
+
+                return {
+                    company: getString(record.company) ?? "",
+                    title: getString(record.title) ?? "",
+                    bullets,
+                };
+            })
+            .filter(
+                (item) =>
+                    item.company.length > 0 ||
+                    item.title.length > 0 ||
+                    item.bullets.length > 0,
+            )
+        : [];
+
+    return {
+        name: getString(versionSource.label) ?? profile?.name ?? "Resume",
+        headline: getString(normalizedResume.headline) ?? getString(basics.headline),
+        summary: getString(normalizedResume.summary) ?? getString(basics.summary),
+        experience,
+    };
+}
+
+function createSupabaseResumeProfileRepository(db: any) {
+    return {
+        async getResumeProfileById(resumeProfileId: string) {
+            const { data, error } = await db
+                .from("resume_profiles")
+                .select("id,name,current_version_id")
+                .eq("id", resumeProfileId)
+                .maybeSingle();
+
+            if (error) {
+                throw error;
+            }
+
+            return data
+                ? {
+                    id: data.id,
+                    name: data.name,
+                    currentVersionId: data.current_version_id ?? "",
+                }
+                : null;
+        },
+    };
+}
+
+function createSupabaseResumeVersionRepository(db: any) {
+    return {
+        async getResumeVersionById(resumeVersionId: string) {
+            const { data, error } = await db
+                .from("resume_versions")
+                .select(
+                    "id,resume_profile_id,version_number,kind,source_kind,source_label,normalized_resume",
+                )
+                .eq("id", resumeVersionId)
+                .maybeSingle();
+
+            if (error) {
+                throw error;
+            }
+
+            return data
+                ? {
+                    id: data.id,
+                    profileId: data.resume_profile_id,
+                    versionNumber: data.version_number,
+                    kind: data.kind,
+                    source: {
+                        kind: data.source_kind,
+                        label: data.source_label,
+                    },
+                    normalizedResume: data.normalized_resume,
+                }
+                : null;
+        },
+    };
+}
+
+function createSupabaseCoverLetterRepository(db: any) {
+    return {
+        async getCoverLetterDraftById(id: string) {
+            const { data, error } = await db
+                .from("cover_letter_drafts")
+                .select("id,resume_profile_id,job_id,content,created_at")
+                .eq("id", id)
+                .maybeSingle();
+
+            if (error) {
+                throw error;
+            }
+
+            return data
+                ? {
+                    id: data.id,
+                    resumeProfileId: data.resume_profile_id,
+                    jobId: data.job_id,
+                    content: data.content,
+                    createdAt: new Date(data.created_at),
+                }
+                : null;
+        },
+    };
+}
+
+function createSupabaseExportedArtifactRepository(db: any) {
+    return {
+        async createExportedArtifact(input: {
+            artifactType: string;
+            sourceEntityType: string;
+            sourceEntityId: string;
+            fileName: string;
+            storagePath: string;
+            mimeType: string;
+            checksumSha256: string;
+            byteSize: number;
+        }) {
+            const { data, error } = await db
+                .from("exported_artifacts")
+                .insert({
+                    artifact_type: input.artifactType,
+                    source_entity_type: input.sourceEntityType,
+                    source_entity_id: input.sourceEntityId,
+                    file_name: input.fileName,
+                    storage_path: input.storagePath,
+                    mime_type: input.mimeType,
+                    checksum_sha256: input.checksumSha256,
+                    byte_size: input.byteSize,
+                })
+                .select("*")
+                .single();
+
+            if (error) {
+                throw error;
+            }
+
+            return data;
+        },
+    };
 }
 
 export function createExportsServer(dependencies?: {
@@ -61,19 +226,19 @@ export function createExportsServer(dependencies?: {
 
     const resumeProfiles =
         dependencies?.resumeProfiles ??
-        createDbResumeProfileRepository({ db: db! });
+        createSupabaseResumeProfileRepository(db!);
 
     const resumeVersions =
         dependencies?.resumeVersions ??
-        createDbResumeVersionRepository({ db: db! });
+        createSupabaseResumeVersionRepository(db!);
 
     const coverLetters =
         dependencies?.coverLetters ??
-        createDbGetCoverLetterDraft({ db: db! });
+        createSupabaseCoverLetterRepository(db!);
 
     const artifacts =
         dependencies?.artifacts ??
-        createDbExportedArtifactRepository({ db: db! });
+        createSupabaseExportedArtifactRepository(db!);
 
     const renderResumeDocxImpl =
         dependencies?.renderResumeDocx ?? renderResumeDocx;
@@ -91,12 +256,7 @@ export function createExportsServer(dependencies?: {
                     data.resumeVersionId,
                 );
 
-                const content = {
-                    name: profile?.name ?? "Resume",
-                    headline: version?.normalizedResume?.headline,
-                    summary: version?.normalizedResume?.summary,
-                    experience: version?.normalizedResume?.experience ?? [],
-                };
+                const content = createResumeExportContent(profile, version);
 
                 const rendered =
                     format === "docx"
@@ -184,12 +344,7 @@ export function createExportsServer(dependencies?: {
                     throw new Error("COVER_LETTER_NOT_FOUND");
                 }
 
-                const resumeContent = {
-                    name: profile?.name ?? "Resume",
-                    headline: version?.normalizedResume?.headline,
-                    summary: version?.normalizedResume?.summary,
-                    experience: version?.normalizedResume?.experience ?? [],
-                };
+                const resumeContent = createResumeExportContent(profile, version);
 
                 const rendered =
                     format === "docx"

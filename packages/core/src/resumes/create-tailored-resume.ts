@@ -48,6 +48,11 @@ function assertValidTailoringSuggestions(
 
 type ResumeProfileRepository = {
     getResumeProfileById(resumeProfileId: string): Promise<ResumeProfile | null>;
+    createResumeProfile(input: {
+        id?: string;
+        name: string;
+        currentVersionId: string;
+    }): Promise<ResumeProfile>;
     updateResumeProfileCurrentVersion(input: {
         resumeProfileId: string;
         currentVersionId: string;
@@ -68,11 +73,32 @@ type ResumeVersionRepository = {
     listResumeVersionsByProfileId(profileId: string): Promise<ResumeVersion[]>;
 };
 
+type JobRepository = {
+    getJobById(
+        jobId: string,
+    ): Promise<{ id: string; company?: string | null } | null>;
+};
+
+function createTailoredResumeName({
+    sourceResumeName,
+    companyName,
+}: {
+    sourceResumeName: string;
+    companyName?: string | null;
+}) {
+    const sourceName = sourceResumeName.trim() || "Resume";
+    const suffix = companyName?.trim() || "Tailored";
+
+    return `${sourceName} - ${suffix}`;
+}
+
 export function createCreateTailoredResume({
+    jobs,
     resumeProfiles,
     resumeVersions,
     generateTailoringSuggestions,
 }: {
+    jobs: JobRepository;
     resumeProfiles: ResumeProfileRepository;
     resumeVersions: ResumeVersionRepository;
     generateTailoringSuggestions(input: {
@@ -104,14 +130,16 @@ export function createCreateTailoredResume({
             throw new Error("RESUME_VERSION_PROFILE_MISMATCH");
         }
 
-        const existingVersions = await resumeVersions.listResumeVersionsByProfileId(
-            input.profileId,
-        );
+        const job = await jobs.getJobById(input.jobId);
 
-        const nextVersionNumber =
-            existingVersions.length === 0
-                ? 1
-                : Math.max(...existingVersions.map((version) => version.versionNumber)) + 1;
+        if (!job) {
+            throw new Error("JOB_NOT_FOUND");
+        }
+
+        const tailoredResumeName = createTailoredResumeName({
+            sourceResumeName: profile.name,
+            companyName: job.company,
+        });
 
         const suggestions = await generateTailoringSuggestions({
             profileId: input.profileId,
@@ -121,13 +149,18 @@ export function createCreateTailoredResume({
 
         assertValidTailoringSuggestions(suggestions);
 
+        const tailoredProfile = await resumeProfiles.createResumeProfile({
+            name: tailoredResumeName,
+            currentVersionId: "",
+        });
+
         const version = await resumeVersions.createResumeVersion({
-            profileId: input.profileId,
-            versionNumber: nextVersionNumber,
+            profileId: tailoredProfile.id,
+            versionNumber: 1,
             kind: "tailored",
             source: {
                 kind: "tailored",
-                label: `Tailored resume for ${input.jobId}`,
+                label: tailoredResumeName,
             },
             normalizedResume: sourceVersion.normalizedResume,
             lineage: {
@@ -137,11 +170,15 @@ export function createCreateTailoredResume({
         });
 
         await resumeProfiles.updateResumeProfileCurrentVersion({
-            resumeProfileId: input.profileId,
+            resumeProfileId: tailoredProfile.id,
             currentVersionId: version.id,
         });
 
         return {
+            profile: {
+                ...tailoredProfile,
+                currentVersionId: version.id,
+            },
             version,
             suggestions,
         };

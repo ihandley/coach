@@ -4,7 +4,7 @@ import { createServerClient } from "@coach/db";
 export async function GET() {
   const db = createServerClient();
 
-  const { data, error } = await db
+  const { data: profiles, error } = await db
     .from("resume_profiles")
     .select("id, name, created_at, current_version_id, source")
     .order("created_at", { ascending: false });
@@ -13,7 +13,52 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data ?? []);
+  const currentVersionIds = Array.from(
+    new Set(
+      (profiles ?? [])
+        .map((profile) => profile.current_version_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  );
+
+  const currentVersionsById = new Map<string, unknown>();
+
+  if (currentVersionIds.length > 0) {
+    const { data: versions, error: versionsError } = await db
+      .from("resume_versions")
+      .select(
+        "id, resume_profile_id, version_number, kind, source_kind, source_label, created_at",
+      )
+      .in("id", currentVersionIds);
+
+    if (versionsError) {
+      return NextResponse.json({ error: versionsError.message }, { status: 500 });
+    }
+
+    for (const version of versions ?? []) {
+      currentVersionsById.set(version.id, {
+        id: version.id,
+        resumeProfileId: version.resume_profile_id,
+        versionNumber: version.version_number,
+        kind: version.kind,
+        source: {
+          kind: version.source_kind,
+          label: version.source_label,
+        },
+        created_at: version.created_at,
+      });
+    }
+  }
+
+  return NextResponse.json(
+    (profiles ?? []).map((profile) => ({
+      ...profile,
+      currentVersionId: profile.current_version_id ?? "",
+      currentVersion: profile.current_version_id
+        ? currentVersionsById.get(profile.current_version_id) ?? null
+        : null,
+    })),
+  );
 }
 
 export async function POST(req: Request) {

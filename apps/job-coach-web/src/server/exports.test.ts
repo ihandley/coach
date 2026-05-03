@@ -197,6 +197,80 @@ describe("createExportsServer", () => {
         });
     });
 
+    it("exports nested tailored resume content using the tailored version label", async () => {
+        const getResumeProfileById = vi.fn().mockResolvedValue({
+            id: "rp1",
+            name: "Jane Doe Resume",
+        });
+
+        const getResumeVersionById = vi.fn().mockResolvedValue({
+            id: "rv2",
+            source: {
+                kind: "tailored",
+                label: "Jane Doe Resume - Pattern",
+            },
+            normalizedResume: {
+                basics: {
+                    headline: "Senior Software Engineer",
+                    summary: "Builds TypeScript and marketplace systems.",
+                },
+                experience: [
+                    {
+                        company: "Acme",
+                        title: "Engineer",
+                        highlights: ["Built API integrations"],
+                    },
+                ],
+            },
+        });
+
+        const renderResumePdf = vi.fn().mockResolvedValue({
+            fileName: "resume.pdf",
+            mimeType: "application/pdf",
+            buffer: new Uint8Array([1]).buffer,
+        });
+
+        const server = createExportsServer({
+            resumeProfiles: {
+                getResumeProfileById,
+            },
+            resumeVersions: {
+                getResumeVersionById,
+            },
+            coverLetters: {
+                getCoverLetterDraftById: vi.fn(),
+            },
+            artifacts: {
+                createExportedArtifact: vi.fn(),
+            },
+            renderResumePdf,
+        });
+
+        await server.exportDocument({
+            documentType: "resume",
+            format: "pdf",
+            resumeProfileId: "rp1",
+            resumeVersionId: "rv2",
+        });
+
+        expect(renderResumePdf).toHaveBeenCalledWith({
+            resumeProfileId: "rp1",
+            resumeVersionId: "rv2",
+            content: {
+                name: "Jane Doe Resume - Pattern",
+                headline: "Senior Software Engineer",
+                summary: "Builds TypeScript and marketplace systems.",
+                experience: [
+                    {
+                        company: "Acme",
+                        title: "Engineer",
+                        bullets: ["Built API integrations"],
+                    },
+                ],
+            },
+        });
+    });
+
     it("exports cover letter docx and persists artifact metadata", async () => {
         const createExportedArtifact = vi.fn();
 

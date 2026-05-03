@@ -1,27 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createTailoredResume = vi.fn();
 
-vi.mock("@coach/db", async () => {
-    const actual = await vi.importActual<object>("@coach/db");
-
+vi.mock("@/server/resume-tailoring/create-tailored-resume-service", () => {
     return {
-        ...actual,
-        createDbCreateTailoredResume: () => createTailoredResume,
+        createTailoredResumeService: () => createTailoredResume,
     };
 });
 
 describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
+    beforeEach(() => {
+        createTailoredResume.mockReset();
+    });
+
     it("creates a tailored resume version", async () => {
         createTailoredResume.mockResolvedValue({
             version: {
                 id: "version-2",
-                profileId: "profile-1",
-                versionNumber: 2,
+                profileId: "profile-2",
+                versionNumber: 1,
                 kind: "tailored",
                 source: {
                     kind: "tailored",
-                    label: "Tailored resume for job-123",
+                    label: "Jane Doe Resume - Pattern",
                 },
                 normalizedResume: {
                     basics: {
@@ -43,6 +44,12 @@ describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
                     sourceResumeVersionId: "version-1",
                     sourceJobId: "job-123",
                 },
+            },
+            tailoredResume: {
+                id: "profile-2",
+                name: "Jane Doe Resume - Pattern",
+                profileId: "profile-2",
+                versionId: "version-2",
             },
             suggestions: [
                 {
@@ -83,14 +90,24 @@ describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
             expect.objectContaining({
                 version: expect.objectContaining({
                     id: "version-2",
-                    profileId: "profile-1",
-                    versionNumber: 2,
+                    profileId: "profile-2",
+                    versionNumber: 1,
                     kind: "tailored",
+                    source: {
+                        kind: "tailored",
+                        label: "Jane Doe Resume - Pattern",
+                    },
                     lineage: {
                         sourceResumeVersionId: "version-1",
                         sourceJobId: "job-123",
                     },
                 }),
+                tailoredResume: {
+                    id: "profile-2",
+                    name: "Jane Doe Resume - Pattern",
+                    profileId: "profile-2",
+                    versionId: "version-2",
+                },
                 suggestions: expect.any(Array),
             }),
         );
@@ -209,6 +226,37 @@ describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
         expect(response.status).toBe(400);
         await expect(response.json()).resolves.toEqual({
             error: "INVALID_TAILORING_SUGGESTIONS",
+        });
+    });
+
+    it("returns 400 when the source version belongs to another profile", async () => {
+        createTailoredResume.mockRejectedValue(
+            new Error("RESUME_VERSION_PROFILE_MISMATCH"),
+        );
+
+        const { POST } = await import("./route");
+
+        const response = await POST(
+            new Request("http://localhost/api/resume-profiles/profile-1/tailored-resumes", {
+                method: "POST",
+                body: JSON.stringify({
+                    jobId: "job-123",
+                    sourceResumeVersionId: "version-99",
+                }),
+                headers: {
+                    "content-type": "application/json",
+                },
+            }),
+            {
+                params: Promise.resolve({
+                    id: "profile-1",
+                }),
+            },
+        );
+
+        expect(response.status).toBe(400);
+        await expect(response.json()).resolves.toEqual({
+            error: "RESUME_VERSION_PROFILE_MISMATCH",
         });
     });
 });
