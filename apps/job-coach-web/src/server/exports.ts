@@ -63,6 +63,24 @@ function createResumeExportContent(profile: any, version: any) {
   };
 }
 
+function assertResumeExportSource(input: { profile: any; version: any; resumeProfileId: string }) {
+  if (!input.profile) {
+    throw new Error("RESUME_PROFILE_NOT_FOUND");
+  }
+
+  if (!input.version) {
+    throw new Error("RESUME_VERSION_NOT_FOUND");
+  }
+
+  if (
+    typeof input.version.profileId === "string" &&
+    input.version.profileId.length > 0 &&
+    input.version.profileId !== input.resumeProfileId
+  ) {
+    throw new Error("RESUME_VERSION_PROFILE_MISMATCH");
+  }
+}
+
 function createSupabaseResumeProfileRepository(db: any) {
   return {
     async getResumeProfileById(resumeProfileId: string) {
@@ -232,6 +250,12 @@ export function createExportsServer(dependencies?: {
         const profile = await resumeProfiles.getResumeProfileById(data.resumeProfileId);
         const version = await resumeVersions.getResumeVersionById(data.resumeVersionId);
 
+        assertResumeExportSource({
+          profile,
+          version,
+          resumeProfileId: data.resumeProfileId,
+        });
+
         const content = createResumeExportContent(profile, version);
 
         const rendered =
@@ -307,6 +331,12 @@ export function createExportsServer(dependencies?: {
         const profile = await resumeProfiles.getResumeProfileById(data.resumeProfileId);
         const version = await resumeVersions.getResumeVersionById(data.resumeVersionId);
         const draft = await coverLetters.getCoverLetterDraftById(data.coverLetterDraftId);
+
+        assertResumeExportSource({
+          profile,
+          version,
+          resumeProfileId: data.resumeProfileId,
+        });
 
         if (!draft) {
           throw new Error("COVER_LETTER_NOT_FOUND");

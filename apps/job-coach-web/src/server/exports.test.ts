@@ -191,31 +191,155 @@ describe("createExportsServer", () => {
     });
   });
 
+  it("returns a clear error when the resume profile is missing", async () => {
+    const server = createExportsServer({
+      resumeProfiles: {
+        getResumeProfileById: vi.fn().mockResolvedValue(null),
+      },
+      resumeVersions: {
+        getResumeVersionById: vi.fn().mockResolvedValue({
+          id: "rv1",
+          profileId: "missing-rp",
+          normalizedResume: {
+            headline: "Software Engineer",
+          },
+        }),
+      },
+      coverLetters: {
+        getCoverLetterDraftById: vi.fn(),
+      },
+      artifacts: {
+        createExportedArtifact: vi.fn(),
+      },
+    });
+
+    await expect(
+      server.exportDocument({
+        documentType: "resume",
+        format: "pdf",
+        resumeProfileId: "missing-rp",
+        resumeVersionId: "rv1",
+      }),
+    ).rejects.toThrow("RESUME_PROFILE_NOT_FOUND");
+  });
+
+  it("returns a clear error when the resume version is missing", async () => {
+    const server = createExportsServer({
+      resumeProfiles: {
+        getResumeProfileById: vi.fn().mockResolvedValue({
+          id: "rp1",
+          name: "Jane Doe",
+        }),
+      },
+      resumeVersions: {
+        getResumeVersionById: vi.fn().mockResolvedValue(null),
+      },
+      coverLetters: {
+        getCoverLetterDraftById: vi.fn(),
+      },
+      artifacts: {
+        createExportedArtifact: vi.fn(),
+      },
+    });
+
+    await expect(
+      server.exportDocument({
+        documentType: "resume",
+        format: "pdf",
+        resumeProfileId: "rp1",
+        resumeVersionId: "missing-rv",
+      }),
+    ).rejects.toThrow("RESUME_VERSION_NOT_FOUND");
+  });
+
+  it("does not require cover letter or job data for resume exports", async () => {
+    const getCoverLetterDraftById = vi.fn();
+
+    const server = createExportsServer({
+      resumeProfiles: {
+        getResumeProfileById: vi.fn().mockResolvedValue({
+          id: "rp1",
+          name: "Jane Doe",
+        }),
+      },
+      resumeVersions: {
+        getResumeVersionById: vi.fn().mockResolvedValue({
+          id: "rv1",
+          profileId: "rp1",
+          normalizedResume: {
+            headline: "Software Engineer",
+            summary: "Builds useful software.",
+          },
+        }),
+      },
+      coverLetters: {
+        getCoverLetterDraftById,
+      },
+      artifacts: {
+        createExportedArtifact: vi.fn(),
+      },
+    });
+
+    const result = await server.exportDocument({
+      documentType: "resume",
+      format: "pdf",
+      resumeProfileId: "rp1",
+      resumeVersionId: "rv1",
+    });
+
+    expect(result.mimeType).toBe("application/pdf");
+    expect(getCoverLetterDraftById).not.toHaveBeenCalled();
+  });
+
   it("exports nested tailored resume content using the tailored version label", async () => {
     const getResumeProfileById = vi.fn().mockResolvedValue({
       id: "rp1",
       name: "Jane Doe Resume",
     });
 
-    const getResumeVersionById = vi.fn().mockResolvedValue({
-      id: "rv2",
-      source: {
-        kind: "tailored",
-        label: "Jane Doe Resume - Pattern",
-      },
-      normalizedResume: {
-        basics: {
-          headline: "Senior Software Engineer",
-          summary: "Builds TypeScript and marketplace systems.",
-        },
-        experience: [
-          {
-            company: "Acme",
-            title: "Engineer",
-            highlights: ["Built API integrations"],
+    const getResumeVersionById = vi.fn(async (resumeVersionId: string) => {
+      if (resumeVersionId === "rv1") {
+        return {
+          id: "rv1",
+          profileId: "rp1",
+          source: {
+            kind: "manual",
+            label: "Jane Doe Resume",
           },
-        ],
-      },
+          normalizedResume: {
+            basics: {
+              headline: "Software Engineer",
+              summary: "Builds useful software.",
+            },
+          },
+        };
+      }
+
+      if (resumeVersionId === "rv2") {
+        return {
+          id: "rv2",
+          profileId: "rp1",
+          source: {
+            kind: "tailored",
+            label: "Jane Doe Resume - Pattern",
+          },
+          normalizedResume: {
+            basics: {
+              headline: "Senior Software Engineer",
+              summary: "Builds TypeScript and marketplace systems.",
+            },
+            experience: [
+              {
+                company: "Acme",
+                title: "Engineer",
+                highlights: ["Built API integrations"],
+              },
+            ],
+          },
+        };
+      }
+
+      return null;
     });
 
     const renderResumePdf = vi.fn().mockResolvedValue({
