@@ -2,77 +2,77 @@ import { createApplicationAnswer } from "@coach/core";
 import { createDbGetResumeProfile, DbJobRepository } from "@coach/db";
 
 interface FromJobBody {
-    jobId: string;
-    question: string;
+  jobId: string;
+  question: string;
 }
 
 function isNonEmptyString(value: unknown): value is string {
-    return typeof value === "string" && value.trim().length > 0;
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function parseBody(value: unknown): FromJobBody | null {
-    if (!value || typeof value !== "object") {
-        return null;
-    }
+  if (!value || typeof value !== "object") {
+    return null;
+  }
 
-    const body = value as Record<string, unknown>;
+  const body = value as Record<string, unknown>;
 
-    if (!isNonEmptyString(body.jobId) || !isNonEmptyString(body.question)) {
-        return null;
-    }
+  if (!isNonEmptyString(body.jobId) || !isNonEmptyString(body.question)) {
+    return null;
+  }
 
-    return {
-        jobId: body.jobId,
-        question: body.question,
-    };
+  return {
+    jobId: body.jobId,
+    question: body.question,
+  };
 }
 
 export async function POST(
-    request: Request,
-    context: {
-        params: Promise<{
-            id: string;
-        }>;
-    },
+  request: Request,
+  context: {
+    params: Promise<{
+      id: string;
+    }>;
+  },
 ) {
-    const { id: resumeProfileId } = await context.params;
+  const { id: resumeProfileId } = await context.params;
 
-    const json = await request.json().catch(() => null);
-    const body = parseBody(json);
+  const json = await request.json().catch(() => null);
+  const body = parseBody(json);
 
-    if (!body) {
-        return Response.json({ error: "Invalid request body" }, { status: 400 });
-    }
+  if (!body) {
+    return Response.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
-    const getResumeProfile = createDbGetResumeProfile({} as never);
-    const jobs = new DbJobRepository({} as never);
+  const getResumeProfile = createDbGetResumeProfile({} as never);
+  const jobs = new DbJobRepository({} as never);
 
-    const resumeProfileResult = await getResumeProfile({
-        resumeProfileId,
-    });
+  const resumeProfileResult = await getResumeProfile({
+    resumeProfileId,
+  });
 
-    const resumeVersion = resumeProfileResult?.currentVersion ?? null;
-    const job = await jobs.getJobById(body.jobId);
+  const resumeVersion = resumeProfileResult?.currentVersion ?? null;
+  const job = await jobs.getJobById(body.jobId);
 
-    if (!resumeVersion || !job) {
-        return Response.json({ error: "Required data not found" }, { status: 404 });
-    }
+  if (!resumeVersion || !job) {
+    return Response.json({ error: "Required data not found" }, { status: 404 });
+  }
 
-    const normalizedResume = resumeVersion.normalizedResume as {
-        basics?: {
-            fullName?: string;
-            summary?: string;
-        };
+  const normalizedResume = resumeVersion.normalizedResume as {
+    basics?: {
+      fullName?: string;
+      summary?: string;
     };
+  };
 
-    const result = await createApplicationAnswer({
-        question: body.question,
-        candidateName: normalizedResume.basics?.fullName ?? "Candidate",
-        companyName: job.company,
-        jobTitle: job.title,
-        jobSummary: job.sourceText,
-        resumeSummary: normalizedResume.basics?.summary ?? "",
-    });
+  const result = await createApplicationAnswer({
+    question: body.question,
+    candidateName: normalizedResume.basics?.fullName ?? "Candidate",
+    companyName: job.company,
+    jobTitle: job.title,
+    jobSummary: job.sourceText,
+    resumeSummary: normalizedResume.basics?.summary ?? "",
+  });
 
-    return Response.json(result, { status: 201 });
+  return Response.json(result, { status: 201 });
 }

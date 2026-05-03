@@ -25,7 +25,6 @@ function getStatusColor(status: string) {
   }
 }
 
-
 function formatRawText(text: string) {
   const paragraphs = text.split(/\n\s*\n/);
 
@@ -37,12 +36,16 @@ function formatRawText(text: string) {
 }
 
 function extractLocation(text: string): string | null {
-  const match = text.match(/\b(Remote|Hybrid|On-site|Orem|Provo|Lehi|Salt Lake City|Utah|CA|California|NY|New York|TX|Texas)\b/i);
+  const match = text.match(
+    /\b(Remote|Hybrid|On-site|Orem|Provo|Lehi|Salt Lake City|Utah|CA|California|NY|New York|TX|Texas)\b/i,
+  );
   return match ? match[0] : null;
 }
 
 function extractSalary(text: string): string | null {
-  const match = text.match(/\$[0-9,]+\s*(?:-|–|to)\s*\$[0-9,]+(?:\s*(?:per year|\/year|annually|\/hr|per hour))?/i);
+  const match = text.match(
+    /\$[0-9,]+\s*(?:-|–|to)\s*\$[0-9,]+(?:\s*(?:per year|\/year|annually|\/hr|per hour))?/i,
+  );
   return match ? match[0] : null;
 }
 
@@ -57,7 +60,6 @@ function parseStructured(text: string) {
     },
   ];
 }
-
 
 type RankedJob = {
   id: string;
@@ -78,9 +80,16 @@ type ResumeProfile = {
   currentVersionId: string;
 };
 
+type TailoredResumeResult = {
+  id: string;
+  name: string;
+  profileId: string;
+  versionId: string;
+};
+
 export function JobsPageClient() {
   const [visibleStatuses, setVisibleStatuses] = React.useState(
-    new Set(["saved", "applied", "interviewing", "offer", "rejected"])
+    new Set(["saved", "applied", "interviewing", "offer", "rejected"]),
   );
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
@@ -97,9 +106,7 @@ export function JobsPageClient() {
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       const message =
-        body && typeof body.error === "string"
-          ? body.error
-          : "Unable to load ranked jobs.";
+        body && typeof body.error === "string" ? body.error : "Unable to load ranked jobs.";
 
       setError(message);
       return;
@@ -145,7 +152,7 @@ export function JobsPageClient() {
                   setSelectedJobIds(new Set([...selectedJobIds, ...visibleIds]));
                 } else {
                   setSelectedJobIds(
-                    new Set([...selectedJobIds].filter((id) => !visibleIds.includes(id)))
+                    new Set([...selectedJobIds].filter((id) => !visibleIds.includes(id))),
                   );
                 }
               }}
@@ -186,18 +193,12 @@ export function JobsPageClient() {
               <div className="w-20 h-2 bg-gray-200 rounded">
                 <div
                   className={`h-2 rounded ${
-                    value >= 75
-                      ? "bg-green-500"
-                      : value >= 50
-                      ? "bg-yellow-500"
-                      : "bg-gray-400"
+                    value >= 75 ? "bg-green-500" : value >= 50 ? "bg-yellow-500" : "bg-gray-400"
                   }`}
                   style={{ width: `${value}%` }}
                 />
               </div>
-              <span className="font-semibold text-gray-900 w-10 text-right">
-                {value}%
-              </span>
+              <span className="font-semibold text-gray-900 w-10 text-right">{value}%</span>
             </div>
           );
         },
@@ -205,11 +206,7 @@ export function JobsPageClient() {
       {
         accessorKey: "title",
         header: "Title",
-        cell: ({ row }) => (
-          <span className="font-medium text-gray-900">
-            {row.original.title}
-          </span>
-        ),
+        cell: ({ row }) => <span className="font-medium text-gray-900">{row.original.title}</span>,
       },
       {
         accessorKey: "company",
@@ -261,9 +258,7 @@ export function JobsPageClient() {
           async function updateStatus(status: string) {
             const prevJobs = jobs;
 
-            setJobs(
-              jobs.map((j) => (j.id === job.id ? { ...j, status } : j))
-            );
+            setJobs(jobs.map((j) => (j.id === job.id ? { ...j, status } : j)));
 
             try {
               const res = await fetch(`/api/jobs/${job.id}`, {
@@ -319,9 +314,8 @@ export function JobsPageClient() {
           );
         },
       },
-      
     ],
-    [selectedJobIds, jobs]
+    [selectedJobIds, jobs],
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -348,9 +342,9 @@ export function JobsPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-  <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
 
-  <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="mr-2 text-sm text-slate-600">Show:</span>
           {["saved", "applied", "interviewing", "offer", "rejected", "archived"].map((status) => {
             const active = visibleStatuses.has(status);
@@ -377,7 +371,7 @@ export function JobsPageClient() {
             );
           })}
         </div>
-</div>
+      </div>
 
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -405,9 +399,7 @@ export function JobsPageClient() {
 
       {jobs.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">
-            No jobs yet. Import one to get started.
-          </p>
+          <p className="text-gray-500">No jobs yet. Import one to get started.</p>
         </div>
       ) : (
         <>
@@ -428,21 +420,19 @@ export function JobsPageClient() {
 
                     // optimistic update
                     const updatedJobs = jobs.map((job) =>
-                      ids.includes(job.id)
-                        ? { ...job, status: value }
-                        : job
+                      ids.includes(job.id) ? { ...job, status: value } : job,
                     );
 
                     setJobs(updatedJobs);
 
                     try {
-                      await fetch('/api/jobs/bulk-update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                      await fetch("/api/jobs/bulk-update", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ ids, status: value }),
                       });
                     } catch (err) {
-                      console.error('Bulk update failed', err);
+                      console.error("Bulk update failed", err);
                       setJobs(prevJobs); // rollback
                     }
 
@@ -467,202 +457,259 @@ export function JobsPageClient() {
             </div>
           )}
 
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className="px-4 py-2 text-left font-medium text-gray-700 cursor-pointer"
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                      {{
-                        asc: " ↑",
-                        desc: " ↓",
-                      }[header.column.getIsSorted() as string] ?? null}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <React.Fragment key={row.id}>
-                  <tr
-                    key={row.id}
-                    data-testid="job-row"
-                    className="cursor-pointer border-t hover:bg-gray-50"
-                    onClick={() =>
-                      setExpandedId(
-                        expandedId === row.original.id ? null : row.original.id
-                      )
-                    }
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-2">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table className="min-w-full text-sm">
+              <thead className="bg-gray-50">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        className="px-4 py-2 text-left font-medium text-gray-700 cursor-pointer"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {{
+                          asc: " ↑",
+                          desc: " ↓",
+                        }[header.column.getIsSorted() as string] ?? null}
+                      </th>
                     ))}
                   </tr>
-                  {expandedId === row.original.id && (
-                    <tr data-testid="job-details">
-                      <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
-                        <JobDescription text={row.original.sourceText || ""} structuredSummary={row.original.structuredSummary} />
-
-                        <div className="mt-4 border-t pt-4 space-y-3">
-                          <ResumeTailor jobId={row.original.id} />
-                        </div>
-
-                        {row.original.sourceUrl && (
-                          <a
-                            href={row.original.sourceUrl}
-                            target="_blank"
-                            className="text-blue-600 underline"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            View Job Posting
-                          </a>
-                        )}
-                      </td>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <React.Fragment key={row.id}>
+                    <tr
+                      key={row.id}
+                      data-testid="job-row"
+                      className="cursor-pointer border-t hover:bg-gray-50"
+                      onClick={() =>
+                        setExpandedId(expandedId === row.original.id ? null : row.original.id)
+                      }
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-4 py-2">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {expandedId === row.original.id && (
+                      <tr data-testid="job-details">
+                        <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
+                          <JobDetailsPanel job={row.original} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>
   );
 }
 
-
-function JobDescription({ text, structuredSummary }: { text: string; structuredSummary?: any }) {
+function JobDetailsPanel({ job }: { job: RankedJob }) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
-  const safeText = text || "No job description available.";
-  const structured = parseStructured(safeText);
-  const location = extractLocation(safeText);
-  const salary = extractSalary(safeText);
+  const [showResumeTailor, setShowResumeTailor] = useState(false);
+  const structuredPanelId = `job-${job.id}-structured-view`;
+  const rawPanelId = `job-${job.id}-original-posting`;
+  const safeText = job.sourceText || "No job description available.";
+
+  const tabClassName = (active: boolean) =>
+    `rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+      active
+        ? "border-slate-900 bg-slate-900 text-white"
+        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+    }`;
 
   return (
     <div className="mt-4 border-t pt-4">
-      <div className="mb-3 flex gap-2">
+      <div
+        data-testid="job-details-tab-row"
+        className="flex flex-wrap items-center justify-between gap-3"
+      >
+        <div role="tablist" aria-label="Job detail views" className="flex items-center gap-2">
+          <button
+            id={`${structuredPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "structured"}
+            aria-controls={structuredPanelId}
+            onClick={() => setMode("structured")}
+            className={tabClassName(mode === "structured")}
+          >
+            Structured View
+          </button>
+          <button
+            id={`${rawPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "raw"}
+            aria-controls={rawPanelId}
+            onClick={() => setMode("raw")}
+            className={tabClassName(mode === "raw")}
+          >
+            Original Posting
+          </button>
+        </div>
+
         <button
           type="button"
-          onClick={() => setMode("structured")}
-          className={`border px-2 py-1 ${
-            mode === "structured" ? "bg-gray-200" : ""
-          }`}
+          aria-expanded={showResumeTailor}
+          aria-controls={`resume-tailor-panel-${job.id}`}
+          onClick={() => setShowResumeTailor(true)}
+          className="btn-primary text-sm"
         >
-          Overview <span className="sr-only">Structured</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("raw")}
-          className={`border px-2 py-1 ${mode === "raw" ? "bg-gray-200" : ""}`}
-        >
-          Original Posting <span className="sr-only">Raw</span>
+          Tailor Resume
         </button>
       </div>
 
-      <div className="96 overflow-y-auto text-sm">
-        {mode === "raw" && formatRawText(safeText)}
+      {showResumeTailor && <ResumeTailor jobId={job.id} />}
 
-        {mode === "structured" && (() => {
-          const summary = structuredSummary;
+      <div className="mt-4 max-h-96 overflow-y-auto text-sm">
+        {mode === "raw" ? (
+          <div id={rawPanelId} role="tabpanel" aria-labelledby={`${rawPanelId}-tab`}>
+            {formatRawText(safeText)}
+          </div>
+        ) : (
+          <div id={structuredPanelId} role="tabpanel" aria-labelledby={`${structuredPanelId}-tab`}>
+            <JobDescription structuredSummary={job.structuredSummary} />
+          </div>
+        )}
+      </div>
 
-          if (!summary) {
-            return (
-              <div className="text-sm text-muted-foreground">
-                No structured summary available yet. Use Raw view for the original posting.
-              </div>
-            );
-          }
+      {job.sourceUrl && (
+        <a
+          href={job.sourceUrl}
+          target="_blank"
+          className="mt-4 inline-block text-blue-600 underline"
+          onClick={(event) => event.stopPropagation()}
+        >
+          View Job Posting
+        </a>
+      )}
+    </div>
+  );
+}
 
-          return (
-            <div className="flex max-w-3xl flex-col gap-4">
-              <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
-                {summary.location && <div>📍 {summary.location}</div>}
-                <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
-              </div>
+function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
+  const summary = structuredSummary;
 
-              {summary.companyInfo?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Company</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.companyInfo.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  if (!summary) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No structured summary available yet. Use Original Posting view for the original posting.
+      </div>
+    );
+  }
 
-              {summary.jobDescription?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Description</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.jobDescription.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+  return (
+    <div className="flex max-w-3xl flex-col gap-4">
+      <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
+        {summary.location && <div>📍 {summary.location}</div>}
+        <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
+      </div>
 
-              {summary.requirements?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Requirements</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.requirements.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+      {summary.companyInfo?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Company</h4>
+          <ul className="ml-5 list-disc">
+            {summary.companyInfo.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-              {summary.benefits?.length > 0 && (
-                <div>
-                  <h4 className="mb-1 font-semibold">Benefits</h4>
-                  <ul className="ml-5 list-disc">
-                    {summary.benefits.map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          );
-        })()}      </div>
+      {summary.jobDescription?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Description</h4>
+          <ul className="ml-5 list-disc">
+            {summary.jobDescription.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {summary.requirements?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Requirements</h4>
+          <ul className="ml-5 list-disc">
+            {summary.requirements.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {summary.benefits?.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Benefits</h4>
+          <ul className="ml-5 list-disc">
+            {summary.benefits.map((item: string, i: number) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
 function ResumeTailor({ jobId }: { jobId: string }) {
   const [resumes, setResumes] = useState<ResumeProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<unknown[] | null>(null);
+  const [createdTailoredResume, setCreatedTailoredResume] = useState<TailoredResumeResult | null>(
+    null,
+  );
   const [tailorError, setTailorError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/resume-profiles')
-      .then((res) => res.json())
-      .then((data) =>
-        setResumes(data.map((r: any) => ({
-          id: r.id,
-          name: r.name || 'Untitled Resume',
-          currentVersionId: r.currentVersionId || r.current_version_id || '',
-        })))
-      )
-      .catch(() => setResumes([]));
+    let isCurrent = true;
+
+    fetch("/api/resume-profiles")
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !Array.isArray(data)) {
+          throw new Error("Unable to load resume profiles.");
+        }
+
+        return data;
+      })
+      .then((data) => {
+        if (!isCurrent) return;
+
+        setResumes(
+          data.map((r: any) => ({
+            id: r.id,
+            name: r.name || "Untitled Resume",
+            currentVersionId: r.currentVersionId || r.current_version_id || "",
+          })),
+        );
+      })
+      .catch(() => {
+        if (!isCurrent) return;
+
+        setResumes([]);
+        setTailorError("Unable to load resume profiles.");
+      })
+      .finally(() => {
+        if (!isCurrent) return;
+
+        setLoadingProfiles(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
   }, []);
 
   const canTailor = Boolean(selectedProfile?.currentVersionId);
@@ -671,13 +718,13 @@ function ResumeTailor({ jobId }: { jobId: string }) {
     if (!selectedProfile?.currentVersionId) return;
 
     setLoading(true);
-    setSuggestions(null);
+    setCreatedTailoredResume(null);
     setTailorError(null);
 
     try {
       const res = await fetch(`/api/resume-profiles/${selectedProfile.id}/tailored-resumes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId,
           sourceResumeVersionId: selectedProfile.currentVersionId,
@@ -686,37 +733,56 @@ function ResumeTailor({ jobId }: { jobId: string }) {
 
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data?.error || 'Unable to generate tailored resume.');
+        throw new Error(data?.error || "Unable to generate tailored resume.");
       }
 
-      setSuggestions(data.suggestions ?? []);
+      const tailoredResume = data?.tailoredResume;
+
+      if (
+        !tailoredResume ||
+        typeof tailoredResume.id !== "string" ||
+        typeof tailoredResume.name !== "string" ||
+        typeof tailoredResume.profileId !== "string" ||
+        typeof tailoredResume.versionId !== "string"
+      ) {
+        throw new Error("Tailored resume response was missing resume details.");
+      }
+
+      setCreatedTailoredResume(tailoredResume);
     } catch (err) {
       console.error(err);
-      setTailorError('Unable to generate tailored resume.');
+      setTailorError("Unable to generate tailored resume.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <select
-          aria-label="Resume profile"
-          value={selectedProfile?.id ?? ''}
-          onChange={(e) => {
-            const profile = resumes.find((resume) => resume.id === e.target.value);
-            setSelectedProfile(profile ?? null);
-          }}
-          className="border rounded px-2 py-1 text-sm"
-        >
-          <option value="">Select resume...</option>
-          {resumes.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
+    <div
+      id={`resume-tailor-panel-${jobId}`}
+      className="mt-3 space-y-3 rounded-md border border-gray-200 bg-white p-3 shadow-sm"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <label className="flex-1 text-sm font-medium text-gray-700">
+          Resume profile
+          <select
+            aria-label="Resume profile"
+            value={selectedProfile?.id ?? ""}
+            onChange={(e) => {
+              const profile = resumes.find((resume) => resume.id === e.target.value);
+              setSelectedProfile(profile ?? null);
+            }}
+            disabled={loadingProfiles || resumes.length === 0}
+            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+          >
+            <option value="">{loadingProfiles ? "Loading resumes..." : "Select resume..."}</option>
+            {resumes.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <button
           type="button"
@@ -724,12 +790,18 @@ function ResumeTailor({ jobId }: { jobId: string }) {
           disabled={!canTailor || loading}
           className="btn-primary text-sm disabled:opacity-50"
         >
-          {loading ? 'Generating...' : 'Tailor Resume'}
+          {loading ? "Generating..." : "Generate Tailored Resume"}
         </button>
       </div>
 
-      {!canTailor && (
-        <p className="text-sm text-gray-600">Import a resume to enable tailoring</p>
+      {!loadingProfiles && resumes.length === 0 && (
+        <p className="text-sm text-gray-600">Import a resume to enable tailoring.</p>
+      )}
+
+      {selectedProfile && !selectedProfile.currentVersionId && (
+        <p className="text-sm text-gray-600">
+          Selected resume has no current version. Import a resume version before tailoring.
+        </p>
       )}
 
       {tailorError && (
@@ -738,10 +810,13 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         </div>
       )}
 
-      {suggestions && (
-        <pre className="rounded border bg-white p-3 whitespace-pre-wrap text-sm">
-          {JSON.stringify(suggestions, null, 2)}
-        </pre>
+      {createdTailoredResume && (
+        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+          Tailored resume created:{" "}
+          <a href="/resumes" className="font-medium underline">
+            {createdTailoredResume.name}
+          </a>
+        </div>
       )}
     </div>
   );

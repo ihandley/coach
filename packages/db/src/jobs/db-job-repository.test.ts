@@ -5,9 +5,7 @@ import { loadEnvFromKeychain } from "../env/load-env";
 
 loadEnvFromKeychain();
 
-const hasSupabaseEnv = Boolean(
-  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
+const hasSupabaseEnv = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const describeIntegration = hasSupabaseEnv ? describe : describe.skip;
 
@@ -109,9 +107,7 @@ describeIntegration("DbJobRepository", () => {
       status: "saved",
     });
 
-    const found = await repo.findJobBySourceUrl(
-      "https://example.com/jobs/123",
-    );
+    const found = await repo.findJobBySourceUrl("https://example.com/jobs/123");
 
     expect(found).toEqual(created);
   });
@@ -119,9 +115,7 @@ describeIntegration("DbJobRepository", () => {
   it("returns null when no job exists for the source URL", async () => {
     const repo = createRepo();
 
-    const found = await repo.findJobBySourceUrl(
-      "https://example.com/jobs/missing",
-    );
+    const found = await repo.findJobBySourceUrl("https://example.com/jobs/missing");
 
     expect(found).toBeNull();
   });

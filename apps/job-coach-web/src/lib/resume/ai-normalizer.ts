@@ -5,9 +5,7 @@ export function isAiResumeNormalizerEnabled() {
   return process.env.RESUME_AI_NORMALIZER_ENABLED === "true";
 }
 
-export async function normalizeResumeWithAi(
-  rawText: string,
-): Promise<NormalizedResume | null> {
+export async function normalizeResumeWithAi(rawText: string): Promise<NormalizedResume | null> {
   if (!isAiResumeNormalizerEnabled()) {
     return null;
   }
@@ -26,18 +24,17 @@ export async function normalizeResumeWithAi(
     messages: [
       {
         role: "system",
-        content:
-          [
-            "Return only JSON with basics{fullName,name,headline?,email,phone?,location?,linkedin?,summary?}, skills:{category,items:string[]}[], experience:{title,company,location?,startDate?,endDate?,bullets:string[]}[], education:{school,degree?,field?,startYear?,endYear?,details:string[]}[], rawText:string.",
-            "Extract every resume section present in the source text, including summary, skills, professional experience, and education. Do not drop sections.",
-            "Extract the candidate headline from the resume header when present. Extract location and LinkedIn from header/contact metadata.",
-            "Preserve skill category groupings such as Languages, Systems, Cloud, or Tools. If skills are not categorized, put them in one Skills category.",
-            "For experience, every company/role heading in the source text must become exactly one separate experience[] item.",
-            "Headings commonly look like `Company — Title (Start – End)`. In that case company is the text before the dash, title is the text after the dash, and dates come from the parenthesized range.",
-            "Do not merge bullets from later companies into earlier companies. Attach each bullet only to the nearest preceding company/role heading.",
-            "Preserve all bullet points under the correct job. Do not truncate, summarize, merge jobs, or hallucinate missing facts.",
-            "For education, every school line must become a separate education[] item. Do not merge multiple schools into one education entry.",
-          ].join(" "),
+        content: [
+          "Return only JSON with basics{fullName,name,headline?,email,phone?,location?,linkedin?,summary?}, skills:{category,items:string[]}[], experience:{title,company,location?,startDate?,endDate?,bullets:string[]}[], education:{school,degree?,field?,startYear?,endYear?,details:string[]}[], rawText:string.",
+          "Extract every resume section present in the source text, including summary, skills, professional experience, and education. Do not drop sections.",
+          "Extract the candidate headline from the resume header when present. Extract location and LinkedIn from header/contact metadata.",
+          "Preserve skill category groupings such as Languages, Systems, Cloud, or Tools. If skills are not categorized, put them in one Skills category.",
+          "For experience, every company/role heading in the source text must become exactly one separate experience[] item.",
+          "Headings commonly look like `Company — Title (Start – End)`. In that case company is the text before the dash, title is the text after the dash, and dates come from the parenthesized range.",
+          "Do not merge bullets from later companies into earlier companies. Attach each bullet only to the nearest preceding company/role heading.",
+          "Preserve all bullet points under the correct job. Do not truncate, summarize, merge jobs, or hallucinate missing facts.",
+          "For education, every school line must become a separate education[] item. Do not merge multiple schools into one education entry.",
+        ].join(" "),
       },
       {
         role: "user",
@@ -80,12 +77,8 @@ export async function normalizeResumeWithAi(
         : {}),
     },
     skills,
-    experience: Array.isArray(parsed.experience)
-      ? parsed.experience
-      : fallback.experience,
-    education: Array.isArray(parsed.education)
-      ? parsed.education
-      : fallback.education,
+    experience: Array.isArray(parsed.experience) ? parsed.experience : fallback.experience,
+    education: Array.isArray(parsed.education) ? parsed.education : fallback.education,
     rawText,
   };
 }

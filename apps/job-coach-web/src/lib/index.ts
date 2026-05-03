@@ -1,1 +1,1 @@
-export { parseJobIntelligence } from './job-intelligence';
+export { parseJobIntelligence } from "./job-intelligence";

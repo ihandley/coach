@@ -38,8 +38,7 @@ function buildPdfBuffer(lines: string[]) {
     pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
   });
   pdf +=
-    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n` +
-    `startxref\n${xrefOffset}\n%%EOF`;
+    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n` + `startxref\n${xrefOffset}\n%%EOF`;
 
   return Buffer.from(pdf);
 }
@@ -85,17 +84,11 @@ test("uploads, previews, and deletes a structured resume", async ({ page }) => {
   await page.getByRole("button", { name: `Preview ${filename}` }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ian Handley" })).toBeVisible();
-  await expect(
-    page.getByText(/Senior Software Engineer.*Open to Remote/),
-  ).toBeVisible();
+  await expect(page.getByText(/Senior Software Engineer.*Open to Remote/)).toBeVisible();
   await expect(page.getByText("Spanish Fork, UT")).toBeVisible();
   await expect(page.getByText("ianhandley@gmail.com")).toBeVisible();
   await expect(page.getByText("linkedin.com/in/ianrhandley")).toBeVisible();
-  await expect(
-    page.getByText(
-      "Senior Software Engineer building backend systems.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByText("Senior Software Engineer building backend systems.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Languages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Systems" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Cloud" })).toBeVisible();
@@ -146,9 +139,7 @@ test("empty PDF shows an error", async ({ page }) => {
 
   await page.getByRole("button", { name: "Import" }).click();
 
-  await expect(
-    page.getByText("We could not find any resume text in that PDF."),
-  ).toBeVisible();
+  await expect(page.getByText("We could not find any resume text in that PDF.")).toBeVisible();
 });
 
 test("malformed PDF shows an error", async ({ page }) => {

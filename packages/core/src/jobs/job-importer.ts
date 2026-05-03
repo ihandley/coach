@@ -16,17 +16,13 @@ export type SavedImportedJob = {
   rawDescription: string;
 } & Record<string, unknown>;
 
-export type FindImportedJobBySourceUrl = (
-  url: string,
-) => Promise<SavedImportedJob | null>;
+export type FindImportedJobBySourceUrl = (url: string) => Promise<SavedImportedJob | null>;
 
 export type FetchPage = (url: string) => Promise<FetchedJobPage>;
 
 export type ExtractJob = (input: FetchedJobPage) => Promise<unknown>;
 
-export type SaveImportedJob = (
-  input: ExtractedJobData,
-) => Promise<SavedImportedJob>;
+export type SaveImportedJob = (input: ExtractedJobData) => Promise<SavedImportedJob>;
 
 export class InvalidJobImportUrlError extends Error {
   constructor(url: string) {
@@ -50,7 +46,7 @@ export type JobImporterDependencies = {
 };
 
 export class JobImporter {
-  constructor(private readonly dependencies: JobImporterDependencies) { }
+  constructor(private readonly dependencies: JobImporterDependencies) {}
 
   async importJobFromUrl(url: string): Promise<SavedImportedJob> {
     if (!isValidHttpUrl(url)) {

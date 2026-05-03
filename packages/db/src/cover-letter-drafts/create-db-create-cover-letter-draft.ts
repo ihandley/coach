@@ -1,21 +1,19 @@
 import type {
-    CoverLetterDraft,
-    CoverLetterDraftRepository,
-    CreateCoverLetterDraftRecordInput,
+  CoverLetterDraft,
+  CoverLetterDraftRepository,
+  CreateCoverLetterDraftRecordInput,
 } from "@coach/core";
 
 export interface CreateDbCreateCoverLetterDraftDependencies {
-    insert: (
-        input: CreateCoverLetterDraftRecordInput,
-    ) => Promise<CoverLetterDraft>;
+  insert: (input: CreateCoverLetterDraftRecordInput) => Promise<CoverLetterDraft>;
 }
 
 export function createDbCreateCoverLetterDraft(
-    dependencies: CreateDbCreateCoverLetterDraftDependencies,
+  dependencies: CreateDbCreateCoverLetterDraftDependencies,
 ): CoverLetterDraftRepository {
-    return {
-        createCoverLetterDraft(input) {
-            return dependencies.insert(input);
-        },
-    };
+  return {
+    createCoverLetterDraft(input) {
+      return dependencies.insert(input);
+    },
+  };
 }

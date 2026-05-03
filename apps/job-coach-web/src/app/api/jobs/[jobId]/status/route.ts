@@ -5,20 +5,14 @@ function createJobRepository() {
   return new DbJobRepository(createServerClient());
 }
 
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ jobId: string }> },
-) {
+export async function POST(request: Request, context: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await context.params;
   const body = await request.json();
 
   const { status } = body;
 
   if (!status) {
-    return Response.json(
-      { error: "INVALID_JOB_STATUS_INPUT" },
-      { status: 400 }
-    );
+    return Response.json({ error: "INVALID_JOB_STATUS_INPUT" }, { status: 400 });
   }
 
   const jobRepository = createJobRepository();

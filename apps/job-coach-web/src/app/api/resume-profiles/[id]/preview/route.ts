@@ -25,10 +25,7 @@ function sanitizeFilename(filename: string) {
   return filename.replaceAll('"', "").replaceAll("\n", " ").replaceAll("\r", " ");
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const shouldDownload = new URL(req.url).searchParams.get("download") === "1";
   const db = createServerClient();
@@ -52,10 +49,7 @@ export async function GET(
     typeof uploadedFile.dataBase64 !== "string" ||
     uploadedFile.dataBase64.length === 0
   ) {
-    return NextResponse.json(
-      { error: "No uploaded PDF found for this resume" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "No uploaded PDF found for this resume" }, { status: 404 });
   }
 
   const filename =

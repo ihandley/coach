@@ -1,21 +1,21 @@
 import type { IntegrationAccount, IntegrationProvider } from "./integration-types";
 
 export function createDbGetIntegrationAccount({
-    db,
+  db,
 }: {
-    db: {
-        integrationAccount: {
-            findFirst: (args: {
-                where: { provider: IntegrationProvider };
-            }) => Promise<IntegrationAccount | null>;
-        };
+  db: {
+    integrationAccount: {
+      findFirst: (args: {
+        where: { provider: IntegrationProvider };
+      }) => Promise<IntegrationAccount | null>;
     };
+  };
 }) {
-    return async function getIntegrationAccount(
-        provider: IntegrationProvider,
-    ): Promise<IntegrationAccount | null> {
-        return db.integrationAccount.findFirst({
-            where: { provider },
-        });
-    };
+  return async function getIntegrationAccount(
+    provider: IntegrationProvider,
+  ): Promise<IntegrationAccount | null> {
+    return db.integrationAccount.findFirst({
+      where: { provider },
+    });
+  };
 }

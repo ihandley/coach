@@ -28,13 +28,11 @@ async function main() {
   // add explicit event
 
   const event = await repo.addApplicationEvent({
-
     jobId: created.id,
 
     type: "note_added",
 
     note: "Reached out to recruiter",
-
   });
 
   console.log("event", event);

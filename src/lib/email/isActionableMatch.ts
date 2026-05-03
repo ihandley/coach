@@ -9,12 +9,7 @@ const MATCH_THRESHOLD = 0.6;
 const CLASSIFICATION_THRESHOLD = 0.6;
 
 export function isActionableMatch(input: ActionableInput): boolean {
-  const {
-    matchScore,
-    classificationConfidence,
-    currentStatus,
-    detectedStatus,
-  } = input;
+  const { matchScore, classificationConfidence, currentStatus, detectedStatus } = input;
 
   if (matchScore < MATCH_THRESHOLD) return false;
 

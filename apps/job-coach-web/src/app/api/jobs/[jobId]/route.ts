@@ -5,10 +5,7 @@ function createJobRepository() {
   return new DbJobRepository(createServerClient());
 }
 
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ jobId: string }> },
-) {
+export async function GET(_request: Request, context: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await context.params;
   const jobRepository = createJobRepository();
 
@@ -29,11 +26,7 @@ export async function GET(
   });
 }
 
-
-export async function PATCH(
-  req: Request,
-  context: { params: Promise<{ jobId: string }> },
-) {
+export async function PATCH(req: Request, context: { params: Promise<{ jobId: string }> }) {
   const body = await req.json();
   const { jobId } = await context.params;
   const jobRepository = createJobRepository();

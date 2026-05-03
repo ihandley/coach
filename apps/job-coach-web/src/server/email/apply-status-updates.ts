@@ -4,7 +4,7 @@ export async function applyStatusUpdates(emails: any[]) {
       email.detectedStatus &&
       email.matchedJobId &&
       email.currentStatus &&
-      email.currentStatus !== email.detectedStatus
+      email.currentStatus !== email.detectedStatus,
   );
 
   for (const email of updates) {

@@ -13,9 +13,7 @@ async function ensurePdfWorker() {
   const workerGlobal = globalThis as PdfjsWorkerGlobal;
 
   if (!workerGlobal.pdfjsWorker) {
-    workerGlobal.pdfjsWorker = await import(
-      "pdfjs-dist/legacy/build/pdf.worker.mjs"
-    );
+    workerGlobal.pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
   }
 }
 
@@ -65,11 +63,7 @@ export async function extractPdfText(input: ArrayBuffer | Uint8Array | Buffer) {
           continue;
         }
 
-        if (
-          typeof y === "number" &&
-          currentY !== null &&
-          Math.abs(y - currentY) > 2
-        ) {
+        if (typeof y === "number" && currentY !== null && Math.abs(y - currentY) > 2) {
           pageLines.push("\n");
         } else if (pageLines.length > 0) {
           pageLines.push(" ");

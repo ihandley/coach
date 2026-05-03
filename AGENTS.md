@@ -11,7 +11,7 @@ This is a structured system with defined workflows, data contracts, constraints,
 
 AI must follow these rules to avoid breaking system integrity.
 
-***
+---
 
 ## System Overview
 
@@ -33,7 +33,7 @@ This system is built around:
 - explicit persistence
 - bounded AI-assisted steps
 
-***
+---
 
 ## Runtime Model
 
@@ -57,7 +57,7 @@ Canonical product behavior lives in:
 - API routes
 - architecture and migration docs in this repository
 
-***
+---
 
 ## Core Principles
 
@@ -72,7 +72,7 @@ Prefer:
 - consistent schemas
 - explicit orchestration
 
-***
+---
 
 ### 2. Structured data is the source of truth
 
@@ -82,7 +82,7 @@ Prefer:
 - Prefer additive updates over destructive ones
 - Persist canonical state in the application data model, not mutable ad hoc files
 
-***
+---
 
 ### 3. Determinism over creativity
 
@@ -91,7 +91,7 @@ Prefer:
 - Prefer explicit structure over prose
 - Keep AI-backed operations bounded and validated
 
-***
+---
 
 ### 4. Small, controlled changes
 
@@ -100,7 +100,7 @@ Prefer:
 - Do not introduce new abstractions casually
 - Prefer the smallest meaningful, testable slice
 
-***
+---
 
 ### 5. No hidden assumptions
 
@@ -109,7 +109,7 @@ Prefer:
 - Flag uncertainty when needed
 - Do not treat legacy OpenCode assumptions as current runtime behavior
 
-***
+---
 
 ## Session State
 
@@ -124,7 +124,7 @@ Active state must be derived from:
 
 If `.ai/current.md` exists, treat it as informational only, not authoritative.
 
-***
+---
 
 ## Repository Conventions
 
@@ -139,7 +139,7 @@ If `.ai/current.md` exists, treat it as informational only, not authoritative.
 
 Respect these boundaries.
 
-***
+---
 
 ### Canonical Sources
 
@@ -156,7 +156,7 @@ When available, these are authoritative:
 
 If there is a conflict between chat context, legacy OpenCode material, and current repo code, trust the current application repository.
 
-***
+---
 
 ## Workflow Model
 
@@ -183,7 +183,7 @@ AI must:
 - not jump ahead or mix stages
 - avoid reintroducing hidden prompt routing
 
-***
+---
 
 ## Issue-Based Execution Workflow
 
@@ -201,7 +201,7 @@ Use these in order:
 
 Do not rely on manual session-state files for active progress tracking.
 
-***
+---
 
 ### Session Start Rule
 
@@ -214,7 +214,7 @@ Before implementing any issue work:
 
 Do not begin coding until the issue branch and draft PR exist.
 
-***
+---
 
 ### Checkpoint Rule
 
@@ -227,7 +227,7 @@ At the end of each meaningful block:
 - provide exact `git add`, `git commit`, and `git push` commands
 - treat the pushed commit as the checkpoint
 
-***
+---
 
 ### Handoff Rule
 
@@ -237,7 +237,7 @@ When stopping work:
 - use the draft PR as the handoff and review surface
 - summarize remaining work in the PR if needed
 
-***
+---
 
 ### Commit Format
 
@@ -251,7 +251,7 @@ Examples:
 - `issue-3: implement minimal URL validation`
 - `issue-3: define import service contract`
 
-***
+---
 
 ## Session Awareness
 
@@ -274,7 +274,7 @@ At the end of work:
 - note any open questions
 - suggest the next step
 
-***
+---
 
 ## Constraints
 
@@ -286,7 +286,7 @@ At the end of work:
 - Do not introduce breaking schema changes without instruction
 - Do not reintroduce legacy OpenCode runtime assumptions as product architecture
 
-***
+---
 
 ## Expectations
 
@@ -331,7 +331,7 @@ Example:
 
 ```ts
 export function example() {
-    return "value";
+  return "value";
 }
 ```
 

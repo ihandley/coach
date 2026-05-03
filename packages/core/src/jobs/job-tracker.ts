@@ -64,9 +64,7 @@ export class JobTracker implements JobTrackerService {
     return this.repository.updateJobStatus(input);
   }
 
-  async addApplicationEvent(
-    input: AddApplicationEventInput,
-  ): Promise<ApplicationEventRecord> {
+  async addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord> {
     return this.repository.addApplicationEvent(input);
   }
 
@@ -82,9 +80,7 @@ export class JobTracker implements JobTrackerService {
       countsByStatus[job.status] += 1;
     }
 
-    const recentlyUpdatedJobs = [...jobs].sort((a, b) =>
-      b.updatedAt.localeCompare(a.updatedAt),
-    );
+    const recentlyUpdatedJobs = [...jobs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
     return {
       totalTrackedJobs: jobs.length,

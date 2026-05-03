@@ -11,11 +11,9 @@ export async function classifyEmailLLM(input: {
 
   if (!apiKey) {
     try {
-      apiKey = execFileSync(
-        "security",
-        ["find-generic-password", "-s", "OPENAI_API_KEY", "-w"],
-        { encoding: "utf8" }
-      ).trim();
+      apiKey = execFileSync("security", ["find-generic-password", "-s", "OPENAI_API_KEY", "-w"], {
+        encoding: "utf8",
+      }).trim();
     } catch {
       return { status: null, confidence: 0 };
     }

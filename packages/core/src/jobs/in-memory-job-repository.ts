@@ -10,10 +10,7 @@ import type {
 } from "./types";
 import { JOB_STATUSES } from "./types";
 
-import {
-  InvalidJobStatusError,
-  JobNotFoundError,
-} from "./job-tracker";
+import { InvalidJobStatusError, JobNotFoundError } from "./job-tracker";
 
 function isJobStatus(value: string): value is JobStatus {
   return JOB_STATUSES.includes(value as JobStatus);
@@ -26,8 +23,7 @@ function createId(): string {
 function nextTimestamp(previous?: string): string {
   const now = Date.now();
   const previousMs = previous ? Date.parse(previous) : Number.NaN;
-  const safeMs =
-    Number.isNaN(previousMs) || now > previousMs ? now : previousMs + 1;
+  const safeMs = Number.isNaN(previousMs) || now > previousMs ? now : previousMs + 1;
 
   return new Date(safeMs).toISOString();
 }
@@ -82,17 +78,14 @@ export class InMemoryJobRepository implements JobRepository {
 
     if (input?.company) {
       const companyQuery = input.company.toLowerCase();
-      jobs = jobs.filter((job) =>
-        job.company.toLowerCase().includes(companyQuery),
-      );
+      jobs = jobs.filter((job) => job.company.toLowerCase().includes(companyQuery));
     }
 
     if (input?.keyword) {
       const keyword = input.keyword.toLowerCase();
       jobs = jobs.filter(
         (job) =>
-          job.company.toLowerCase().includes(keyword) ||
-          job.title.toLowerCase().includes(keyword),
+          job.company.toLowerCase().includes(keyword) || job.title.toLowerCase().includes(keyword),
       );
     }
 
@@ -131,9 +124,7 @@ export class InMemoryJobRepository implements JobRepository {
     return updatedJob;
   }
 
-  async addApplicationEvent(
-    input: AddApplicationEventInput,
-  ): Promise<ApplicationEventRecord> {
+  async addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord> {
     const existingJob = this.jobs.get(input.jobId);
 
     if (!existingJob) {
@@ -160,9 +151,7 @@ export class InMemoryJobRepository implements JobRepository {
     return event;
   }
 
-  async listApplicationEvents(
-    jobId: string,
-  ): Promise<ApplicationEventRecord[]> {
+  async listApplicationEvents(jobId: string): Promise<ApplicationEventRecord[]> {
     return this.events.filter((event) => event.jobId === jobId);
   }
 }

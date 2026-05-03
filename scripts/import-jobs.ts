@@ -4,18 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { classifyEmailLLM, isAboveConfidenceThreshold } from "../server/utils/classify-email-llm";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 const LEGACY_ID_NAMESPACE = "f2a6f0b3-5f8c-4b3e-9b5f-1a0c0d3e4f50";
 
 function uuidFromLegacyId(legacyId: string) {
-  const hash = crypto
-    .createHash("sha1")
-    .update(`${LEGACY_ID_NAMESPACE}:${legacyId}`)
-    .digest("hex");
+  const hash = crypto.createHash("sha1").update(`${LEGACY_ID_NAMESPACE}:${legacyId}`).digest("hex");
 
   return [
     hash.slice(0, 8),
@@ -27,23 +21,16 @@ function uuidFromLegacyId(legacyId: string) {
 }
 
 function normalizedCreatedAt(job: any): string {
-  const value =
-    job.applied_date ||
-    job.saved_date ||
-    job.createdAt ||
-    job.created_at;
+  const value = job.applied_date || job.saved_date || job.createdAt || job.created_at;
 
   return value && String(value).trim().length > 0
     ? new Date(value).toISOString()
     : new Date().toISOString();
 }
 
-
-
 async function classifyStatusWithLLM(job: any): Promise<string> {
   const subject = `${job.company ?? ""} ${job.title ?? ""}`.trim();
-  const snippet =
-    job.description ?? job.rawDescription ?? job.notes ?? "";
+  const snippet = job.description ?? job.rawDescription ?? job.notes ?? "";
 
   try {
     const result = await classifyEmailLLM({
@@ -80,10 +67,7 @@ function mapStatus(status: unknown) {
 }
 
 async function main() {
-  const filePath = path.resolve(
-    process.env.HOME!,
-    "code/github/opencode/data/job-coach/jobs.json",
-  );
+  const filePath = path.resolve(process.env.HOME!, "code/github/opencode/data/job-coach/jobs.json");
 
   const raw = fs.readFileSync(filePath, "utf-8");
   const json = JSON.parse(raw);

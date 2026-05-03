@@ -1,25 +1,25 @@
-import OpenAI from 'openai'
+import OpenAI from "openai";
 
-export type EmailStatus = 'applied' | 'rejected' | 'interviewing' | 'none'
+export type EmailStatus = "applied" | "rejected" | "interviewing" | "none";
 
 export interface LLMClassificationResult {
-  status: EmailStatus
-  confidence: number
+  status: EmailStatus;
+  confidence: number;
 }
 
-const CONFIDENCE_THRESHOLD = 0.7
+const CONFIDENCE_THRESHOLD = 0.7;
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 function isValidStatus(value: any): value is EmailStatus {
-  return ['applied', 'rejected', 'interviewing', 'none'].includes(value)
+  return ["applied", "rejected", "interviewing", "none"].includes(value);
 }
 
 export async function classifyEmailLLM(input: {
-  subject: string
-  snippet: string
+  subject: string;
+  snippet: string;
 }): Promise<LLMClassificationResult> {
   const prompt = `
 You are classifying job-related emails.
@@ -39,46 +39,46 @@ Rules:
 Email:
 Subject: ${input.subject}
 Snippet: ${input.snippet}
-`
+`;
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: "gpt-4o-mini",
     temperature: 0,
     messages: [
       {
-        role: 'user',
-        content: prompt
-      }
-    ]
-  })
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
 
-  const content = response.choices[0]?.message?.content
+  const content = response.choices[0]?.message?.content;
 
   if (!content) {
-    throw new Error('No response content from LLM')
+    throw new Error("No response content from LLM");
   }
 
-  let parsed: any
+  let parsed: any;
   try {
-    parsed = JSON.parse(content)
+    parsed = JSON.parse(content);
   } catch {
-    throw new Error('Failed to parse LLM JSON')
+    throw new Error("Failed to parse LLM JSON");
   }
 
   if (!isValidStatus(parsed.status)) {
-    throw new Error('Invalid status from LLM')
+    throw new Error("Invalid status from LLM");
   }
 
-  if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
-    throw new Error('Invalid confidence from LLM')
+  if (typeof parsed.confidence !== "number" || parsed.confidence < 0 || parsed.confidence > 1) {
+    throw new Error("Invalid confidence from LLM");
   }
 
   return {
     status: parsed.status,
-    confidence: parsed.confidence
-  }
+    confidence: parsed.confidence,
+  };
 }
 
 export function isAboveConfidenceThreshold(result: LLMClassificationResult): boolean {
-  return result.confidence >= CONFIDENCE_THRESHOLD
+  return result.confidence >= CONFIDENCE_THRESHOLD;
 }

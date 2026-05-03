@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@coach/db";
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const db = createServerClient();
@@ -18,10 +15,7 @@ export async function DELETE(
     return NextResponse.json({ error: unlinkError.message }, { status: 500 });
   }
 
-  const { error } = await db
-    .from("resume_profiles")
-    .delete()
-    .eq("id", id);
+  const { error } = await db.from("resume_profiles").delete().eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

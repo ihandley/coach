@@ -18,15 +18,9 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
   process.exit(1);
 }
 
-const oauth2Client = new google.auth.OAuth2(
-  CLIENT_ID,
-  CLIENT_SECRET,
-  "urn:ietf:wg:oauth:2.0:oob"
-);
+const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, "urn:ietf:wg:oauth:2.0:oob");
 
-const scopes = [
-  "https://www.googleapis.com/auth/gmail.readonly",
-];
+const scopes = ["https://www.googleapis.com/auth/gmail.readonly"];
 
 const url = oauth2Client.generateAuthUrl({
   access_type: "offline",

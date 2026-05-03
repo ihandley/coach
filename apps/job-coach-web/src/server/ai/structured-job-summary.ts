@@ -42,13 +42,13 @@ Rules:
 - Be concise
 - Use bullet-style phrasing
 - If unknown, return null or []
-`
+`,
       },
       {
         role: "user",
-        content: text
-      }
-    ]
+        content: text,
+      },
+    ],
   });
 
   return JSON.parse(response.choices[0].message.content!);

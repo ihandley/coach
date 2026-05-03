@@ -121,11 +121,7 @@ University of Utah - BS Computer Science`);
         },
         {
           category: "Systems",
-          items: expect.arrayContaining([
-            "Distributed Systems",
-            "Microservices",
-            "Messaging",
-          ]),
+          items: expect.arrayContaining(["Distributed Systems", "Microservices", "Messaging"]),
         },
         {
           category: "Cloud",
@@ -179,10 +175,7 @@ University of Utah - BS Computer Science`);
       "Developed microservices and APIs supporting supply chain optimization platforms",
       "Designed containerized services (Docker/Kubernetes) improving deployment consistency",
     ]);
-    const bulletCount = result.experience.reduce(
-      (count, entry) => count + entry.bullets.length,
-      0,
-    );
+    const bulletCount = result.experience.reduce((count, entry) => count + entry.bullets.length, 0);
     expect(bulletCount).toBe(12);
     expect(result.education).toMatchObject([
       {
@@ -214,9 +207,7 @@ Engineer at Acme
     const skillStrings = result.skills.flatMap((group) => group.items);
     const normalizedSkillStrings = skillStrings.map((skill) => skill.toLowerCase());
 
-    expect(normalizedSkillStrings).toHaveLength(
-      new Set(normalizedSkillStrings).size,
-    );
+    expect(normalizedSkillStrings).toHaveLength(new Set(normalizedSkillStrings).size);
     expect(result.skills.map((group) => group.category)).not.toContain("Skills");
     expect(result.skills).toEqual(
       expect.arrayContaining([

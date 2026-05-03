@@ -8,11 +8,11 @@ const db = createServerClient();
 const workflowRunRepository = createDbWorkflowRunRepository({ db });
 
 export const workflowsServer = createWorkflowsServer({
-    workflowRunRepository,
-    importJobFromUrl: async ({ sourceUrl }) => importJobFromUrl(sourceUrl),
-    scoreJobFit: async ({ jobId, resumeProfileId }) =>
-        evaluationsServer.scoreJobFit({
-            jobId,
-            resumeProfileId,
-        }),
+  workflowRunRepository,
+  importJobFromUrl: async ({ sourceUrl }) => importJobFromUrl(sourceUrl),
+  scoreJobFit: async ({ jobId, resumeProfileId }) =>
+    evaluationsServer.scoreJobFit({
+      jobId,
+      resumeProfileId,
+    }),
 });

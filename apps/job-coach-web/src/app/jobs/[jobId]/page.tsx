@@ -20,11 +20,7 @@ async function getJob(jobId: string): Promise<Job | null> {
   return res.json();
 }
 
-export default async function JobDetailPage({
-  params,
-}: {
-  params: Promise<{ jobId: string }>;
-}) {
+export default async function JobDetailPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await params;
   const job = await getJob(jobId);
 

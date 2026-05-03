@@ -40,9 +40,7 @@ export function createImportResumeFromText(deps: {
 }) {
   const { createResumeProfile, normalizeResume } = deps;
 
-  return async function importResumeFromText(
-    input: ImportResumeFromTextInput
-  ) {
+  return async function importResumeFromText(input: ImportResumeFromTextInput) {
     const text = input.text.trim();
 
     if (!text) {

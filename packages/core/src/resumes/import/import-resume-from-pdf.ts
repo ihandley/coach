@@ -17,9 +17,7 @@ async function ensurePdfWorker() {
   const workerGlobal = globalThis as PdfjsWorkerGlobal;
 
   if (!workerGlobal.pdfjsWorker) {
-    workerGlobal.pdfjsWorker = await import(
-      "pdfjs-dist/legacy/build/pdf.worker.mjs"
-    );
+    workerGlobal.pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
   }
 }
 
@@ -60,11 +58,7 @@ async function extractPdfText(buffer: Buffer) {
           continue;
         }
 
-        if (
-          typeof y === "number" &&
-          currentY !== null &&
-          Math.abs(y - currentY) > 2
-        ) {
+        if (typeof y === "number" && currentY !== null && Math.abs(y - currentY) > 2) {
           pageLines.push("\n");
         } else if (pageLines.length > 0) {
           pageLines.push(" ");
@@ -89,10 +83,7 @@ export function createImportResumeFromPdf(deps: {
 }) {
   const { importResumeFromText } = deps;
 
-  return async function importResumeFromPdf(input: {
-    name: string;
-    filePath: string;
-  }) {
+  return async function importResumeFromPdf(input: { name: string; filePath: string }) {
     const buffer = fs.readFileSync(input.filePath);
     const text = await extractPdfText(buffer);
 

@@ -83,6 +83,88 @@ function createPostDbMock() {
   return { db, operations };
 }
 
+function createGetDbMock() {
+  return {
+    from: vi.fn((table: string) => ({
+      select: vi.fn(() => {
+        if (table === "resume_profiles") {
+          return {
+            order: vi.fn(async () => ({
+              data: [
+                {
+                  id: "profile-123",
+                  name: "Primary Resume",
+                  created_at: "2026-05-01T00:00:00Z",
+                  current_version_id: "version-123",
+                  source: { kind: "manual", label: "Baseline Resume" },
+                },
+              ],
+              error: null,
+            })),
+          };
+        }
+
+        if (table === "resume_versions") {
+          return {
+            in: vi.fn(async () => ({
+              data: [
+                {
+                  id: "version-123",
+                  resume_profile_id: "profile-123",
+                  version_number: 2,
+                  kind: "tailored",
+                  source_kind: "tailored",
+                  source_label: "Primary Resume - Pattern",
+                  created_at: "2026-05-01T01:00:00Z",
+                },
+              ],
+              error: null,
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    })),
+  };
+}
+
+describe("GET /api/resume-profiles", () => {
+  beforeEach(() => {
+    createServerClientMock.mockReset();
+  });
+
+  it("returns currentVersionId for each profile", async () => {
+    createServerClientMock.mockReturnValue(createGetDbMock());
+    const { GET } = await import("./route");
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      {
+        id: "profile-123",
+        name: "Primary Resume",
+        created_at: "2026-05-01T00:00:00Z",
+        current_version_id: "version-123",
+        currentVersionId: "version-123",
+        currentVersion: {
+          id: "version-123",
+          resumeProfileId: "profile-123",
+          versionNumber: 2,
+          kind: "tailored",
+          source: {
+            kind: "tailored",
+            label: "Primary Resume - Pattern",
+          },
+          created_at: "2026-05-01T01:00:00Z",
+        },
+        source: { kind: "manual", label: "Baseline Resume" },
+      },
+    ]);
+  });
+});
+
 describe("POST /api/resume-profiles", () => {
   beforeEach(() => {
     createServerClientMock.mockReset();

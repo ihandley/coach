@@ -189,6 +189,7 @@ It is useful for:
 - identifying terminology that may still appear in scripts or docs
 
 It is not the product runtime and should not be treated as the source of truth for current application behavior.
+
 ## Browser E2E tests
 
 This repo uses Playwright for browser-driven end-to-end tests.

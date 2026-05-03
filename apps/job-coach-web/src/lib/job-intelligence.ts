@@ -10,7 +10,10 @@ export type JobIntelligence = {
 };
 
 export function parseJobIntelligence(text: string): JobIntelligence {
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   const sections: Record<string, string[]> = {
     about: [],
