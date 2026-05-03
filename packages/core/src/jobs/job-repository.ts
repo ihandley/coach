@@ -12,6 +12,7 @@ export interface JobRepository {
   getJobById(jobId: string): Promise<JobRecord | null>;
   listJobs(input?: ListJobsInput): Promise<JobRecord[]>;
   updateJobStatus(input: UpdateJobStatusInput): Promise<JobRecord>;
+  deleteJob(jobId: string): Promise<void>;
   addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord>;
   listApplicationEvents(jobId: string): Promise<ApplicationEventRecord[]>;
   findJobBySourceUrl(sourceUrl: string): Promise<JobRecord | null>;

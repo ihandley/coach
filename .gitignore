@@ -152,5 +152,6 @@ node_modules/
 
 # Job Coach local dev artifacts
 *.sql
+!supabase/migrations/20260503000000_create_exported_artifacts.sql
 fix-*.py
 dev-*.sql

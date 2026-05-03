@@ -84,6 +84,9 @@ describe("POST /api/exports", () => {
     expect(response.headers.get("content-type")).toContain("application/pdf");
     expect(response.headers.get("content-disposition")).toBe('attachment; filename="resume.pdf"');
 
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(new TextDecoder().decode(bytes)).toBe("%PDF");
+
     expect(exportDocumentMock).toHaveBeenCalledWith({
       documentType: "resume",
       format: "pdf",
@@ -220,4 +223,31 @@ describe("POST /api/exports", () => {
     expect(response.status).toBe(400);
     expect(exportDocumentMock).not.toHaveBeenCalled();
   });
+
+  it.each(["RESUME_PROFILE_NOT_FOUND", "RESUME_VERSION_NOT_FOUND"])(
+    "returns 404 when export fails with %s",
+    async (errorCode) => {
+      const { POST } = await import("./route");
+
+      exportDocumentMock.mockRejectedValue(new Error(errorCode));
+
+      const response = await POST(
+        new Request("http://localhost/api/exports", {
+          method: "POST",
+          body: JSON.stringify({
+            documentType: "resume",
+            format: "pdf",
+            resumeProfileId: "resume-profile-1",
+            resumeVersionId: "resume-version-1",
+          }),
+          headers: {
+            "content-type": "application/json",
+          },
+        }),
+      );
+
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: errorCode });
+    },
+  );
 });

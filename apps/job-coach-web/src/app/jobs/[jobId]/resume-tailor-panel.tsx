@@ -5,14 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 type ResumeProfile = {
   id: string;
   name: string;
+  currentVersionId?: string | null;
   source?: {
     label?: string;
   };
-};
-
-type MatchResult = {
-  score?: number;
-  reasons?: string[];
 };
 
 function getResumeLabel(profile: ResumeProfile) {
@@ -24,7 +20,7 @@ export function ResumeTailorPanel({ jobId }: { jobId: string }) {
   const [selectedResumeId, setSelectedResumeId] = useState("");
   const [loadingResumes, setLoadingResumes] = useState(true);
   const [tailoring, setTailoring] = useState(false);
-  const [result, setResult] = useState<MatchResult | null>(null);
+  const [tailoredResumeCreated, setTailoredResumeCreated] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedResume = useMemo(
@@ -39,23 +35,41 @@ export function ResumeTailorPanel({ jobId }: { jobId: string }) {
       setLoadingResumes(true);
       setError(null);
 
-      const res = await fetch("/api/resume-profiles");
-      const data = await res.json().catch(() => null);
+      try {
+        const res = await fetch("/api/resume-profiles");
+        const data = await res.json().catch(() => null);
 
-      if (!isCurrent) {
-        return;
-      }
+        if (!isCurrent) {
+          return;
+        }
 
-      if (!res.ok) {
-        setError(data?.error ?? "Unable to load resumes.");
+        if (!res.ok) {
+          setError(data?.error ?? "Unable to load resumes.");
+          setLoadingResumes(false);
+          return;
+        }
+
+        const nextResumes = Array.isArray(data)
+          ? data.map((profile) => ({
+              id: profile.id,
+              name: profile.name || "Untitled Resume",
+              currentVersionId: profile.currentVersionId || profile.current_version_id || "",
+              source: profile.source,
+            }))
+          : [];
+
+        setResumes(nextResumes);
+        setSelectedResumeId("");
         setLoadingResumes(false);
-        return;
-      }
+      } catch {
+        if (!isCurrent) {
+          return;
+        }
 
-      const nextResumes = Array.isArray(data) ? data : [];
-      setResumes(nextResumes);
-      setSelectedResumeId(nextResumes[0]?.id ?? "");
-      setLoadingResumes(false);
+        setError("Unable to load resumes.");
+        setResumes([]);
+        setLoadingResumes(false);
+      }
     }
 
     loadResumes();
@@ -66,21 +80,21 @@ export function ResumeTailorPanel({ jobId }: { jobId: string }) {
   }, []);
 
   async function tailorResume() {
-    if (!selectedResumeId) {
+    if (!selectedResume?.currentVersionId) {
       return;
     }
 
     setTailoring(true);
-    setResult(null);
+    setTailoredResumeCreated(false);
     setError(null);
 
     try {
-      const res = await fetch("/api/match", {
+      const res = await fetch(`/api/resume-profiles/${selectedResume.id}/tailored-resumes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId,
-          resumeProfileId: selectedResumeId,
+          sourceResumeVersionId: selectedResume.currentVersionId,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -90,13 +104,15 @@ export function ResumeTailorPanel({ jobId }: { jobId: string }) {
         return;
       }
 
-      setResult(data);
+      setTailoredResumeCreated(true);
     } catch {
       setError("Unable to tailor this resume.");
     } finally {
       setTailoring(false);
     }
   }
+
+  const canTailor = Boolean(selectedResume?.currentVersionId);
 
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-4">
@@ -116,27 +132,38 @@ export function ResumeTailorPanel({ jobId }: { jobId: string }) {
           ) : resumes.length === 0 ? (
             <option>No resumes available</option>
           ) : (
-            resumes.map((resume) => (
-              <option key={resume.id} value={resume.id}>
-                {getResumeLabel(resume)}
-              </option>
-            ))
+            <>
+              <option value="">Select resume...</option>
+              {resumes.map((resume) => (
+                <option key={resume.id} value={resume.id}>
+                  {getResumeLabel(resume)}
+                </option>
+              ))}
+            </>
           )}
         </select>
 
         <button
           type="button"
           onClick={tailorResume}
-          disabled={tailoring || !selectedResumeId}
+          disabled={tailoring || !canTailor}
           className="btn-primary disabled:opacity-50"
         >
           {tailoring ? "Tailoring..." : "Tailor Resume"}
         </button>
 
-        {selectedResume && result ? (
-          <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-sm text-blue-950">
-            Tailor Resume completed for {getResumeLabel(selectedResume)}
-            {typeof result.score === "number" ? ` (${Math.round(result.score)}%)` : ""}.
+        {selectedResume && !selectedResume.currentVersionId ? (
+          <p className="text-sm text-gray-600">
+            Selected resume has no current version. Import a resume version before tailoring.
+          </p>
+        ) : null}
+
+        {tailoredResumeCreated ? (
+          <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+            Tailored resume created.{" "}
+            <a href="/resumes" className="font-medium underline">
+              View resumes
+            </a>
           </div>
         ) : null}
 

@@ -45,6 +45,7 @@ export class InMemoryJobRepository implements JobRepository {
       title: input.title,
       sourceUrl: input.sourceUrl,
       sourceText: input.sourceText,
+      structuredSummary: input.structuredSummary,
       status: input.status,
       createdAt: now,
       updatedAt: now,
@@ -122,6 +123,11 @@ export class InMemoryJobRepository implements JobRepository {
     }
 
     return updatedJob;
+  }
+
+  async deleteJob(jobId: string): Promise<void> {
+    this.jobs.delete(jobId);
+    this.events = this.events.filter((event) => event.jobId !== jobId);
   }
 
   async addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord> {

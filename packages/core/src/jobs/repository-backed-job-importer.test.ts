@@ -19,6 +19,9 @@ describe("RepositoryBackedJobImporter.importJobFromUrl", () => {
           company: "Acme",
           title: "Backend Engineer",
           rawDescription: "Build APIs",
+          structuredSummary: {
+            jobDescription: ["Build APIs"],
+          },
           location: "Remote",
         };
       },
@@ -31,6 +34,9 @@ describe("RepositoryBackedJobImporter.importJobFromUrl", () => {
     expect(result.title).toBe("Backend Engineer");
     expect(result.sourceUrl).toBe("https://example.com/jobs/123");
     expect(result.sourceText).toBe("Build APIs");
+    expect(result.structuredSummary).toEqual({
+      jobDescription: ["Build APIs"],
+    });
     expect(result.status).toBe("saved");
 
     const found = await repository.findJobBySourceUrl("https://example.com/jobs/123");

@@ -36,6 +36,7 @@ export class RepositoryBackedJobImporter {
           title: input.title,
           sourceUrl: url,
           sourceText: input.rawDescription,
+          structuredSummary: input.structuredSummary,
           status: "saved",
         });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,19 +11,6 @@ import {
 } from "@tanstack/react-table";
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
-import { useEffect, useMemo, useState } from "react";
-function getStatusColor(status: string) {
-  switch (status?.toLowerCase()) {
-    case "applied":
-      return "bg-blue-100 text-blue-800";
-    case "interview":
-      return "bg-purple-100 text-purple-800";
-    case "rejected":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-}
 
 function formatRawText(text: string) {
   const paragraphs = text.split(/\n\s*\n/);
@@ -33,32 +20,6 @@ function formatRawText(text: string) {
       {p}
     </p>
   ));
-}
-
-function extractLocation(text: string): string | null {
-  const match = text.match(
-    /\b(Remote|Hybrid|On-site|Orem|Provo|Lehi|Salt Lake City|Utah|CA|California|NY|New York|TX|Texas)\b/i,
-  );
-  return match ? match[0] : null;
-}
-
-function extractSalary(text: string): string | null {
-  const match = text.match(
-    /\$[0-9,]+\s*(?:-|–|to)\s*\$[0-9,]+(?:\s*(?:per year|\/year|annually|\/hr|per hour))?/i,
-  );
-  return match ? match[0] : null;
-}
-
-function parseStructured(text: string) {
-  return [
-    {
-      title: "Description",
-      content: text
-        .split("\n")
-        .map((line) => line.trim().replace(/^[-•*]\s*/, ""))
-        .filter(Boolean),
-    },
-  ];
 }
 
 type RankedJob = {
@@ -96,8 +57,9 @@ export function JobsPageClient() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
 
   async function load() {
@@ -117,16 +79,64 @@ export function JobsPageClient() {
   }
 
   async function handleImport() {
-    if (!url) return;
+    if (!url || isImporting) return;
 
-    await fetch("/api/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sourceUrl: url }),
-    });
+    setIsImporting(true);
+    setError(null);
+    setImportSuccess(null);
 
-    await load();
-    setUrl("");
+    try {
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceUrl: url }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Import job failed.");
+      }
+
+      await load();
+      setUrl("");
+      setImportSuccess("Job imported successfully.");
+      window.setTimeout(() => setImportSuccess(null), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Unable to import job.");
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  async function handleDeleteJob(jobId: string) {
+    const confirmed = window.confirm("Delete this job? This cannot be undone.");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Delete job failed.");
+      }
+
+      setJobs((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
+      setSelectedJobIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.delete(jobId);
+        return nextIds;
+      });
+      setExpandedId((currentId) => (currentId === jobId ? null : currentId));
+    } catch (err) {
+      console.error(err);
+      setError("Unable to delete job.");
+    }
   }
 
   useEffect(() => {
@@ -249,73 +259,8 @@ export function JobsPageClient() {
           );
         },
       },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => {
-          const job = row.original;
-
-          async function updateStatus(status: string) {
-            const prevJobs = jobs;
-
-            setJobs(jobs.map((j) => (j.id === job.id ? { ...j, status } : j)));
-
-            try {
-              const res = await fetch(`/api/jobs/${job.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status }),
-              });
-
-              if (!res.ok) {
-                throw new Error("Status update failed");
-              }
-            } catch (err) {
-              console.error("Update failed", err);
-              setJobs(prevJobs);
-            }
-          }
-
-          return (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="text-green-600 text-xs underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateStatus("applied");
-                }}
-              >
-                Apply
-              </button>
-
-              <button
-                type="button"
-                className="text-yellow-600 text-xs underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateStatus("saved");
-                }}
-              >
-                Maybe
-              </button>
-
-              <button
-                type="button"
-                className="text-red-600 text-xs underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateStatus("archived");
-                }}
-              >
-                Ignore
-              </button>
-            </div>
-          );
-        },
-      },
     ],
-    [selectedJobIds, jobs],
+    [selectedJobIds],
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -383,17 +328,24 @@ export function JobsPageClient() {
         <div className="flex gap-2">
           <input
             value={url}
+            disabled={isImporting}
             onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                void handleImport();
+              }
+            }}
             placeholder="Paste job URL"
             className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
           <button
             onClick={handleImport}
-            disabled={!url}
+            disabled={!url || isImporting}
             className="btn-primary disabled:opacity-50"
           >
-            Import
+            {isImporting ? "Importing…" : "Import"}
           </button>
+          {importSuccess ? <p className="text-sm text-green-600">{importSuccess}</p> : null}
         </div>
       </div>
 
@@ -497,8 +449,11 @@ export function JobsPageClient() {
                     </tr>
                     {expandedId === row.original.id && (
                       <tr data-testid="job-details">
-                        <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
-                          <JobDetailsPanel job={row.original} />
+                        <td
+                          colSpan={row.getVisibleCells().length}
+                          className="bg-gray-50 px-4 py-3 text-sm"
+                        >
+                          <JobDetailsPanel job={row.original} onDeleteJob={handleDeleteJob} />
                         </td>
                       </tr>
                     )}
@@ -513,7 +468,13 @@ export function JobsPageClient() {
   );
 }
 
-function JobDetailsPanel({ job }: { job: RankedJob }) {
+function JobDetailsPanel({
+  job,
+  onDeleteJob,
+}: {
+  job: RankedJob;
+  onDeleteJob: (jobId: string) => void | Promise<void>;
+}) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
   const [showResumeTailor, setShowResumeTailor] = useState(false);
   const structuredPanelId = `job-${job.id}-structured-view`;
@@ -558,15 +519,26 @@ function JobDetailsPanel({ job }: { job: RankedJob }) {
           </button>
         </div>
 
-        <button
-          type="button"
-          aria-expanded={showResumeTailor}
-          aria-controls={`resume-tailor-panel-${job.id}`}
-          onClick={() => setShowResumeTailor(true)}
-          className="btn-primary text-sm"
-        >
-          Tailor Resume
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void onDeleteJob(job.id);
+            }}
+            className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50"
+          >
+            Delete job
+          </button>
+          <button
+            type="button"
+            aria-expanded={showResumeTailor}
+            aria-controls={`resume-tailor-panel-${job.id}`}
+            onClick={() => setShowResumeTailor((value) => !value)}
+            className="btn-primary text-sm"
+          >
+            Tailor Resume
+          </button>
+        </div>
       </div>
 
       {showResumeTailor && <ResumeTailor jobId={job.id} />}
@@ -812,9 +784,9 @@ function ResumeTailor({ jobId }: { jobId: string }) {
 
       {createdTailoredResume && (
         <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-          Tailored resume created:{" "}
+          Tailored resume created.{" "}
           <a href="/resumes" className="font-medium underline">
-            {createdTailoredResume.name}
+            View resumes
           </a>
         </div>
       )}

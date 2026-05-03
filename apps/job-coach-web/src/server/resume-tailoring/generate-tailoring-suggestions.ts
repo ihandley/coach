@@ -19,6 +19,99 @@ type SignalRule = {
   confidence: "low" | "medium" | "high";
 };
 
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getBasics(resume: NormalizedResume): UnknownRecord {
+  const basics = (resume as { basics?: unknown }).basics;
+
+  return isRecord(basics) ? basics : {};
+}
+
+function getText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function collectText(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectText(item));
+  }
+
+  const text = getText(value);
+
+  return text ? [text] : [];
+}
+
+function getSummary(resume: NormalizedResume): string {
+  return getText(getBasics(resume).summary);
+}
+
+function getSkills(resume: NormalizedResume): string[] {
+  const skills = (resume as { skills?: unknown }).skills;
+
+  if (!Array.isArray(skills)) {
+    return [];
+  }
+
+  return skills.flatMap((skill) => {
+    if (typeof skill === "string") {
+      return collectText(skill);
+    }
+
+    if (isRecord(skill)) {
+      const itemTexts = collectText(skill.items);
+      const categoryText = getText(skill.category);
+
+      return itemTexts.length > 0 ? itemTexts : collectText(categoryText);
+    }
+
+    return [];
+  });
+}
+
+function getExperience(resume: NormalizedResume): unknown[] {
+  const experience = (resume as { experience?: unknown }).experience;
+
+  return Array.isArray(experience) ? experience : [];
+}
+
+function getExperienceText(experienceItem: unknown): string {
+  if (!isRecord(experienceItem)) {
+    return "";
+  }
+
+  const highlights = collectText(experienceItem.highlights);
+
+  if (highlights.length > 0) {
+    return highlights.join(" ");
+  }
+
+  for (const field of ["summary", "description", "responsibilities", "bullets"]) {
+    const fallbackText = collectText(experienceItem[field]);
+
+    if (fallbackText.length > 0) {
+      return fallbackText.join(" ");
+    }
+  }
+
+  return "";
+}
+
+function formatSkills(resume: NormalizedResume): string {
+  return getSkills(resume).join(", ");
+}
+
+function appendToSummary(resume: NormalizedResume, content: string): string {
+  return [getSummary(resume), content].filter(Boolean).join(" ");
+}
+
+function appendToSkills(resume: NormalizedResume, skills: string[]): string {
+  return [...getSkills(resume), ...skills].join(", ");
+}
+
 function normalizeText(value: unknown): string {
   if (value === null || value === undefined) {
     return "";
@@ -28,17 +121,30 @@ function normalizeText(value: unknown): string {
     return value.toLowerCase();
   }
 
-  return JSON.stringify(value).toLowerCase();
+  try {
+    const serialized = JSON.stringify(value);
+
+    return typeof serialized === "string" ? serialized.toLowerCase() : "";
+  } catch {
+    try {
+      return String(value).toLowerCase();
+    } catch {
+      return "";
+    }
+  }
 }
 
 function resumeToText(resume: NormalizedResume): string {
+  const basics = getBasics(resume);
+
   return normalizeText([
-    resume.basics.fullName,
-    resume.basics.headline,
-    resume.basics.summary,
-    resume.skills,
-    resume.experience,
-    resume.education,
+    basics.fullName,
+    basics.name,
+    basics.headline,
+    basics.summary,
+    getSkills(resume),
+    getExperience(resume),
+    (resume as { education?: unknown }).education,
   ]);
 }
 
@@ -52,20 +158,22 @@ function includesAny(haystack: string, needles: string[]) {
 
 function getOriginalContent(resume: NormalizedResume, sectionTarget: string): string {
   if (sectionTarget === "summary") {
-    return resume.basics.summary;
+    return getSummary(resume);
   }
 
   if (sectionTarget === "skills") {
-    return resume.skills.join(", ");
+    return formatSkills(resume) || getSummary(resume);
   }
 
-  const firstExperience = resume.experience[0];
+  for (const experienceItem of getExperience(resume)) {
+    const experienceText = getExperienceText(experienceItem);
 
-  if (firstExperience && Array.isArray(firstExperience.highlights)) {
-    return firstExperience.highlights.join(" ");
+    if (experienceText) {
+      return experienceText;
+    }
   }
 
-  return resume.basics.summary ?? "";
+  return getSummary(resume);
 }
 
 const signalRules: SignalRule[] = [
@@ -81,7 +189,10 @@ const signalRules: SignalRule[] = [
     ],
     resumeTerms: ["marketplace", "ecommerce", "amazon sp-api", "walmart"],
     suggestedContent: ({ resume }) =>
-      `${resume.basics.summary} Add one concise sentence connecting backend/API experience to high-volume ecommerce marketplace integrations.`,
+      appendToSummary(
+        resume,
+        "Add one concise sentence connecting backend/API experience to high-volume ecommerce marketplace integrations.",
+      ),
     rationale:
       "Pattern emphasizes marketplace integrations and ecommerce acceleration, but the baseline resume does not name that domain.",
     relatedJobRequirements: [
@@ -120,7 +231,7 @@ const signalRules: SignalRule[] = [
     sectionTarget: "skills",
     jobTerms: ["database design", "data modeling"],
     resumeTerms: ["database design", "data modeling"],
-    suggestedContent: ({ resume }) => `${resume.skills.join(", ")}, database design, data modeling`,
+    suggestedContent: ({ resume }) => appendToSkills(resume, ["database design", "data modeling"]),
     rationale:
       "The baseline skills mention PostgreSQL but do not mirror the database design and data modeling language in the posting.",
     relatedJobRequirements: ["database design", "data modeling"],

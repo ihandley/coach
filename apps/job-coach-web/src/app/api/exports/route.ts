@@ -1,5 +1,3 @@
-import { createExport } from "@coach/core";
-
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -53,6 +51,26 @@ function isValidExportBody(body: unknown): boolean {
   return true;
 }
 
+function createExportErrorResponse(error: unknown) {
+  if (error instanceof Error) {
+    if (
+      error.message === "RESUME_PROFILE_NOT_FOUND" ||
+      error.message === "RESUME_VERSION_NOT_FOUND" ||
+      error.message === "COVER_LETTER_NOT_FOUND"
+    ) {
+      return Response.json({ error: error.message }, { status: 404 });
+    }
+
+    if (error.message === "RESUME_VERSION_PROFILE_MISMATCH") {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+  }
+
+  console.error("Export failed", error);
+
+  return Response.json({ error: "EXPORT_FAILED" }, { status: 500 });
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
 
@@ -63,13 +81,17 @@ export async function POST(request: Request) {
   const { createExportsServer } = await import("../../../server/exports");
   const { exportDocument } = createExportsServer();
 
-  const result = await exportDocument(body);
+  try {
+    const result = await exportDocument(body);
 
-  return new Response(result.buffer, {
-    status: 200,
-    headers: {
-      "content-type": result.mimeType,
-      "content-disposition": `attachment; filename="${result.fileName}"`,
-    },
-  });
+    return new Response(result.buffer, {
+      status: 200,
+      headers: {
+        "content-type": result.mimeType,
+        "content-disposition": `attachment; filename="${result.fileName}"`,
+      },
+    });
+  } catch (error) {
+    return createExportErrorResponse(error);
+  }
 }
