@@ -42,3 +42,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ jobId: st
 
   return Response.json(job);
 }
+
+export async function DELETE(_request: Request, context: { params: Promise<{ jobId: string }> }) {
+  const { jobId } = await context.params;
+  const jobRepository = createJobRepository();
+
+  await jobRepository.deleteJob(jobId);
+
+  return new Response(null, { status: 204 });
+}

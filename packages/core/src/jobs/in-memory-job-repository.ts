@@ -124,6 +124,11 @@ export class InMemoryJobRepository implements JobRepository {
     return updatedJob;
   }
 
+  async deleteJob(jobId: string): Promise<void> {
+    this.jobs.delete(jobId);
+    this.events = this.events.filter((event) => event.jobId !== jobId);
+  }
+
   async addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord> {
     const existingJob = this.jobs.get(input.jobId);
 

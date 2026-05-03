@@ -186,6 +186,14 @@ export class DbJobRepository implements JobRepository {
     return mapJobRow(data);
   }
 
+  async deleteJob(jobId: string): Promise<void> {
+    const { error } = await this.supabase.from("jobs").delete().eq("id", jobId);
+
+    if (error) {
+      throw error;
+    }
+  }
+
   async addApplicationEvent(input: AddApplicationEventInput): Promise<ApplicationEventRecord> {
     const { data, error } = await this.supabase
       .from("application_events")

@@ -38,7 +38,14 @@ type RankedJob = {
 type ResumeProfile = {
   id: string;
   name: string;
-  currentVersionId?: string | null;
+  currentVersionId: string;
+};
+
+type TailoredResumeResult = {
+  id: string;
+  name: string;
+  profileId: string;
+  versionId: string;
 };
 
 export function JobsPageClient() {
@@ -80,6 +87,37 @@ export function JobsPageClient() {
 
     await load();
     setUrl("");
+  }
+
+  async function handleDeleteJob(jobId: string) {
+    const confirmed = window.confirm("Delete this job? This cannot be undone.");
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Delete job failed.");
+      }
+
+      setJobs((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
+      setSelectedJobIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.delete(jobId);
+        return nextIds;
+      });
+      setExpandedId((currentId) => (currentId === jobId ? null : currentId));
+    } catch (err) {
+      console.error(err);
+      setError("Unable to delete job.");
+    }
   }
 
   useEffect(() => {
@@ -389,7 +427,7 @@ export function JobsPageClient() {
                           colSpan={row.getVisibleCells().length}
                           className="bg-gray-50 px-4 py-3 text-sm"
                         >
-                          <JobDetailsPanel job={row.original} />
+                          <JobDetailsPanel job={row.original} onDeleteJob={handleDeleteJob} />
                         </td>
                       </tr>
                     )}
@@ -404,7 +442,13 @@ export function JobsPageClient() {
   );
 }
 
-function JobDetailsPanel({ job }: { job: RankedJob }) {
+function JobDetailsPanel({
+  job,
+  onDeleteJob,
+}: {
+  job: RankedJob;
+  onDeleteJob: (jobId: string) => void | Promise<void>;
+}) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
   const [showResumeTailor, setShowResumeTailor] = useState(false);
   const structuredPanelId = `job-${job.id}-structured-view`;
@@ -449,15 +493,26 @@ function JobDetailsPanel({ job }: { job: RankedJob }) {
           </button>
         </div>
 
-        <button
-          type="button"
-          aria-expanded={showResumeTailor}
-          aria-controls={`resume-tailor-panel-${job.id}`}
-          onClick={() => setShowResumeTailor((value) => !value)}
-          className="btn-primary text-sm"
-        >
-          Tailor Resume
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              void onDeleteJob(job.id);
+            }}
+            className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50"
+          >
+            Delete job
+          </button>
+          <button
+            type="button"
+            aria-expanded={showResumeTailor}
+            aria-controls={`resume-tailor-panel-${job.id}`}
+            onClick={() => setShowResumeTailor((value) => !value)}
+            className="btn-primary text-sm"
+          >
+            Tailor Resume
+          </button>
+        </div>
       </div>
 
       {showResumeTailor && <ResumeTailor jobId={job.id} />}
@@ -557,7 +612,9 @@ function ResumeTailor({ jobId }: { jobId: string }) {
   const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [tailoredResumeCreated, setTailoredResumeCreated] = useState(false);
+  const [createdTailoredResume, setCreatedTailoredResume] = useState<TailoredResumeResult | null>(
+    null,
+  );
   const [tailorError, setTailorError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -607,7 +664,7 @@ function ResumeTailor({ jobId }: { jobId: string }) {
     if (!selectedProfile?.currentVersionId) return;
 
     setLoading(true);
-    setTailoredResumeCreated(false);
+    setCreatedTailoredResume(null);
     setTailorError(null);
 
     try {
@@ -625,7 +682,19 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         throw new Error(data?.error || "Unable to generate tailored resume.");
       }
 
-      setTailoredResumeCreated(true);
+      const tailoredResume = data?.tailoredResume;
+
+      if (
+        !tailoredResume ||
+        typeof tailoredResume.id !== "string" ||
+        typeof tailoredResume.name !== "string" ||
+        typeof tailoredResume.profileId !== "string" ||
+        typeof tailoredResume.versionId !== "string"
+      ) {
+        throw new Error("Tailored resume response was missing resume details.");
+      }
+
+      setCreatedTailoredResume(tailoredResume);
     } catch (err) {
       console.error(err);
       setTailorError("Unable to generate tailored resume.");
@@ -687,7 +756,7 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         </div>
       )}
 
-      {tailoredResumeCreated && (
+      {createdTailoredResume && (
         <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
           Tailored resume created.{" "}
           <a href="/resumes" className="font-medium underline">

@@ -35,8 +35,11 @@ describe("JobsPageClient", () => {
   };
 
   let fetchMock: ReturnType<typeof vi.fn>;
+  let deleteShouldFail: boolean;
 
   beforeEach(() => {
+    deleteShouldFail = false;
+
     fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input.toString();
 
@@ -78,6 +81,12 @@ describe("JobsPageClient", () => {
         });
       }
 
+      if (url === "/api/jobs/job-1" && init?.method === "DELETE") {
+        return deleteShouldFail
+          ? jsonResponse({ error: "Unable to delete job." }, { status: 500 })
+          : new Response(null, { status: 204 });
+      }
+
       return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
     });
 
@@ -86,7 +95,81 @@ describe("JobsPageClient", () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("shows the delete action only inside the expanded job details card", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete job" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("job-row"));
+
+    expect(
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not delete the job when confirmation is canceled", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+    );
+
+    expect(confirmSpy).toHaveBeenCalledWith("Delete this job? This cannot be undone.");
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/jobs/job-1",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(screen.getByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.getByTestId("job-details")).toBeInTheDocument();
+  });
+
+  it("deletes the job and removes the expanded row after confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/jobs/job-1",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("Product Engineer")).not.toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+    expect(screen.getByText("No jobs yet. Import one to get started.")).toBeInTheDocument();
+  });
+
+  it("shows a visible error when delete fails", async () => {
+    deleteShouldFail = true;
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+    );
+
+    expect(await screen.findByText("Unable to delete job.")).toBeInTheDocument();
+    expect(screen.getByText("Product Engineer")).toBeInTheDocument();
   });
 
   it("tailors a resume from the expanded job details panel", async () => {

@@ -4,12 +4,14 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listJobs = vi.fn();
+const deleteJob = vi.fn();
 
 vi.mock("@coach/db", async () => {
   const actual = await vi.importActual<object>("@coach/db");
 
   class MockDbJobRepository {
     listJobs = listJobs;
+    deleteJob = deleteJob;
   }
 
   return {
@@ -20,6 +22,7 @@ vi.mock("@coach/db", async () => {
 
 beforeEach(() => {
   listJobs.mockReset();
+  deleteJob.mockReset();
   vi.resetModules();
 });
 
@@ -68,5 +71,20 @@ describe("GET /api/jobs/[jobId]", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: "JOB_NOT_FOUND",
     });
+  });
+});
+
+describe("DELETE /api/jobs/[jobId]", () => {
+  it("deletes the matching job", async () => {
+    deleteJob.mockResolvedValue(undefined);
+
+    const { DELETE } = await import("./route");
+
+    const response = await DELETE(new Request("http://localhost/api/jobs/job-123"), {
+      params: Promise.resolve({ jobId: "job-123" }),
+    });
+
+    expect(response.status).toBe(204);
+    expect(deleteJob).toHaveBeenCalledWith("job-123");
   });
 });
