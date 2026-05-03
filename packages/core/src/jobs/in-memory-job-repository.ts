@@ -45,6 +45,7 @@ export class InMemoryJobRepository implements JobRepository {
       title: input.title,
       sourceUrl: input.sourceUrl,
       sourceText: input.sourceText,
+      structuredSummary: input.structuredSummary,
       status: input.status,
       createdAt: now,
       updatedAt: now,

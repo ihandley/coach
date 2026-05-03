@@ -112,6 +112,32 @@ describe("JobsPageClient", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders structured and original posting details with expanded-card controls", async () => {
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+
+    const details = screen.getByTestId("job-details");
+
+    expect(within(details).getByRole("button", { name: "Delete job" })).toBeInTheDocument();
+    expect(within(details).getByRole("button", { name: "Tailor Resume" })).toBeInTheDocument();
+    expect(within(details).getByText("Company")).toBeInTheDocument();
+    expect(within(details).getByText("Pattern builds hiring tools.")).toBeInTheDocument();
+    expect(within(details).getByText("Description")).toBeInTheDocument();
+    expect(within(details).getByText("Build product workflows.")).toBeInTheDocument();
+    expect(within(details).getByText("Requirements")).toBeInTheDocument();
+    expect(within(details).getByText("TypeScript")).toBeInTheDocument();
+    expect(within(details).getByText("Benefits")).toBeInTheDocument();
+    expect(within(details).getByText("Remote work")).toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("tab", { name: "Original Posting" }));
+
+    expect(within(details).getByText("Build thoughtful product workflows.")).toBeInTheDocument();
+    expect(
+      within(details).queryByText("No structured summary available yet.", { exact: false }),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not delete the job when confirmation is canceled", async () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
 

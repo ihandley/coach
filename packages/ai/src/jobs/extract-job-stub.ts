@@ -1,3 +1,4 @@
+import { cleanJobText, extractJobFields } from "@coach/core";
 import type { ExtractedJobData, FetchedJobPage } from "@coach/core";
 
 export class ExtractJobDataError extends Error {
@@ -10,17 +11,29 @@ export class ExtractJobDataError extends Error {
 export const extractJobStub = async (input: FetchedJobPage): Promise<ExtractedJobData> => {
   const html = input.html;
 
-  const title = extractOgMeta(html, "og:title") ?? extractTitleFromH1(html) ?? "Unknown";
+  const titleCandidate = extractOgMeta(html, "og:title") ?? extractTitleFromH1(html) ?? "";
 
-  const company =
-    extractCompanyFromGreenhouseBackLink(html) ?? extractOgMeta(html, "og:site_name") ?? "Unknown";
+  const companyCandidate =
+    extractCompanyFromGreenhouseBackLink(html) ?? extractOgMeta(html, "og:site_name") ?? "";
 
-  const rawDescription = extractJobDescriptionText(html) ?? stripHtmlToText(html);
+  const rawDescription = cleanJobText(
+    extractLinkedInDescriptionText(html) ??
+      extractJobDescriptionText(html) ??
+      stripHtmlToText(html),
+  );
 
   if (!rawDescription || rawDescription.trim().length === 0) {
     throw new ExtractJobDataError("Could not extract job description text");
   }
 
+  const fields = extractJobFields(
+    [titleCandidate, usefulCompanyCandidate(companyCandidate)].filter(Boolean).join("\n"),
+  );
+
+  const title = titleCandidate ? fields.title : "Unknown";
+  const company = titleCandidate
+    ? fields.company
+    : usefulCompanyCandidate(companyCandidate) || "Unknown";
   const location = extractOgMeta(html, "og:description") ?? undefined;
 
   return {
@@ -30,6 +43,10 @@ export const extractJobStub = async (input: FetchedJobPage): Promise<ExtractedJo
     ...(location ? { location } : {}),
   };
 };
+
+function usefulCompanyCandidate(company: string): string {
+  return company.trim().toLowerCase() === "linkedin" ? "" : company;
+}
 
 function extractOgMeta(html: string, property: string): string | null {
   const escaped = escapeRegExp(property);
@@ -59,6 +76,18 @@ function extractCompanyFromGreenhouseBackLink(html: string): string | null {
 
 function extractJobDescriptionText(html: string): string | null {
   const match = html.match(/<div class="job__description body"><div>([\s\S]*?)<\/div><\/div>/i);
+
+  if (!match) {
+    return null;
+  }
+
+  return normalizeWhitespace(decodeHtml(stripHtml(match[1]))).trim() || null;
+}
+
+function extractLinkedInDescriptionText(html: string): string | null {
+  const match = html.match(
+    /<div[^>]+class=["'][^"']*(?:show-more-less-html__markup|jobs-description-content__text|description__text)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+  );
 
   if (!match) {
     return null;

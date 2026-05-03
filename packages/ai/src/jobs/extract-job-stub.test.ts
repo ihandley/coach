@@ -56,4 +56,33 @@ describe("extractJobStub", () => {
     expect(result.title).toBe("Unknown");
     expect(result.rawDescription).toContain("Hello world");
   });
+
+  it("cleans LinkedIn SEO titles into company and role fields", async () => {
+    const result = await extractJobStub({
+      url: "https://www.linkedin.com/jobs/view/123",
+      html: `
+        <html>
+          <head>
+            <meta property="og:title" content="Pattern hiring Staff Software Engineer, Predict in Lehi, UT | LinkedIn" />
+            <meta property="og:site_name" content="LinkedIn" />
+          </head>
+          <body>
+            <div class="show-more-less-html__markup">
+              <p>About the job</p>
+              <p>Build predictive hiring workflows.</p>
+              <ul>
+                <li>TypeScript</li>
+              </ul>
+            </div>
+          </body>
+        </html>
+      `,
+    });
+
+    expect(result.company).toBe("Pattern");
+    expect(result.title).toBe("Staff Software Engineer, Predict");
+    expect(result.rawDescription).toContain("About the job");
+    expect(result.rawDescription).toContain("Build predictive hiring workflows.");
+    expect(result.rawDescription).toContain("- TypeScript");
+  });
 });
