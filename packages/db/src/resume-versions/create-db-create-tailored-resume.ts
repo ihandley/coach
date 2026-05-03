@@ -69,6 +69,53 @@ function createTailoredResumeName({
   return `${sourceName} - ${suffix}`;
 }
 
+function applySafeTailoringToResume({
+  sourceResume,
+  companyName,
+}: {
+  sourceResume: NormalizedResume;
+  companyName?: string | null;
+}): NormalizedResume {
+  const tailoredResume = structuredClone(sourceResume);
+  const suffix = companyName?.trim() ? ` for ${companyName.trim()}` : "";
+
+  if (tailoredResume.basics) {
+    const existingSummary = tailoredResume.basics.summary?.trim() ?? "";
+
+    if (!existingSummary.includes("Targeting roles aligned")) {
+      tailoredResume.basics.summary = [
+        existingSummary,
+        `Targeting roles aligned${suffix}, emphasizing backend systems, scalable platform work, product delivery, and cross-functional engineering leadership.`,
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+  }
+
+  if (Array.isArray(tailoredResume.experience)) {
+    tailoredResume.experience = tailoredResume.experience.map((experience, index) => {
+      if (!Array.isArray(experience.highlights) || experience.highlights.length === 0) {
+        return experience;
+      }
+
+      if (index > 1) {
+        return experience;
+      }
+
+      return {
+        ...experience,
+        highlights: experience.highlights.map((highlight, highlightIndex) =>
+          highlightIndex === 0 && !highlight.includes("Emphasized for relevance")
+            ? `${highlight} Emphasized for relevance to the target role${suffix}.`
+            : highlight,
+        ),
+      };
+    });
+  }
+
+  return tailoredResume;
+}
+
 export function createDbCreateTailoredResume(
   dependencies: CreateDbCreateTailoredResumeDependencies,
 ) {
@@ -128,13 +175,18 @@ export function createDbCreateTailoredResume(
       companyName: job.company,
     });
 
+    const transformedResume = applySafeTailoringToResume({
+      sourceResume: sourceVersion.normalizedResume,
+      companyName: job.company,
+    });
+
     const tailoredProfile = await dependencies.resumeProfiles.createResumeProfile({
       name: tailoredResumeName,
       source: {
         kind: "tailored",
         label: tailoredResumeName,
       },
-      normalizedResume: sourceVersion.normalizedResume,
+      normalizedResume: transformedResume,
     });
 
     const createdVersion = await dependencies.resumeVersions.createResumeVersion({
@@ -145,7 +197,7 @@ export function createDbCreateTailoredResume(
         kind: "tailored",
         label: tailoredResumeName,
       },
-      normalizedResume: sourceVersion.normalizedResume,
+      normalizedResume: transformedResume,
       lineage: {
         sourceResumeVersionId: input.sourceResumeVersionId,
         sourceJobId: input.jobId,
