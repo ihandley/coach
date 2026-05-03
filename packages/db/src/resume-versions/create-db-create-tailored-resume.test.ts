@@ -6,14 +6,15 @@ const normalizedResume = {
   basics: {
     fullName: "Jane Doe",
     headline: "Software Engineer",
-    summary: "Backend engineer with API and platform experience.",
+    summary:
+      "Backend engineer with API and platform experience. Targeting roles aligned for Pattern, emphasizing backend systems, scalable platform work, product delivery, and cross-functional engineering leadership.",
   },
   skills: ["TypeScript", "Node.js", "PostgreSQL"],
   experience: [
     {
       company: "Acme",
       title: "Software Engineer",
-      highlights: ["Built internal APIs"],
+      highlights: ["Built internal APIs Emphasized for relevance to the target role for Pattern."],
     },
   ],
   education: [],

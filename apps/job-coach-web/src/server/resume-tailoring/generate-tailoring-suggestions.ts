@@ -61,11 +61,11 @@ function getOriginalContent(resume: NormalizedResume, sectionTarget: string): st
 
   const firstExperience = resume.experience[0];
 
-  if (firstExperience) {
+  if (firstExperience && Array.isArray(firstExperience.highlights)) {
     return firstExperience.highlights.join(" ");
   }
 
-  return resume.basics.summary;
+  return resume.basics.summary ?? "";
 }
 
 const signalRules: SignalRule[] = [
