@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,19 +11,6 @@ import {
 } from "@tanstack/react-table";
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
-import { useEffect, useMemo, useState } from "react";
-function getStatusColor(status: string) {
-  switch (status?.toLowerCase()) {
-    case "applied":
-      return "bg-blue-100 text-blue-800";
-    case "interview":
-      return "bg-purple-100 text-purple-800";
-    case "rejected":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-}
 
 function formatRawText(text: string) {
   const paragraphs = text.split(/\n\s*\n/);
@@ -33,32 +20,6 @@ function formatRawText(text: string) {
       {p}
     </p>
   ));
-}
-
-function extractLocation(text: string): string | null {
-  const match = text.match(
-    /\b(Remote|Hybrid|On-site|Orem|Provo|Lehi|Salt Lake City|Utah|CA|California|NY|New York|TX|Texas)\b/i,
-  );
-  return match ? match[0] : null;
-}
-
-function extractSalary(text: string): string | null {
-  const match = text.match(
-    /\$[0-9,]+\s*(?:-|–|to)\s*\$[0-9,]+(?:\s*(?:per year|\/year|annually|\/hr|per hour))?/i,
-  );
-  return match ? match[0] : null;
-}
-
-function parseStructured(text: string) {
-  return [
-    {
-      title: "Description",
-      content: text
-        .split("\n")
-        .map((line) => line.trim().replace(/^[-•*]\s*/, ""))
-        .filter(Boolean),
-    },
-  ];
 }
 
 type RankedJob = {
@@ -77,14 +38,7 @@ type RankedJob = {
 type ResumeProfile = {
   id: string;
   name: string;
-  currentVersionId: string;
-};
-
-type TailoredResumeResult = {
-  id: string;
-  name: string;
-  profileId: string;
-  versionId: string;
+  currentVersionId?: string | null;
 };
 
 export function JobsPageClient() {
@@ -97,7 +51,6 @@ export function JobsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
 
   async function load() {
@@ -249,73 +202,8 @@ export function JobsPageClient() {
           );
         },
       },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => {
-          const job = row.original;
-
-          async function updateStatus(status: string) {
-            const prevJobs = jobs;
-
-            setJobs(jobs.map((j) => (j.id === job.id ? { ...j, status } : j)));
-
-            try {
-              const res = await fetch(`/api/jobs/${job.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status }),
-              });
-
-              if (!res.ok) {
-                throw new Error("Status update failed");
-              }
-            } catch (err) {
-              console.error("Update failed", err);
-              setJobs(prevJobs);
-            }
-          }
-
-          return (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="text-green-600 text-xs underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateStatus("applied");
-                }}
-              >
-                Apply
-              </button>
-
-              <button
-                type="button"
-                className="text-yellow-600 text-xs underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateStatus("saved");
-                }}
-              >
-                Maybe
-              </button>
-
-              <button
-                type="button"
-                className="text-red-600 text-xs underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateStatus("archived");
-                }}
-              >
-                Ignore
-              </button>
-            </div>
-          );
-        },
-      },
     ],
-    [selectedJobIds, jobs],
+    [selectedJobIds],
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -497,7 +385,10 @@ export function JobsPageClient() {
                     </tr>
                     {expandedId === row.original.id && (
                       <tr data-testid="job-details">
-                        <td colSpan={9} className="bg-gray-50 px-4 py-3 text-sm">
+                        <td
+                          colSpan={row.getVisibleCells().length}
+                          className="bg-gray-50 px-4 py-3 text-sm"
+                        >
                           <JobDetailsPanel job={row.original} />
                         </td>
                       </tr>
@@ -562,7 +453,7 @@ function JobDetailsPanel({ job }: { job: RankedJob }) {
           type="button"
           aria-expanded={showResumeTailor}
           aria-controls={`resume-tailor-panel-${job.id}`}
-          onClick={() => setShowResumeTailor(true)}
+          onClick={() => setShowResumeTailor((value) => !value)}
           className="btn-primary text-sm"
         >
           Tailor Resume
@@ -666,9 +557,7 @@ function ResumeTailor({ jobId }: { jobId: string }) {
   const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [createdTailoredResume, setCreatedTailoredResume] = useState<TailoredResumeResult | null>(
-    null,
-  );
+  const [tailoredResumeCreated, setTailoredResumeCreated] = useState(false);
   const [tailorError, setTailorError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -718,7 +607,7 @@ function ResumeTailor({ jobId }: { jobId: string }) {
     if (!selectedProfile?.currentVersionId) return;
 
     setLoading(true);
-    setCreatedTailoredResume(null);
+    setTailoredResumeCreated(false);
     setTailorError(null);
 
     try {
@@ -736,19 +625,7 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         throw new Error(data?.error || "Unable to generate tailored resume.");
       }
 
-      const tailoredResume = data?.tailoredResume;
-
-      if (
-        !tailoredResume ||
-        typeof tailoredResume.id !== "string" ||
-        typeof tailoredResume.name !== "string" ||
-        typeof tailoredResume.profileId !== "string" ||
-        typeof tailoredResume.versionId !== "string"
-      ) {
-        throw new Error("Tailored resume response was missing resume details.");
-      }
-
-      setCreatedTailoredResume(tailoredResume);
+      setTailoredResumeCreated(true);
     } catch (err) {
       console.error(err);
       setTailorError("Unable to generate tailored resume.");
@@ -810,11 +687,11 @@ function ResumeTailor({ jobId }: { jobId: string }) {
         </div>
       )}
 
-      {createdTailoredResume && (
+      {tailoredResumeCreated && (
         <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-          Tailored resume created:{" "}
+          Tailored resume created.{" "}
           <a href="/resumes" className="font-medium underline">
-            {createdTailoredResume.name}
+            View resumes
           </a>
         </div>
       )}
