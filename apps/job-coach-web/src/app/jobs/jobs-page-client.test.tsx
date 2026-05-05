@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { JOB_STATUSES } from "@coach/core/jobs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JobsPageClient } from "./jobs-page-client";
@@ -11,6 +12,10 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
     status: 200,
     ...init,
   });
+}
+
+function getStatusLabel(status: string) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 describe("JobsPageClient", () => {
@@ -102,6 +107,15 @@ describe("JobsPageClient", () => {
               id: "job-1",
               company: body.company,
             });
+      }
+
+      if (url === "/api/jobs/job-1/status" && init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+
+        return jsonResponse({
+          id: "job-1",
+          status: body.status,
+        });
       }
 
       if (url === "/api/jobs/job-1" && init?.method === "DELETE") {
@@ -212,10 +226,23 @@ describe("JobsPageClient", () => {
     expect(within(titleCell as HTMLElement).getByText("NEW")).toBeInTheDocument();
   });
 
+  it("renders readable created and updated dates instead of raw timestamps", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.getByText("Apr 26, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Apr 25, 2026")).toBeInTheDocument();
+    expect(screen.queryByText("2026-04-26T12:00:00.000Z")).not.toBeInTheDocument();
+    expect(screen.queryByText("2026-04-25T12:00:00.000Z")).not.toBeInTheDocument();
+  });
+
   it("edits the company inline without expanding the job row", async () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Pattern")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Edit company for Product Engineer" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
 
@@ -290,39 +317,15 @@ describe("JobsPageClient", () => {
     );
   });
 
-  it("includes archived jobs in the default All status view", async () => {
-    const jobs = [
-      {
-        ...rankedJob,
-        id: "job-saved",
-        title: "Product Engineer",
-        status: "saved",
-      },
-      {
-        ...rankedJob,
-        id: "job-applied",
-        title: "Platform Engineer",
-        status: "applied",
-      },
-      {
-        ...rankedJob,
-        id: "job-interviewing",
-        title: "Infrastructure Engineer",
-        status: "interviewing",
-      },
-      {
-        ...rankedJob,
-        id: "job-rejected",
-        title: "Systems Engineer",
-        status: "rejected",
-      },
-      {
-        ...rankedJob,
-        id: "job-remi",
-        title: "Remi",
-        status: "archived",
-      },
-    ];
+  it("includes every current status in the default All status view", async () => {
+    const jobs = JOB_STATUSES.map((status, index) => ({
+      ...rankedJob,
+      id: `job-${status}`,
+      title: status === "archived" ? "Remi" : `${getStatusLabel(status)} Role`,
+      status,
+      createdAt: `2026-04-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
+      updatedAt: `2026-04-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
+    }));
 
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const url = input.toString();
@@ -337,12 +340,23 @@ describe("JobsPageClient", () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Remi")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All (5)" })).toHaveClass(
+    const renderedRowCount = screen.getAllByTestId("job-row").length;
+
+    expect(screen.getByRole("button", { name: `All (${JOB_STATUSES.length})` })).toHaveClass(
       "border-blue-600",
       "bg-blue-50",
       "text-blue-700",
     );
-    expect(screen.getAllByTestId("job-row")).toHaveLength(5);
+    expect(renderedRowCount).toBe(JOB_STATUSES.length);
+
+    const individualChipTotal = JOB_STATUSES.reduce((sum, status) => {
+      expect(
+        screen.getByRole("button", { name: `${getStatusLabel(status)} (1)` }),
+      ).toBeInTheDocument();
+      return sum + 1;
+    }, 0);
+
+    expect(individualChipTotal).toBe(renderedRowCount);
 
     const archivedChip = screen.getByRole("button", { name: "Archived (1)" });
     expect(archivedChip).toHaveClass("border-gray-500", "bg-gray-100", "text-gray-700");
@@ -356,11 +370,50 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(archivedChip);
     expect(screen.queryByText("Remi")).not.toBeInTheDocument();
-    expect(screen.getAllByTestId("job-row")).toHaveLength(4);
+    expect(screen.getAllByTestId("job-row")).toHaveLength(JOB_STATUSES.length - 1);
 
-    fireEvent.click(screen.getByRole("button", { name: "All (5)" }));
+    fireEvent.click(screen.getByRole("button", { name: `All (${JOB_STATUSES.length})` }));
     expect(screen.getByText("Remi")).toBeInTheDocument();
-    expect(screen.getAllByTestId("job-row")).toHaveLength(5);
+    expect(screen.getAllByTestId("job-row")).toHaveLength(JOB_STATUSES.length);
+  });
+
+  it("keeps status chip counts synced after a popover status update", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Saved (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Applied (0)" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit job status" }));
+    fireEvent.click(screen.getByRole("button", { name: "applied" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/jobs/job-1/status",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ status: "applied" }),
+        }),
+      );
+    });
+
+    expect(screen.getByRole("button", { name: "Saved (0)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Applied (1)" })).toBeInTheDocument();
+  });
+
+  it("preserves row expand and collapse after interacting with table controls", async () => {
+    render(<JobsPageClient />);
+
+    const row = await screen.findByTestId("job-row");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit job status" }));
+    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(screen.getByTestId("job-details")).toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
   });
 
   it("shows the delete action only inside the expanded job details card", async () => {

@@ -2,26 +2,12 @@
 
 import { useState } from "react";
 
-const statuses = ["saved", "applied", "interviewing", "rejected", "offer", "archived"];
-
-function getStatusColor(status: string) {
-  switch (status) {
-    case "saved":
-      return "bg-gray-100 text-gray-800";
-    case "applied":
-      return "bg-blue-100 text-blue-800";
-    case "interviewing":
-      return "bg-yellow-100 text-yellow-800";
-    case "offer":
-      return "bg-green-100 text-green-800";
-    case "rejected":
-      return "bg-red-100 text-red-800";
-    case "archived":
-      return "bg-gray-200 text-gray-600";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-}
+import {
+  getJobStatusBadgeClassName,
+  getJobStatusLabel,
+  JOB_STATUS_OPTIONS,
+  type JobStatusOption,
+} from "../job-status-options";
 
 export function JobStatusSelect({
   jobId,
@@ -32,13 +18,13 @@ export function JobStatusSelect({
   jobId: string;
   initialStatus: string;
   variant?: "inline" | "popover";
-  onStatusChange?: (status: string) => void;
+  onStatusChange?: (status: JobStatusOption) => void;
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [isSaving, setIsSaving] = useState(false);
   const [open, setOpen] = useState(false);
 
-  async function updateStatus(nextStatus: string) {
+  async function updateStatus(nextStatus: JobStatusOption) {
     const previousStatus = status;
 
     setStatus(nextStatus);
@@ -71,13 +57,13 @@ export function JobStatusSelect({
       <select
         aria-label="Job status"
         value={status}
-        onChange={(e) => updateStatus(e.target.value)}
+        onChange={(e) => updateStatus(e.target.value as JobStatusOption)}
         disabled={isSaving}
         className="rounded-md border border-gray-300 bg-white px-3 py-1"
       >
-        {statuses.map((s) => (
+        {JOB_STATUS_OPTIONS.map((s) => (
           <option key={s} value={s}>
-            {s}
+            {getJobStatusLabel(s)}
           </option>
         ))}
       </select>
@@ -93,14 +79,14 @@ export function JobStatusSelect({
         aria-expanded={open}
         disabled={isSaving}
         onClick={() => setOpen((value) => !value)}
-        className={`cursor-pointer rounded px-2 py-1 text-xs font-medium ${getStatusColor(status)} hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60`}
+        className={`cursor-pointer rounded px-2 py-1 text-xs font-medium ${getJobStatusBadgeClassName(status)} hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60`}
       >
         {status}
       </button>
 
       {open ? (
         <div className="absolute z-10 mt-1 w-40 rounded-md border border-gray-200 bg-white shadow">
-          {statuses.map((s) => (
+          {JOB_STATUS_OPTIONS.map((s) => (
             <button
               key={s}
               type="button"

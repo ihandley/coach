@@ -13,6 +13,16 @@ import {
 import { getMatchScoreState, isRecentlyImported } from "@/lib/jobs-table-signals";
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
+import {
+  areAllJobStatusesVisible,
+  countJobsByStatus,
+  createVisibleJobStatuses,
+  getActiveStatusChipClassName,
+  getJobStatusLabel,
+  JOB_STATUS_OPTIONS,
+  normalizeJobStatus,
+  type JobStatusOption,
+} from "./job-status-options";
 
 function formatRawText(text: string) {
   const paragraphs = text.split(/\n\s*\n/);
@@ -50,21 +60,34 @@ type TailoredResumeResult = {
   versionId: string;
 };
 
-const statusOptions = ["saved", "applied", "interviewing", "offer", "rejected", "archived"];
+const jobDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function formatReadableJobDate(date: string | null | undefined) {
+  if (!date) {
+    return null;
+  }
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return jobDateFormatter.format(parsed);
+}
 
 export function JobsPageClient() {
-  const [visibleStatuses, setVisibleStatuses] = React.useState(new Set(statusOptions));
+  const [visibleStatuses, setVisibleStatuses] =
+    React.useState<Set<JobStatusOption>>(createVisibleJobStatuses);
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
 
-  const statusCounts = jobs.reduce<Record<string, number>>((counts, job) => {
-    const status = String(job.status ?? "")
-      .trim()
-      .toLowerCase();
-    counts[status] = (counts[status] ?? 0) + 1;
-    return counts;
-  }, {});
-
+  const statusCounts = countJobsByStatus(jobs);
   const totalJobs = jobs.length;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -211,6 +234,12 @@ export function JobsPageClient() {
     [],
   );
 
+  const handleUpdateStatus = useCallback((jobId: string, status: JobStatusOption) => {
+    setJobs((currentJobs) =>
+      currentJobs.map((job) => (job.id === jobId ? { ...job, status } : job)),
+    );
+  }, []);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -220,9 +249,9 @@ export function JobsPageClient() {
       <div className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => setVisibleStatuses(new Set(statusOptions))}
+          onClick={() => setVisibleStatuses(createVisibleJobStatuses())}
           className={`rounded-full border px-3 py-1 text-sm ${
-            visibleStatuses.size === statusOptions.length
+            areAllJobStatusesVisible(visibleStatuses)
               ? "border-blue-600 bg-blue-50 text-blue-700"
               : "border-gray-300 bg-white text-gray-600"
           }`}
@@ -230,10 +259,10 @@ export function JobsPageClient() {
           All ({totalJobs})
         </button>
 
-        {statusOptions.map((status) => {
+        {JOB_STATUS_OPTIONS.map((status) => {
           const active = visibleStatuses.has(status);
           const count = statusCounts[status] ?? 0;
-          const label = status.charAt(0).toUpperCase() + status.slice(1);
+          const label = getJobStatusLabel(status);
 
           return (
             <button
@@ -247,15 +276,7 @@ export function JobsPageClient() {
               }}
               className={`rounded-full border px-3 py-1 text-sm ${
                 active
-                  ? status === "applied"
-                    ? "border-blue-500 bg-blue-100 text-blue-700"
-                    : status === "rejected"
-                      ? "border-red-500 bg-red-100 text-red-700"
-                      : status === "interviewing"
-                        ? "border-purple-500 bg-purple-100 text-purple-700"
-                        : status === "offer"
-                          ? "border-green-500 bg-green-100 text-green-700"
-                          : "border-gray-500 bg-gray-100 text-gray-700"
+                  ? getActiveStatusChipClassName(status)
                   : "border-gray-300 bg-white text-gray-600"
               }`}
             >
@@ -352,22 +373,17 @@ export function JobsPageClient() {
       {
         accessorKey: "status",
         header: "Status",
-        cell: ({ row }) => (
-          <JobStatusSelect
-            key={`${row.original.id}-${row.original.status}`}
-            jobId={row.original.id}
-            initialStatus={row.original.status}
-            variant="popover"
-          />
-        ),
+        cell: ({ row }) => <StatusCell job={row.original} onStatusChange={handleUpdateStatus} />,
       },
       {
         accessorKey: "updatedAt",
         header: "Updated",
+        cell: (info) => <DateCell value={info.getValue<string | null>()} />,
       },
       {
         accessorKey: "createdAt",
         header: "Created",
+        cell: (info) => <DateCell value={info.getValue<string | null>()} />,
       },
       {
         accessorKey: "sourceUrl",
@@ -388,11 +404,15 @@ export function JobsPageClient() {
         },
       },
     ],
-    [handleUpdateCompany, selectedJobIds],
+    [handleUpdateCompany, handleUpdateStatus, selectedJobIds],
   );
 
   const filteredJobs = React.useMemo(() => {
-    return jobs.filter((j) => visibleStatuses.has(j.status?.toLowerCase()));
+    return jobs.filter((job) => {
+      const status = normalizeJobStatus(job.status);
+
+      return status ? visibleStatuses.has(status) : false;
+    });
   }, [jobs, visibleStatuses]);
 
   const activeSortLabel = React.useMemo(() => {
@@ -523,10 +543,11 @@ export function JobsPageClient() {
                   className="border border-gray-300 rounded px-2 py-1"
                 >
                   <option value="">Set status...</option>
-                  <option value="saved">Saved</option>
-                  <option value="applied">Applied</option>
-                  <option value="interviewing">Interviewing</option>
-                  <option value="rejected">Rejected</option>
+                  {JOB_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {getJobStatusLabel(status)}
+                    </option>
+                  ))}
                 </select>
 
                 <button
@@ -630,6 +651,40 @@ function MatchScoreCell({ score }: { score: number | null }) {
       <span className="w-10 text-right font-semibold text-gray-900">{scoreState.percentage}%</span>
     </div>
   );
+}
+
+function StatusCell({
+  job,
+  onStatusChange,
+}: {
+  job: RankedJob;
+  onStatusChange: (jobId: string, status: JobStatusOption) => void;
+}) {
+  return (
+    <div
+      onClick={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <JobStatusSelect
+        key={`${job.id}-${job.status}`}
+        jobId={job.id}
+        initialStatus={job.status}
+        variant="popover"
+        onStatusChange={(status) => onStatusChange(job.id, status)}
+      />
+    </div>
+  );
+}
+
+function DateCell({ value }: { value: string | null | undefined }) {
+  const formattedDate = formatReadableJobDate(value);
+
+  if (!formattedDate) {
+    return <span className="text-gray-500">Not set</span>;
+  }
+
+  return <span>{formattedDate}</span>;
 }
 
 function CompanyCell({
