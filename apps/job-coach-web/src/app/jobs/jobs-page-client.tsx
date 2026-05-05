@@ -50,13 +50,12 @@ type TailoredResumeResult = {
   versionId: string;
 };
 
+const statusOptions = ["saved", "applied", "interviewing", "offer", "rejected", "archived"];
+
 export function JobsPageClient() {
-  const [visibleStatuses, setVisibleStatuses] = React.useState(
-    new Set(["saved", "applied", "interviewing", "offer", "rejected"]),
-  );
+  const [visibleStatuses, setVisibleStatuses] = React.useState(new Set(statusOptions));
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
-  const statusOptions = ["saved", "applied", "interviewing", "offer", "rejected"];
 
   const statusCounts = jobs.reduce<Record<string, number>>((counts, job) => {
     const status = String(job.status ?? "")

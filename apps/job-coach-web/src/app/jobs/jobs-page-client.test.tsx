@@ -199,6 +199,79 @@ describe("JobsPageClient", () => {
     expect(within(titleCell as HTMLElement).getByText("NEW")).toBeInTheDocument();
   });
 
+  it("includes archived jobs in the default All status view", async () => {
+    const jobs = [
+      {
+        ...rankedJob,
+        id: "job-saved",
+        title: "Product Engineer",
+        status: "saved",
+      },
+      {
+        ...rankedJob,
+        id: "job-applied",
+        title: "Platform Engineer",
+        status: "applied",
+      },
+      {
+        ...rankedJob,
+        id: "job-interviewing",
+        title: "Infrastructure Engineer",
+        status: "interviewing",
+      },
+      {
+        ...rankedJob,
+        id: "job-rejected",
+        title: "Systems Engineer",
+        status: "rejected",
+      },
+      {
+        ...rankedJob,
+        id: "job-remi",
+        title: "Remi",
+        status: "archived",
+      },
+    ];
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse(jobs);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Remi")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All (5)" })).toHaveClass(
+      "border-blue-600",
+      "bg-blue-50",
+      "text-blue-700",
+    );
+    expect(screen.getAllByTestId("job-row")).toHaveLength(5);
+
+    const archivedChip = screen.getByRole("button", { name: "Archived (1)" });
+    expect(archivedChip).toHaveClass("border-gray-500", "bg-gray-100", "text-gray-700");
+
+    const remiRow = screen.getByText("Remi").closest("tr");
+    expect(remiRow).not.toBeNull();
+    expect(within(remiRow as HTMLElement).getByTestId("job-status")).toHaveClass(
+      "bg-gray-200",
+      "text-gray-600",
+    );
+
+    fireEvent.click(archivedChip);
+    expect(screen.queryByText("Remi")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("job-row")).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole("button", { name: "All (5)" }));
+    expect(screen.getByText("Remi")).toBeInTheDocument();
+    expect(screen.getAllByTestId("job-row")).toHaveLength(5);
+  });
+
   it("shows the delete action only inside the expanded job details card", async () => {
     render(<JobsPageClient />);
 
