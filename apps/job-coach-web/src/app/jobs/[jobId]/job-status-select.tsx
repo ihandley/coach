@@ -27,10 +27,12 @@ export function JobStatusSelect({
   jobId,
   initialStatus,
   variant = "inline",
+  onStatusChange,
 }: {
   jobId: string;
   initialStatus: string;
   variant?: "inline" | "popover";
+  onStatusChange?: (status: string) => void;
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,6 +54,8 @@ export function JobStatusSelect({
       if (!res.ok) {
         throw new Error("Unable to update job status.");
       }
+
+      onStatusChange?.(nextStatus);
     } catch (err) {
       console.error("Status update failed", err);
       setStatus(previousStatus);

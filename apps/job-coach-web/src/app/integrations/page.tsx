@@ -2,7 +2,9 @@ import { RefreshButton } from "./apply-updates-button";
 import { EmailIntegrationTable } from "./email-integration-table";
 
 async function getEmails() {
-  const res = await fetch("http://localhost:3000/api/integrations/email", {
+  const baseUrl = process.env.JOB_COACH_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+
+  const res = await fetch(`${baseUrl}/api/integrations/email`, {
     cache: "no-store",
   });
 
