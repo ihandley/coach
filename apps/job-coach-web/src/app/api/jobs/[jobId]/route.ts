@@ -29,6 +29,33 @@ export async function GET(_request: Request, context: { params: Promise<{ jobId:
 export async function PATCH(req: Request, context: { params: Promise<{ jobId: string }> }) {
   const body = await req.json();
   const { jobId } = await context.params;
+
+  if (typeof body.company === "string") {
+    const company = body.company.trim();
+
+    if (!company) {
+      return Response.json({ error: "INVALID_COMPANY" }, { status: 400 });
+    }
+
+    const db = createServerClient();
+    const { data, error } = await db
+      .from("jobs")
+      .update({
+        company,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", jobId)
+      .select("id, company")
+      .single();
+
+    if (error) {
+      console.error(error);
+      return Response.json({ error: "UPDATE_COMPANY_FAILED" }, { status: 500 });
+    }
+
+    return Response.json(data);
+  }
+
   const jobRepository = createJobRepository();
 
   const job = await jobRepository.updateJobStatus({

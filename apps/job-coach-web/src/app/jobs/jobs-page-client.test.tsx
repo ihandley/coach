@@ -36,9 +36,11 @@ describe("JobsPageClient", () => {
 
   let fetchMock: ReturnType<typeof vi.fn>;
   let deleteShouldFail: boolean;
+  let companyUpdateShouldFail: boolean;
 
   beforeEach(() => {
     deleteShouldFail = false;
+    companyUpdateShouldFail = false;
 
     fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input.toString();
@@ -91,6 +93,17 @@ describe("JobsPageClient", () => {
         );
       }
 
+      if (url === "/api/jobs/job-1" && init?.method === "PATCH") {
+        const body = JSON.parse(String(init.body));
+
+        return companyUpdateShouldFail
+          ? jsonResponse({ error: "Unable to update company." }, { status: 500 })
+          : jsonResponse({
+              id: "job-1",
+              company: body.company,
+            });
+      }
+
       if (url === "/api/jobs/job-1" && init?.method === "DELETE") {
         return deleteShouldFail
           ? jsonResponse({ error: "Unable to delete job." }, { status: 500 })
@@ -107,6 +120,247 @@ describe("JobsPageClient", () => {
     cleanup();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("shows skeleton rows while ranked jobs load", async () => {
+    render(<JobsPageClient />);
+
+    expect(screen.getByRole("status", { name: "Loading jobs" })).toBeInTheDocument();
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+  });
+
+  it("shows a retryable error state when ranked jobs fail to load", async () => {
+    let shouldFail = true;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return shouldFail
+          ? jsonResponse({ error: "Ranked jobs unavailable." }, { status: 500 })
+          : jsonResponse([rankedJob]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ranked jobs unavailable.");
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText("No jobs yet. Import one to get started.")).not.toBeInTheDocument();
+
+    shouldFail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+  });
+
+  it("renders score states, NEW badges, and the default sort label", async () => {
+    const recentlyCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const olderCreatedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            id: "job-unmatched",
+            title: "Recently Imported",
+            createdAt: recentlyCreatedAt,
+            updatedAt: recentlyCreatedAt,
+            score: null,
+          },
+          {
+            ...rankedJob,
+            id: "job-high",
+            title: "Strong Match",
+            createdAt: olderCreatedAt,
+            updatedAt: olderCreatedAt,
+            score: 0.82,
+          },
+          {
+            ...rankedJob,
+            id: "job-zero",
+            title: "Explicit Zero Match",
+            createdAt: olderCreatedAt,
+            updatedAt: olderCreatedAt,
+            score: 0,
+          },
+        ]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Recently Imported")).toBeInTheDocument();
+    expect(screen.getByText("Not matched")).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Match score 82%" })).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Match score 0%" })).toBeInTheDocument();
+    expect(screen.getAllByRole("meter")).toHaveLength(2);
+    expect(
+      screen.getByText("Default sort: NEW jobs first, then matched jobs by score."),
+    ).toBeInTheDocument();
+
+    const titleCell = screen.getByText("Recently Imported").closest("td");
+    expect(titleCell).not.toBeNull();
+    expect(within(titleCell as HTMLElement).getByText("NEW")).toBeInTheDocument();
+  });
+
+  it("edits the company inline without expanding the job row", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Pattern")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
+
+    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+
+    const companyInput = screen.getByLabelText("Company for Product Engineer");
+    fireEvent.change(companyInput, {
+      target: {
+        value: "Pattern Labs",
+      },
+    });
+    fireEvent.keyDown(companyInput, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/jobs/job-1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ company: "Pattern Labs" }),
+        }),
+      );
+    });
+
+    expect(await screen.findByText("Pattern Labs")).toBeInTheDocument();
+    expect(screen.queryByText("Pattern")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+  });
+
+  it("saves company edits on blur and reverts on failure", async () => {
+    companyUpdateShouldFail = true;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Pattern")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
+
+    const companyInput = screen.getByLabelText("Company for Product Engineer");
+    fireEvent.change(companyInput, {
+      target: {
+        value: "Pattern Labs",
+      },
+    });
+    fireEvent.blur(companyInput);
+
+    expect(await screen.findByText("Unable to update company.")).toBeInTheDocument();
+    expect(screen.getByText("Pattern")).toBeInTheDocument();
+    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
+  });
+
+  it("cancels company edits on escape", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Pattern")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
+
+    const companyInput = screen.getByLabelText("Company for Product Engineer");
+    fireEvent.change(companyInput, {
+      target: {
+        value: "Pattern Labs",
+      },
+    });
+    fireEvent.keyDown(companyInput, { key: "Escape" });
+
+    expect(screen.getByText("Pattern")).toBeInTheDocument();
+    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/jobs/job-1",
+      expect.objectContaining({ method: "PATCH" }),
+    );
+  });
+
+  it("includes archived jobs in the default All status view", async () => {
+    const jobs = [
+      {
+        ...rankedJob,
+        id: "job-saved",
+        title: "Product Engineer",
+        status: "saved",
+      },
+      {
+        ...rankedJob,
+        id: "job-applied",
+        title: "Platform Engineer",
+        status: "applied",
+      },
+      {
+        ...rankedJob,
+        id: "job-interviewing",
+        title: "Infrastructure Engineer",
+        status: "interviewing",
+      },
+      {
+        ...rankedJob,
+        id: "job-rejected",
+        title: "Systems Engineer",
+        status: "rejected",
+      },
+      {
+        ...rankedJob,
+        id: "job-remi",
+        title: "Remi",
+        status: "archived",
+      },
+    ];
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse(jobs);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Remi")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All (5)" })).toHaveClass(
+      "border-blue-600",
+      "bg-blue-50",
+      "text-blue-700",
+    );
+    expect(screen.getAllByTestId("job-row")).toHaveLength(5);
+
+    const archivedChip = screen.getByRole("button", { name: "Archived (1)" });
+    expect(archivedChip).toHaveClass("border-gray-500", "bg-gray-100", "text-gray-700");
+
+    const remiRow = screen.getByText("Remi").closest("tr");
+    expect(remiRow).not.toBeNull();
+    expect(within(remiRow as HTMLElement).getByTestId("job-status")).toHaveClass(
+      "bg-gray-200",
+      "text-gray-600",
+    );
+
+    fireEvent.click(archivedChip);
+    expect(screen.queryByText("Remi")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("job-row")).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole("button", { name: "All (5)" }));
+    expect(screen.getByText("Remi")).toBeInTheDocument();
+    expect(screen.getAllByTestId("job-row")).toHaveLength(5);
   });
 
   it("shows the delete action only inside the expanded job details card", async () => {

@@ -1,8 +1,15 @@
 import { createServerClient, DbJobRepository } from "@coach/db";
 
+import { compareRankedJobSignals } from "@/lib/jobs-table-signals";
+
+type JobMatchRow = {
+  job_id: string;
+  score: unknown;
+};
+
 export function normalizeRankedScore(score: unknown) {
   if (typeof score !== "number" || Number.isNaN(score)) {
-    return 0;
+    return null;
   }
 
   return Math.max(0, Math.min(score / 100, 1));
@@ -31,12 +38,18 @@ export async function GET() {
 
   const { data: matches } = await db.from("job_matches").select("job_id, score");
 
-  const matchMap = new Map(
-    (matches || []).map((m: any) => [m.job_id, normalizeRankedScore(m.score)]),
-  );
+  const matchMap = new Map<string, number>();
+
+  for (const match of (matches || []) as JobMatchRow[]) {
+    const normalizedScore = normalizeRankedScore(match.score);
+
+    if (normalizedScore !== null) {
+      matchMap.set(match.job_id, normalizedScore);
+    }
+  }
 
   const ranked = jobs
-    .map((job: any) => ({
+    .map((job) => ({
       id: job.id,
       title: job.title,
       company: job.company,
@@ -46,9 +59,9 @@ export async function GET() {
       structuredSummary: job.structuredSummary,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
-      score: matchMap.get(job.id) ?? 0,
+      score: matchMap.has(job.id) ? matchMap.get(job.id)! : null,
     }))
-    .sort((a: any, b: any) => b.score - a.score);
+    .sort(compareRankedJobSignals);
 
   return Response.json(ranked);
 }
