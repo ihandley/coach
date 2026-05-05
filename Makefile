@@ -26,6 +26,9 @@ typecheck:
 dev:
 	pnpm --filter job-coach-web dev
 
+prd:
+	pnpm -rub prd:job-coach
+
 build:
 	pnpm --filter job-coach-web build
 
