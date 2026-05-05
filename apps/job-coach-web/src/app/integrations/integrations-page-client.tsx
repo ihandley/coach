@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useEffect, useState } from "react";
+import { createElement, useCallback, useEffect, useState } from "react";
 
 export type IntegrationAccount = {
   id: string;
@@ -37,14 +37,16 @@ export function IntegrationsPageClient({
     IntegrationAccount | null | undefined
   >(undefined);
 
-  async function refreshIntegrationAccount() {
+  const refreshIntegrationAccount = useCallback(async () => {
     const nextAccount = await getIntegrationAccount();
     setIntegrationAccount(nextAccount);
-  }
+  }, [getIntegrationAccount]);
 
   useEffect(() => {
-    void refreshIntegrationAccount();
-  }, [getIntegrationAccount]);
+    queueMicrotask(() => {
+      void refreshIntegrationAccount();
+    });
+  }, [refreshIntegrationAccount]);
 
   if (integrationAccount === undefined) {
     return createElement(

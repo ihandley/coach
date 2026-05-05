@@ -96,7 +96,7 @@ export function createEvaluationProductionEntry({
     },
   };
 
-  const scorer = createDbJobFitScorer({
+  const _scorer = createDbJobFitScorer({
     jobs,
     resumeProfiles,
     evaluations,

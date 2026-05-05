@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import {
   getJobStatusBadgeClassName,
+  getJobStatusDisplayLabel,
   getJobStatusLabel,
   JOB_STATUS_OPTIONS,
   type JobStatusOption,
@@ -81,7 +82,7 @@ export function JobStatusSelect({
         onClick={() => setOpen((value) => !value)}
         className={`cursor-pointer rounded px-2 py-1 text-xs font-medium ${getJobStatusBadgeClassName(status)} hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60`}
       >
-        {status}
+        {getJobStatusDisplayLabel(status)}
       </button>
 
       {open ? (
@@ -93,7 +94,7 @@ export function JobStatusSelect({
               onClick={() => updateStatus(s)}
               className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
             >
-              {s}
+              {getJobStatusLabel(s)}
             </button>
           ))}
         </div>

@@ -1,4 +1,3 @@
-import type { EvaluationResult } from "@coach/core";
 import { createDbJobFitScorer, DbJobEvaluationRepository } from "@coach/db";
 
 import { createAppEvaluationServer } from "./create-evaluation-server";

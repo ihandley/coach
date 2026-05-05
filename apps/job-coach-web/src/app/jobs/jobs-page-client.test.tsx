@@ -236,6 +236,41 @@ describe("JobsPageClient", () => {
     expect(screen.queryByText("2026-04-25T12:00:00.000Z")).not.toBeInTheDocument();
   });
 
+  it("renders missing and invalid dates gracefully", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            id: "job-invalid-dates",
+            title: "Invalid Dates",
+            createdAt: "not-a-date",
+            updatedAt: "also-not-a-date",
+          },
+          {
+            ...rankedJob,
+            id: "job-missing-dates",
+            title: "Missing Dates",
+            createdAt: null,
+            updatedAt: undefined,
+          },
+        ]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Invalid Dates")).toBeInTheDocument();
+    expect(screen.getByText("Missing Dates")).toBeInTheDocument();
+    expect(screen.getAllByText("Not set")).toHaveLength(4);
+    expect(screen.queryByText("not-a-date")).not.toBeInTheDocument();
+    expect(screen.queryByText("also-not-a-date")).not.toBeInTheDocument();
+  });
+
   it("edits the company inline without expanding the job row", async () => {
     render(<JobsPageClient />);
 
@@ -385,7 +420,7 @@ describe("JobsPageClient", () => {
     expect(screen.getByRole("button", { name: "Applied (0)" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit job status" }));
-    fireEvent.click(screen.getByRole("button", { name: "applied" }));
+    fireEvent.click(screen.getByRole("button", { name: "Applied" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(

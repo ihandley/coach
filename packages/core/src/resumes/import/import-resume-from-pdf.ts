@@ -13,6 +13,8 @@ type TextContentItem = {
   transform?: number[];
 };
 
+const NULL_CHARACTER = String.fromCharCode(0);
+
 async function ensurePdfWorker() {
   const workerGlobal = globalThis as PdfjsWorkerGlobal;
 
@@ -23,7 +25,7 @@ async function ensurePdfWorker() {
 
 function normalizeExtractedText(text: string) {
   return text
-    .replace(/\u0000/g, "")
+    .replaceAll(NULL_CHARACTER, "")
     .replace(/\u00ad/g, "")
     .replace(/\(cid:\d+\)/g, "")
     .replace(/[^\S\r\n]+/g, " ")

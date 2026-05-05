@@ -4,7 +4,7 @@ import { InMemoryJobRepository } from "@coach/core";
 import { createInMemoryJobEvaluationRepository } from "@coach/core";
 import { createInMemoryResumeProfileRepository } from "@coach/core";
 
-import { createEvaluationServer, type EvaluationServer } from "./evaluations";
+import { createEvaluationServer } from "./evaluations";
 
 describe("createEvaluationServer", () => {
   it("scores a job fit and returns the saved evaluation", async () => {

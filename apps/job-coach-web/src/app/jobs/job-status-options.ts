@@ -1,16 +1,6 @@
-import type { JobStatus } from "@coach/core/jobs";
+import { JOB_STATUSES } from "@coach/core/jobs";
 
-export const JOB_STATUS_OPTIONS = [
-  "saved",
-  "researching",
-  "applying",
-  "applied",
-  "interviewing",
-  "offer",
-  "rejected",
-  "withdrawn",
-  "archived",
-] as const satisfies readonly JobStatus[];
+export const JOB_STATUS_OPTIONS = JOB_STATUSES;
 
 export type JobStatusOption = (typeof JOB_STATUS_OPTIONS)[number];
 
@@ -87,6 +77,12 @@ export function areAllJobStatusesVisible(visibleStatuses: ReadonlySet<JobStatusO
 
 export function getJobStatusLabel(status: JobStatusOption) {
   return STATUS_LABELS[status];
+}
+
+export function getJobStatusDisplayLabel(status: string) {
+  const normalized = normalizeJobStatus(status);
+
+  return normalized ? getJobStatusLabel(normalized) : status;
 }
 
 export function getActiveStatusChipClassName(status: JobStatusOption) {

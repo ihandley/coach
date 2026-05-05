@@ -5,6 +5,7 @@ import type {
   ApplicationEventRecord,
   DashboardSummary,
   JobRecord,
+  JobStatus,
   UpdateJobStatusInput,
   CreateJobInput,
   ListJobsInput,
@@ -26,17 +27,7 @@ export class JobNotFoundError extends Error {
 }
 
 function createEmptyCountsByStatus() {
-  return {
-    saved: 0,
-    researching: 0,
-    applying: 0,
-    applied: 0,
-    interviewing: 0,
-    offer: 0,
-    rejected: 0,
-    withdrawn: 0,
-    archived: 0,
-  };
+  return Object.fromEntries(JOB_STATUSES.map((status) => [status, 0])) as Record<JobStatus, number>;
 }
 
 export class JobTracker implements JobTrackerService {

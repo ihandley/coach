@@ -42,7 +42,9 @@ async function classifyStatusWithLLM(job: any): Promise<string> {
       if (result.status === "none") return "saved";
       return result.status;
     }
-  } catch {}
+  } catch {
+    // Fall back to the legacy status mapping when LLM classification is unavailable.
+  }
 
   return mapStatus(job.status);
 }

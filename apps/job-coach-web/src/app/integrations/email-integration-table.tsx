@@ -141,6 +141,8 @@ export function EmailIntegrationTable({ emails }: { emails: EmailRow[] }) {
     [],
   );
 
+  // TanStack Table intentionally returns non-memoizable table helpers.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: filteredEmails,
     columns,

@@ -12,9 +12,12 @@ type Job = {
 };
 
 async function getJob(jobId: string): Promise<Job | null> {
-  const res = await fetch(`${process.env.JOB_COACH_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`}/api/jobs/${jobId}`, {
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `${process.env.JOB_COACH_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`}/api/jobs/${jobId}`,
+    {
+      cache: "no-store",
+    },
+  );
 
   if (!res.ok) return null;
   return res.json();
