@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listJobs = vi.fn();
 const deleteJob = vi.fn();
+const from = vi.fn();
 
 vi.mock("@coach/db", async () => {
   const actual = await vi.importActual<object>("@coach/db");
@@ -16,6 +17,9 @@ vi.mock("@coach/db", async () => {
 
   return {
     ...actual,
+    createServerClient: vi.fn(() => ({
+      from,
+    })),
     DbJobRepository: MockDbJobRepository,
   };
 });
@@ -23,6 +27,7 @@ vi.mock("@coach/db", async () => {
 beforeEach(() => {
   listJobs.mockReset();
   deleteJob.mockReset();
+  from.mockReset();
   vi.resetModules();
 });
 
@@ -70,6 +75,48 @@ describe("GET /api/jobs/[jobId]", () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toMatchObject({
       error: "JOB_NOT_FOUND",
+    });
+  });
+});
+
+describe("PATCH /api/jobs/[jobId]", () => {
+  it("updates the company field", async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: {
+        id: "job-123",
+        company: "Acme Labs",
+      },
+      error: null,
+    });
+    const select = vi.fn(() => ({ single }));
+    const eq = vi.fn(() => ({ select }));
+    const update = vi.fn(() => ({ eq }));
+
+    from.mockReturnValue({ update });
+
+    const { PATCH } = await import("./route");
+
+    const response = await PATCH(
+      new Request("http://localhost/api/jobs/job-123", {
+        method: "PATCH",
+        body: JSON.stringify({ company: " Acme Labs " }),
+      }),
+      {
+        params: Promise.resolve({ jobId: "job-123" }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(from).toHaveBeenCalledWith("jobs");
+    expect(update).toHaveBeenCalledWith({
+      company: "Acme Labs",
+      updated_at: expect.any(String),
+    });
+    expect(eq).toHaveBeenCalledWith("id", "job-123");
+    expect(select).toHaveBeenCalledWith("id, company");
+    await expect(response.json()).resolves.toEqual({
+      id: "job-123",
+      company: "Acme Labs",
     });
   });
 });

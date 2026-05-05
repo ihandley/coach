@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -166,6 +166,51 @@ export function JobsPageClient() {
     }
   }
 
+  const handleUpdateCompany = useCallback(
+    async (jobId: string, company: string, previousCompany: string) => {
+      const nextCompany = company.trim();
+
+      if (!nextCompany) {
+        return;
+      }
+
+      setError(null);
+      setJobs((currentJobs) =>
+        currentJobs.map((job) => (job.id === jobId ? { ...job, company: nextCompany } : job)),
+      );
+
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ company: nextCompany }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Update company failed.");
+        }
+
+        const body = await res.json().catch(() => null);
+        const savedCompany =
+          body && typeof body.company === "string" && body.company.trim()
+            ? body.company
+            : nextCompany;
+
+        setJobs((currentJobs) =>
+          currentJobs.map((job) => (job.id === jobId ? { ...job, company: savedCompany } : job)),
+        );
+      } catch (err) {
+        console.error(err);
+        setJobs((currentJobs) =>
+          currentJobs.map((job) => (job.id === jobId ? { ...job, company: previousCompany } : job)),
+        );
+        setError("Unable to update company.");
+        throw err;
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -302,6 +347,7 @@ export function JobsPageClient() {
       {
         accessorKey: "company",
         header: "Company",
+        cell: ({ row }) => <CompanyCell job={row.original} onUpdateCompany={handleUpdateCompany} />,
       },
       {
         accessorKey: "status",
@@ -342,7 +388,7 @@ export function JobsPageClient() {
         },
       },
     ],
-    [selectedJobIds],
+    [handleUpdateCompany, selectedJobIds],
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -582,6 +628,121 @@ function MatchScoreCell({ score }: { score: number | null }) {
         <div className={`h-2 rounded ${barColor}`} style={{ width: `${scoreState.percentage}%` }} />
       </div>
       <span className="w-10 text-right font-semibold text-gray-900">{scoreState.percentage}%</span>
+    </div>
+  );
+}
+
+function CompanyCell({
+  job,
+  onUpdateCompany,
+}: {
+  job: RankedJob;
+  onUpdateCompany: (jobId: string, company: string, previousCompany: string) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(job.company);
+  const [isSaving, setIsSaving] = useState(false);
+  const skipBlurSaveRef = useRef(false);
+
+  async function saveCompany() {
+    if (isSaving) {
+      return;
+    }
+
+    const nextCompany = draft.trim();
+
+    if (!nextCompany || nextCompany === job.company) {
+      setDraft(job.company);
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await onUpdateCompany(job.id, nextCompany, job.company);
+      setDraft(nextCompany);
+      setIsEditing(false);
+    } catch {
+      setDraft(job.company);
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function cancelEdit() {
+    skipBlurSaveRef.current = true;
+    setDraft(job.company);
+    setIsEditing(false);
+  }
+
+  if (isEditing) {
+    return (
+      <input
+        aria-label={`Company for ${job.title}`}
+        autoFocus
+        disabled={isSaving}
+        value={draft}
+        onBlur={() => {
+          if (skipBlurSaveRef.current) {
+            skipBlurSaveRef.current = false;
+            return;
+          }
+
+          void saveCompany();
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          event.stopPropagation();
+
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void saveCompany();
+          }
+
+          if (event.key === "Escape") {
+            event.preventDefault();
+            cancelEdit();
+          }
+        }}
+        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        className="w-44 rounded-md border border-blue-300 px-2 py-1 text-sm"
+      />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span>{job.company}</span>
+      <button
+        type="button"
+        aria-label={`Edit company for ${job.title}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          setDraft(job.company);
+          setIsEditing(true);
+        }}
+        onMouseDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+        className="rounded p-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+      >
+        <svg
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
+          <path d="m19.5 7.125-2.625-2.625" />
+        </svg>
+      </button>
     </div>
   );
 }

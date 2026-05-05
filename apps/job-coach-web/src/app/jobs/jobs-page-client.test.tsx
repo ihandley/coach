@@ -36,9 +36,11 @@ describe("JobsPageClient", () => {
 
   let fetchMock: ReturnType<typeof vi.fn>;
   let deleteShouldFail: boolean;
+  let companyUpdateShouldFail: boolean;
 
   beforeEach(() => {
     deleteShouldFail = false;
+    companyUpdateShouldFail = false;
 
     fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input.toString();
@@ -89,6 +91,17 @@ describe("JobsPageClient", () => {
           },
           { status: 201 },
         );
+      }
+
+      if (url === "/api/jobs/job-1" && init?.method === "PATCH") {
+        const body = JSON.parse(String(init.body));
+
+        return companyUpdateShouldFail
+          ? jsonResponse({ error: "Unable to update company." }, { status: 500 })
+          : jsonResponse({
+              id: "job-1",
+              company: body.company,
+            });
       }
 
       if (url === "/api/jobs/job-1" && init?.method === "DELETE") {
@@ -197,6 +210,84 @@ describe("JobsPageClient", () => {
     const titleCell = screen.getByText("Recently Imported").closest("td");
     expect(titleCell).not.toBeNull();
     expect(within(titleCell as HTMLElement).getByText("NEW")).toBeInTheDocument();
+  });
+
+  it("edits the company inline without expanding the job row", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Pattern")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
+
+    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+
+    const companyInput = screen.getByLabelText("Company for Product Engineer");
+    fireEvent.change(companyInput, {
+      target: {
+        value: "Pattern Labs",
+      },
+    });
+    fireEvent.keyDown(companyInput, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/jobs/job-1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ company: "Pattern Labs" }),
+        }),
+      );
+    });
+
+    expect(await screen.findByText("Pattern Labs")).toBeInTheDocument();
+    expect(screen.queryByText("Pattern")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+  });
+
+  it("saves company edits on blur and reverts on failure", async () => {
+    companyUpdateShouldFail = true;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Pattern")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
+
+    const companyInput = screen.getByLabelText("Company for Product Engineer");
+    fireEvent.change(companyInput, {
+      target: {
+        value: "Pattern Labs",
+      },
+    });
+    fireEvent.blur(companyInput);
+
+    expect(await screen.findByText("Unable to update company.")).toBeInTheDocument();
+    expect(screen.getByText("Pattern")).toBeInTheDocument();
+    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
+  });
+
+  it("cancels company edits on escape", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Pattern")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
+
+    const companyInput = screen.getByLabelText("Company for Product Engineer");
+    fireEvent.change(companyInput, {
+      target: {
+        value: "Pattern Labs",
+      },
+    });
+    fireEvent.keyDown(companyInput, { key: "Escape" });
+
+    expect(screen.getByText("Pattern")).toBeInTheDocument();
+    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "/api/jobs/job-1",
+      expect.objectContaining({ method: "PATCH" }),
+    );
   });
 
   it("includes archived jobs in the default All status view", async () => {
