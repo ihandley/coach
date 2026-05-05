@@ -41,6 +41,25 @@ export function RefreshButton() {
     }
   }
 
+  async function applyUpdates() {
+    setIsRefreshing(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/integrations/email/apply", {
+        method: "POST",
+      });
+
+      if (!res.ok) throw new Error();
+
+      setMessage("Updates applied.");
+      setTimeout(() => location.reload(), 700);
+    } catch {
+      setMessage("Apply failed.");
+      setIsRefreshing(false);
+    }
+  }
+
   return (
     <div className="flex flex-col items-end gap-2">
       <button
@@ -49,6 +68,13 @@ export function RefreshButton() {
         className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2 rounded shadow"
       >
         {isRefreshing ? "Refreshing…" : "Refresh"}
+      </button>
+
+      <button
+        onClick={applyUpdates}
+        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow"
+      >
+        Apply Updates
       </button>
 
       {isRefreshing ? (

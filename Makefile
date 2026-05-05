@@ -26,6 +26,18 @@ typecheck:
 dev:
 	pnpm --filter job-coach-web dev
 
+.PHONY: prd
+
+prd:
+	NEXT_PUBLIC_APP_ENV=production \
+	JOB_COACH_APP_URL="http://localhost:3001" \
+	SUPABASE_URL="https://akmlurgldseksxgvksut.supabase.co" \
+	SUPABASE_SERVICE_ROLE_KEY="$$(security find-generic-password -s SUPABASE_SERVICE_ROLE_KEY -w)" \
+	OPENAI_API_KEY="$$(security find-generic-password -s OPENAI_API_KEY -w)" \
+	NODE_ENV=production \
+	PORT=3001 \
+	pnpm --filter job-coach-web start
+
 build:
 	pnpm --filter job-coach-web build
 

@@ -13,13 +13,14 @@ function readKeychainValue(service: string) {
 }
 
 export async function listRecentEmails() {
-  const resJobs = await fetch("http://localhost:3000/api/jobs");
+  const baseUrl = process.env.JOB_COACH_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+  const resJobs = await fetch(`${baseUrl}/api/jobs`);
   const jobs = resJobs.ok ? await resJobs.json() : [];
 
   const auth = new google.auth.OAuth2(
     readKeychainValue("GOOGLE_CLIENT_ID"),
     readKeychainValue("GOOGLE_CLIENT_SECRET"),
-    "http://localhost:3000/api/integrations/email/callback",
+    `${baseUrl}/api/integrations/email/callback`,
   );
 
   auth.setCredentials({

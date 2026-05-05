@@ -54,6 +54,15 @@ export function JobsPageClient() {
   );
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
+  const statusOptions = ["saved", "applied", "interviewing", "offer", "rejected"];
+
+  const statusCounts = jobs.reduce<Record<string, number>>((counts, job) => {
+    const status = String(job.status ?? "").trim().toLowerCase();
+    counts[status] = (counts[status] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  const totalJobs = jobs.length;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
@@ -143,6 +152,56 @@ export function JobsPageClient() {
     load();
   }, []);
 
+  function StatusFilterChips() {
+    return (
+      <div className="mb-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setVisibleStatuses(new Set(statusOptions))}
+          className={`rounded-full border px-3 py-1 text-sm ${
+            visibleStatuses.size === statusOptions.length
+              ? "border-blue-600 bg-blue-50 text-blue-700"
+              : "border-gray-300 bg-white text-gray-600"
+          }`}
+        >
+          All ({totalJobs})
+        </button>
+
+        {statusOptions.map((status) => {
+          const active = visibleStatuses.has(status);
+          const count = statusCounts[status] ?? 0;
+          const label = status.charAt(0).toUpperCase() + status.slice(1);
+
+          return (
+            <button
+              key={status}
+              type="button"
+              onClick={() => {
+                const next = new Set(visibleStatuses);
+                if (next.has(status)) next.delete(status);
+                else next.add(status);
+                setVisibleStatuses(next);
+              }}
+              className={`rounded-full border px-3 py-1 text-sm ${
+                active
+                  ? (
+                      status === "applied" ? "border-blue-500 bg-blue-100 text-blue-700" :
+                      status === "rejected" ? "border-red-500 bg-red-100 text-red-700" :
+                      status === "interviewing" ? "border-purple-500 bg-purple-100 text-purple-700" :
+                      status === "offer" ? "border-green-500 bg-green-100 text-green-700" :
+                      "border-gray-500 bg-gray-100 text-gray-700"
+                    )
+                  : "border-gray-300 bg-white text-gray-600"
+              }`}
+            >
+              {label} ({count})
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   const columns = useMemo<ColumnDef<RankedJob>[]>(
     () => [
       {
@@ -227,6 +286,7 @@ export function JobsPageClient() {
         header: "Status",
         cell: ({ row }) => (
           <JobStatusSelect
+            key={`${row.original.id}-${row.original.status}`}
             jobId={row.original.id}
             initialStatus={row.original.status}
             variant="popover"
@@ -288,34 +348,6 @@ export function JobsPageClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-2 text-sm text-slate-600">Show:</span>
-          {["saved", "applied", "interviewing", "offer", "rejected", "archived"].map((status) => {
-            const active = visibleStatuses.has(status);
-
-            return (
-              <button
-                key={status}
-                type="button"
-                aria-pressed={active}
-                onClick={() => {
-                  const next = new Set(visibleStatuses);
-                  if (next.has(status)) next.delete(status);
-                  else next.add(status);
-                  setVisibleStatuses(next);
-                }}
-                className={`rounded-full border px-3 py-1 text-sm capitalize transition ${
-                  active
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {status}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {error ? (
@@ -408,6 +440,8 @@ export function JobsPageClient() {
               </div>
             </div>
           )}
+
+          <StatusFilterChips />
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="min-w-full text-sm">

@@ -8,7 +8,7 @@ export async function applyStatusUpdates(emails: any[]) {
   );
 
   for (const email of updates) {
-    await fetch(`http://localhost:3000/api/jobs/${email.matchedJobId}/status`, {
+    await fetch(`${process.env.JOB_COACH_APP_URL ?? `http://localhost:${process.env.PORT ?? 3000}`}/api/jobs/${email.matchedJobId}/status`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
