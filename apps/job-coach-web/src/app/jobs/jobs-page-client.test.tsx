@@ -109,6 +109,96 @@ describe("JobsPageClient", () => {
     vi.unstubAllGlobals();
   });
 
+  it("shows skeleton rows while ranked jobs load", async () => {
+    render(<JobsPageClient />);
+
+    expect(screen.getByRole("status", { name: "Loading jobs" })).toBeInTheDocument();
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+  });
+
+  it("shows a retryable error state when ranked jobs fail to load", async () => {
+    let shouldFail = true;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return shouldFail
+          ? jsonResponse({ error: "Ranked jobs unavailable." }, { status: 500 })
+          : jsonResponse([rankedJob]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ranked jobs unavailable.");
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText("No jobs yet. Import one to get started.")).not.toBeInTheDocument();
+
+    shouldFail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+  });
+
+  it("renders score states, NEW badges, and the default sort label", async () => {
+    const recentlyCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const olderCreatedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            id: "job-unmatched",
+            title: "Recently Imported",
+            createdAt: recentlyCreatedAt,
+            updatedAt: recentlyCreatedAt,
+            score: null,
+          },
+          {
+            ...rankedJob,
+            id: "job-high",
+            title: "Strong Match",
+            createdAt: olderCreatedAt,
+            updatedAt: olderCreatedAt,
+            score: 0.82,
+          },
+          {
+            ...rankedJob,
+            id: "job-zero",
+            title: "Explicit Zero Match",
+            createdAt: olderCreatedAt,
+            updatedAt: olderCreatedAt,
+            score: 0,
+          },
+        ]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Recently Imported")).toBeInTheDocument();
+    expect(screen.getByText("Not matched")).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Match score 82%" })).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Match score 0%" })).toBeInTheDocument();
+    expect(screen.getAllByRole("meter")).toHaveLength(2);
+    expect(
+      screen.getByText("Default sort: NEW jobs first, then matched jobs by score."),
+    ).toBeInTheDocument();
+
+    const titleCell = screen.getByText("Recently Imported").closest("td");
+    expect(titleCell).not.toBeNull();
+    expect(within(titleCell as HTMLElement).getByText("NEW")).toBeInTheDocument();
+  });
+
   it("shows the delete action only inside the expanded job details card", async () => {
     render(<JobsPageClient />);
 

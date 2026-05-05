@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -9,6 +9,8 @@ import {
   ColumnDef,
   SortingState,
 } from "@tanstack/react-table";
+
+import { getMatchScoreState, isRecentlyImported } from "@/lib/jobs-table-signals";
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
 
@@ -31,7 +33,7 @@ type RankedJob = {
   sourceText?: string | null;
   createdAt: string;
   updatedAt: string;
-  score: number;
+  score: number | null;
   structuredSummary?: any;
 };
 
@@ -57,7 +59,9 @@ export function JobsPageClient() {
   const statusOptions = ["saved", "applied", "interviewing", "offer", "rejected"];
 
   const statusCounts = jobs.reduce<Record<string, number>>((counts, job) => {
-    const status = String(job.status ?? "").trim().toLowerCase();
+    const status = String(job.status ?? "")
+      .trim()
+      .toLowerCase();
     counts[status] = (counts[status] ?? 0) + 1;
     return counts;
   }, {});
@@ -65,27 +69,42 @@ export function JobsPageClient() {
   const totalJobs = jobs.length;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [url, setUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
 
-  async function load() {
-    const res = await fetch("/api/jobs/ranked");
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      const message =
-        body && typeof body.error === "string" ? body.error : "Unable to load ranked jobs.";
-
-      setError(message);
-      return;
-    }
-
-    setJobs(await res.json());
+  const load = useCallback(async () => {
+    setIsLoading(true);
     setError(null);
-  }
+
+    try {
+      const res = await fetch("/api/jobs/ranked");
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const message =
+          body && typeof body.error === "string" ? body.error : "Unable to load ranked jobs.";
+
+        throw new Error(message);
+      }
+
+      const body = await res.json();
+
+      if (!Array.isArray(body)) {
+        throw new Error("Unable to load ranked jobs.");
+      }
+
+      setJobs(body);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error && err.message ? err.message : "Unable to load ranked jobs.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   async function handleImport() {
     if (!url || isImporting) return;
@@ -149,8 +168,8 @@ export function JobsPageClient() {
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   function StatusFilterChips() {
     return (
@@ -184,13 +203,15 @@ export function JobsPageClient() {
               }}
               className={`rounded-full border px-3 py-1 text-sm ${
                 active
-                  ? (
-                      status === "applied" ? "border-blue-500 bg-blue-100 text-blue-700" :
-                      status === "rejected" ? "border-red-500 bg-red-100 text-red-700" :
-                      status === "interviewing" ? "border-purple-500 bg-purple-100 text-purple-700" :
-                      status === "offer" ? "border-green-500 bg-green-100 text-green-700" :
-                      "border-gray-500 bg-gray-100 text-gray-700"
-                    )
+                  ? status === "applied"
+                    ? "border-blue-500 bg-blue-100 text-blue-700"
+                    : status === "rejected"
+                      ? "border-red-500 bg-red-100 text-red-700"
+                      : status === "interviewing"
+                        ? "border-purple-500 bg-purple-100 text-purple-700"
+                        : status === "offer"
+                          ? "border-green-500 bg-green-100 text-green-700"
+                          : "border-gray-500 bg-gray-100 text-gray-700"
                   : "border-gray-300 bg-white text-gray-600"
               }`}
             >
@@ -255,27 +276,29 @@ export function JobsPageClient() {
       {
         accessorKey: "score",
         header: "Match",
-        cell: (info) => {
-          const value = Math.round(info.getValue<number>() * 100);
-          return (
-            <div className="flex items-center justify-end gap-2">
-              <div className="w-20 h-2 bg-gray-200 rounded">
-                <div
-                  className={`h-2 rounded ${
-                    value >= 75 ? "bg-green-500" : value >= 50 ? "bg-yellow-500" : "bg-gray-400"
-                  }`}
-                  style={{ width: `${value}%` }}
-                />
-              </div>
-              <span className="font-semibold text-gray-900 w-10 text-right">{value}%</span>
-            </div>
-          );
+        sortingFn: (first, second) => {
+          const firstScore = getMatchScoreState(first.original.score);
+          const secondScore = getMatchScoreState(second.original.score);
+          const firstValue = firstScore.state === "matched" ? firstScore.score : -1;
+          const secondValue = secondScore.state === "matched" ? secondScore.score : -1;
+
+          return firstValue - secondValue;
         },
+        cell: (info) => <MatchScoreCell score={info.getValue<number | null>()} />,
       },
       {
         accessorKey: "title",
         header: "Title",
-        cell: ({ row }) => <span className="font-medium text-gray-900">{row.original.title}</span>,
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="font-medium text-gray-900">{row.original.title}</span>
+            {isRecentlyImported(row.original.createdAt) ? (
+              <span className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-700">
+                NEW
+              </span>
+            ) : null}
+          </div>
+        ),
       },
       {
         accessorKey: "company",
@@ -327,19 +350,34 @@ export function JobsPageClient() {
     return jobs.filter((j) => visibleStatuses.has(j.status?.toLowerCase()));
   }, [jobs, visibleStatuses]);
 
+  const activeSortLabel = React.useMemo(() => {
+    const activeSort = sorting[0];
+
+    if (!activeSort) {
+      return "Default sort: NEW jobs first, then matched jobs by score.";
+    }
+
+    const labels: Record<string, string> = {
+      score: "match",
+      title: "title",
+      company: "company",
+      status: "status",
+      updatedAt: "updated date",
+      createdAt: "created date",
+    };
+
+    return `Sorted by ${labels[activeSort.id] ?? activeSort.id} ${
+      activeSort.desc ? "descending" : "ascending"
+    }.`;
+  }, [sorting]);
+
+  // TanStack Table intentionally returns non-memoizable table helpers.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: filteredJobs,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
-    initialState: {
-      sorting: [
-        {
-          id: "createdAt",
-          desc: true,
-        },
-      ],
-    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -351,8 +389,21 @@ export function JobsPageClient() {
       </div>
 
       {error ? (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              void load();
+            }}
+            disabled={isLoading}
+            className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+          >
+            Retry
+          </button>
         </div>
       ) : null}
 
@@ -381,11 +432,13 @@ export function JobsPageClient() {
         </div>
       </div>
 
-      {jobs.length === 0 ? (
+      {isLoading ? (
+        <JobsTableSkeleton />
+      ) : jobs.length === 0 && !error ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-500">No jobs yet. Import one to get started.</p>
         </div>
-      ) : (
+      ) : jobs.length > 0 ? (
         <>
           {selectedJobIds.size > 0 && (
             <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
@@ -443,6 +496,8 @@ export function JobsPageClient() {
 
           <StatusFilterChips />
 
+          <p className="mb-3 text-xs text-gray-500">{activeSortLabel}</p>
+
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50">
@@ -497,7 +552,72 @@ export function JobsPageClient() {
             </table>
           </div>
         </>
-      )}
+      ) : null}
+    </div>
+  );
+}
+
+function MatchScoreCell({ score }: { score: number | null }) {
+  const scoreState = getMatchScoreState(score);
+
+  if (scoreState.state === "unmatched") {
+    return <span className="block text-right text-sm text-gray-500">Not matched</span>;
+  }
+
+  const barColor = {
+    green: "bg-green-500",
+    yellow: "bg-yellow-500",
+    gray: "bg-gray-400",
+  }[scoreState.tone];
+
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <div
+        role="meter"
+        aria-label={`Match score ${scoreState.percentage}%`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={scoreState.percentage}
+        className="h-2 w-20 rounded bg-gray-200"
+      >
+        <div className={`h-2 rounded ${barColor}`} style={{ width: `${scoreState.percentage}%` }} />
+      </div>
+      <span className="w-10 text-right font-semibold text-gray-900">{scoreState.percentage}%</span>
+    </div>
+  );
+}
+
+function JobsTableSkeleton() {
+  return (
+    <div
+      aria-label="Loading jobs"
+      role="status"
+      className="overflow-x-auto rounded-lg border border-gray-200 bg-white"
+    >
+      <table className="min-w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            {["", "Match", "Title", "Company", "Status", "Updated", "Created", "Source"].map(
+              (header) => (
+                <th key={header} className="px-4 py-2 text-left font-medium text-gray-700">
+                  {header}
+                </th>
+              ),
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {[0, 1, 2].map((row) => (
+            <tr key={row} className="border-t">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((cell) => (
+                <td key={cell} className="px-4 py-3">
+                  <div className="h-3 w-full max-w-28 rounded bg-gray-200" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
