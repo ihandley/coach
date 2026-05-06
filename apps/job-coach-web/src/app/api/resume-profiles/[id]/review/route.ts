@@ -1,36 +1,9 @@
-import { createBaselineResumeReview, type NormalizedResume } from "@coach/core";
-import { createServerClient } from "@coach/db";
+import { createDbReviewCurrentResumeProfile } from "@coach/db";
+import { kyselyDb } from "../../../../../server/db";
 
-async function getCurrentResumeVersion(
-  db: ReturnType<typeof createServerClient>,
-  resumeProfileId: string,
-) {
-  const { data: profile, error: profileError } = await db
-    .from("resume_profiles")
-    .select("id,current_version_id")
-    .eq("id", resumeProfileId)
-    .maybeSingle();
-
-  if (profileError) {
-    throw profileError;
-  }
-
-  if (!profile?.current_version_id) {
-    return null;
-  }
-
-  const { data: version, error: versionError } = await db
-    .from("resume_versions")
-    .select("id,normalized_resume")
-    .eq("id", profile.current_version_id)
-    .maybeSingle();
-
-  if (versionError) {
-    throw versionError;
-  }
-
-  return version;
-}
+const reviewCurrentResumeProfile = createDbReviewCurrentResumeProfile({
+  db: kyselyDb,
+});
 
 export async function GET(
   _request: Request,
@@ -42,18 +15,21 @@ export async function GET(
 ) {
   const { id: resumeProfileId } = await context.params;
 
-  const db = createServerClient();
-  const version = await getCurrentResumeVersion(db, resumeProfileId);
+  try {
+    const result = await reviewCurrentResumeProfile({
+      resumeProfileId,
+    });
 
-  if (!version) {
-    return Response.json({ error: "RESUME_PROFILE_NOT_FOUND" }, { status: 404 });
+    return Response.json(result);
+  } catch (error) {
+    if (error instanceof Error && error.message === "RESUME_PROFILE_NOT_FOUND") {
+      return Response.json({ error: "RESUME_PROFILE_NOT_FOUND" }, { status: 404 });
+    }
+
+    if (error instanceof Error && error.message === "RESUME_VERSION_NOT_FOUND") {
+      return Response.json({ error: "RESUME_VERSION_NOT_FOUND" }, { status: 404 });
+    }
+
+    throw error;
   }
-
-  const review = await createBaselineResumeReview(version.normalized_resume as NormalizedResume);
-
-  return Response.json({
-    id: resumeProfileId,
-    resumeVersionId: version.id,
-    review,
-  });
 }

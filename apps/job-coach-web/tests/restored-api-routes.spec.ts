@@ -80,7 +80,7 @@ test("restored resume workflow APIs are available", async ({ request }) => {
   expect(review.status()).toBe(200);
   await expect(review.json()).resolves.toEqual(
     expect.objectContaining({
-      id: resumeProfileId,
+      resumeProfileId,
       resumeVersionId,
       review: expect.objectContaining({
         coreStrengths: expect.any(Array),

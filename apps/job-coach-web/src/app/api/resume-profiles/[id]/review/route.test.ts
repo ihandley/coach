@@ -1,93 +1,119 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createServerClientMock, resumeProfileQueryMock, resumeVersionQueryMock, serverClient } =
-  vi.hoisted(() => {
-    const resumeProfileQueryMock = vi.fn();
-    const resumeVersionQueryMock = vi.fn();
-    const serverClient = { from: vi.fn() };
+type WhereState = {
+  column: string;
+  value: unknown;
+};
 
-    return {
-      createServerClientMock: vi.fn(() => serverClient),
-      resumeProfileQueryMock,
-      resumeVersionQueryMock,
-      serverClient,
-    };
-  });
-
-vi.mock("@coach/db", async () => {
-  const actual = await vi.importActual<object>("@coach/db");
+const { dbMock, kyselyDbMock, selectFromMock } = vi.hoisted(() => {
+  const dbMock = {
+    from: vi.fn(() => {
+      throw new Error("Supabase route logic should not be used by review route");
+    }),
+  };
+  const selectFromMock = vi.fn();
+  const kyselyDbMock = {
+    selectFrom: selectFromMock,
+  };
 
   return {
-    ...actual,
-    createServerClient: createServerClientMock,
+    dbMock,
+    kyselyDbMock,
+    selectFromMock,
   };
 });
 
-function mockResumeProfileQueries() {
-  serverClient.from.mockImplementation((table: string) => {
-    if (table === "resume_profiles") {
-      return {
-        select: () => ({
-          eq: () => ({
-            maybeSingle: resumeProfileQueryMock,
-          }),
-        }),
-      };
-    }
+vi.mock("../../../../../server/db", () => ({
+  db: dbMock,
+  kyselyDb: kyselyDbMock,
+}));
 
-    if (table === "resume_versions") {
-      return {
-        select: () => ({
-          eq: () => ({
-            maybeSingle: resumeVersionQueryMock,
-          }),
-        }),
-      };
-    }
+function createKyselySelectMock() {
+  const rowsByTable = new Map<string, Array<Record<string, unknown>>>([
+    [
+      "resume_profiles",
+      [
+        {
+          id: "profile-1",
+          name: "Primary Resume",
+          current_version_id: "version-1",
+        },
+      ],
+    ],
+    [
+      "resume_versions",
+      [
+        {
+          id: "version-1",
+          profile_id: "profile-1",
+          version_number: 1,
+          kind: "baseline",
+          source_kind: "manual",
+          source_label: "Primary Resume",
+          normalized_resume: {
+            basics: {
+              headline: "Software Engineer",
+              summary: "Builds product software.",
+            },
+            skills: ["TypeScript"],
+            experience: [
+              {
+                company: "Acme",
+                title: "Software Engineer",
+                highlights: ["Built APIs."],
+              },
+            ],
+            education: [],
+          },
+          source_resume_version_id: null,
+          source_job_id: null,
+        },
+      ],
+    ],
+  ]);
 
-    throw new Error(`Unexpected table ${table}`);
+  selectFromMock.mockImplementation((table: string) => {
+    const state: {
+      where?: WhereState;
+    } = {};
+
+    const builder = {
+      selectAll() {
+        return builder;
+      },
+      where(column: string, operator: string, value: unknown) {
+        if (operator !== "=") {
+          throw new Error(`Unsupported test operator: ${operator}`);
+        }
+
+        state.where = { column, value };
+
+        return builder;
+      },
+      async executeTakeFirst() {
+        const rows = rowsByTable.get(table) ?? [];
+
+        if (!state.where) {
+          return rows[0];
+        }
+
+        return rows.find((row) => row[state.where?.column ?? ""] === state.where?.value);
+      },
+    };
+
+    return builder;
   });
 }
 
 describe("GET /api/resume-profiles/[id]/review", () => {
   beforeEach(() => {
-    createServerClientMock.mockReset();
-    resumeProfileQueryMock.mockReset();
-    resumeVersionQueryMock.mockReset();
-    serverClient.from.mockReset();
+    vi.resetModules();
+    dbMock.from.mockClear();
+    selectFromMock.mockReset();
   });
 
-  it("returns the current baseline review for a resume profile", async () => {
-    createServerClientMock.mockReturnValue(serverClient);
-    resumeProfileQueryMock.mockResolvedValue({
-      data: {
-        id: "profile-1",
-        current_version_id: "version-1",
-      },
-      error: null,
-    });
-    resumeVersionQueryMock.mockResolvedValue({
-      data: {
-        id: "version-1",
-        normalized_resume: {
-          basics: {
-            headline: "Software Engineer",
-            summary: "Builds product software.",
-          },
-          skills: ["TypeScript"],
-          experience: [
-            {
-              company: "Acme",
-              title: "Software Engineer",
-              highlights: ["Built APIs."],
-            },
-          ],
-          education: [],
-        },
-      },
-      error: null,
-    });
-    mockResumeProfileQueries();
+  it("returns the current baseline review using the Kysely-style db adapter", async () => {
+    createKyselySelectMock();
 
     const { GET } = await import("./route");
 
@@ -101,8 +127,11 @@ describe("GET /api/resume-profiles/[id]/review", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(selectFromMock).toHaveBeenCalledWith("resume_profiles");
+    expect(selectFromMock).toHaveBeenCalledWith("resume_versions");
+    expect(dbMock.from).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
-      id: "profile-1",
+      resumeProfileId: "profile-1",
       resumeVersionId: "version-1",
       review: {
         coreStrengths: expect.arrayContaining(["Includes a clear professional headline."]),
@@ -111,12 +140,21 @@ describe("GET /api/resume-profiles/[id]/review", () => {
   });
 
   it("returns 404 when the resume profile does not exist", async () => {
-    createServerClientMock.mockReturnValue(serverClient);
-    resumeProfileQueryMock.mockResolvedValue({
-      data: null,
-      error: null,
+    selectFromMock.mockImplementation(() => {
+      const builder = {
+        selectAll() {
+          return builder;
+        },
+        where() {
+          return builder;
+        },
+        async executeTakeFirst() {
+          return undefined;
+        },
+      };
+
+      return builder;
     });
-    mockResumeProfileQueries();
 
     const { GET } = await import("./route");
 
@@ -127,6 +165,7 @@ describe("GET /api/resume-profiles/[id]/review", () => {
     });
 
     expect(response.status).toBe(404);
+    expect(dbMock.from).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toMatchObject({
       error: "RESUME_PROFILE_NOT_FOUND",
     });
