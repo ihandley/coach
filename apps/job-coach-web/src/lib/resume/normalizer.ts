@@ -186,6 +186,16 @@ function skillCategoryRank(skill: string, category: string) {
   return preferredCategory.toLowerCase() === category.toLowerCase() ? 0 : 2;
 }
 
+export function normalizeResumeSkillGroups(groups: ResumeSkillGroup[]) {
+  const groupedSkills = new Map<string, string[]>();
+
+  for (const group of groups) {
+    pushSkillGroup(groupedSkills, group.category, group.items);
+  }
+
+  return globallyDedupSkillGroups(groupedSkills);
+}
+
 function globallyDedupSkillGroups(groups: Map<string, string[]>) {
   const categorizedGroups = Array.from(groups.entries()).filter(
     ([category]) => !isFallbackSkillCategory(category),
@@ -201,18 +211,24 @@ function globallyDedupSkillGroups(groups: Map<string, string[]>) {
 
   for (const [category, items] of orderedGroups) {
     for (const item of items) {
+      const selectedCategory = getPreferredSkillCategory(item) ?? category;
       const normalized = item.toLowerCase();
-      const rank = skillCategoryRank(item, category);
+      const rank = skillCategoryRank(item, selectedCategory);
       const selected = selectedSkills.get(normalized);
 
       if (!selected || rank < selected.rank) {
-        selectedSkills.set(normalized, { category, item, rank });
+        selectedSkills.set(normalized, { category: selectedCategory, item, rank });
       }
     }
   }
 
-  return orderedGroups
-    .map(([category]) => {
+  const orderedCategories = unique([
+    ...orderedGroups.map(([category]) => category),
+    ...Array.from(selectedSkills.values()).map((skill) => skill.category),
+  ]);
+
+  return orderedCategories
+    .map((category) => {
       const items = Array.from(selectedSkills.values())
         .filter((skill) => skill.category === category)
         .map((skill) => skill.item)
@@ -223,7 +239,28 @@ function globallyDedupSkillGroups(groups: Map<string, string[]>) {
     .filter((group) => group.items.length > 0) satisfies ResumeSkillGroup[];
 }
 
-function extractSkills(rawText: string, lines: string[]) {
+function parseHeader(rawText: string, lines: string[]) {
+  const email = rawText.match(emailPattern)?.[0] ?? "";
+  const phone = rawText.match(phonePattern)?.[0];
+  const linkedin = extractLinkedin(rawText);
+  const name = extractName(lines);
+  const headline = extractHeadline(lines, name);
+  const location = extractLocation(lines, email, phone, linkedin);
+  const summary = extractSummary(lines);
+
+  return {
+    fullName: name,
+    name,
+    ...(headline ? { headline } : {}),
+    email,
+    ...(phone ? { phone } : {}),
+    ...(location ? { location } : {}),
+    ...(linkedin ? { linkedin } : {}),
+    ...(summary ? { summary } : {}),
+  };
+}
+
+function parseSkills(rawText: string, lines: string[]) {
   const explicitSkillLines = [
     ...sectionLines(lines, "skills"),
     ...sectionLines(lines, "technical skills"),
@@ -339,7 +376,7 @@ function parseAtExperienceHeading(line: string) {
   };
 }
 
-function buildExperience(lines: string[]) {
+function parseExperience(lines: string[]) {
   const experienceLines = sectionLinesForHeadings(lines, [
     "professional experience",
     "work experience",
@@ -422,7 +459,7 @@ function buildExperience(lines: string[]) {
     : [];
 }
 
-function buildEducation(lines: string[]) {
+function parseEducation(lines: string[]) {
   const educationLines = sectionLines(lines, "education");
 
   if (educationLines.length === 0) {
@@ -456,28 +493,12 @@ function buildEducation(lines: string[]) {
 export function normalizeResumeText(rawText: string): NormalizedResume {
   const normalizedRawText = rawText.replace(/\r/g, "\n").trim();
   const lines = linesFromText(normalizedRawText);
-  const email = normalizedRawText.match(emailPattern)?.[0] ?? "";
-  const phone = normalizedRawText.match(phonePattern)?.[0];
-  const linkedin = extractLinkedin(normalizedRawText);
-  const name = extractName(lines);
-  const headline = extractHeadline(lines, name);
-  const location = extractLocation(lines, email, phone, linkedin);
-  const summary = extractSummary(lines);
 
   return {
-    basics: {
-      fullName: name,
-      name,
-      ...(headline ? { headline } : {}),
-      email,
-      ...(phone ? { phone } : {}),
-      ...(location ? { location } : {}),
-      ...(linkedin ? { linkedin } : {}),
-      ...(summary ? { summary } : {}),
-    },
-    skills: extractSkills(normalizedRawText, lines),
-    experience: buildExperience(lines),
-    education: buildEducation(lines),
+    basics: parseHeader(normalizedRawText, lines),
+    skills: parseSkills(normalizedRawText, lines),
+    experience: parseExperience(lines),
+    education: parseEducation(lines),
     rawText: normalizedRawText,
   };
 }

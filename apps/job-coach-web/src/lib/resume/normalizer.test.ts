@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeResumeText } from "./normalizer";
+import { normalizeResumeSkillGroups, normalizeResumeText } from "./normalizer";
 
 const ianResumeExtractedText = `Ian Handley
 Senior Software Engineer — Go, Distributed Systems, Cloud (AWS/GCP) — Open to Remote
@@ -61,7 +61,11 @@ University of Utah - BS Computer Science`);
       skills: [
         {
           category: "Skills",
-          items: expect.arrayContaining(["TypeScript", "React", "SQL"]),
+          items: expect.arrayContaining(["TypeScript", "React"]),
+        },
+        {
+          category: "Databases",
+          items: ["SQL"],
         },
       ],
       experience: [
@@ -225,5 +229,27 @@ Engineer at Acme
         },
       ]),
     );
+  });
+
+  it("normalizes parsed skill groups before imported resume output is persisted", () => {
+    expect(
+      normalizeResumeSkillGroups([
+        { category: "Languages", items: ["TypeScript", "Node.js", "SQL"] },
+        { category: "Skills", items: ["TypeScript", "Docker"] },
+      ]),
+    ).toEqual([
+      {
+        category: "Languages",
+        items: ["TypeScript"],
+      },
+      {
+        category: "Tools",
+        items: ["Node.js"],
+      },
+      {
+        category: "Databases",
+        items: ["SQL"],
+      },
+    ]);
   });
 });

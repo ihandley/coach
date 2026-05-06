@@ -1,4 +1,4 @@
-import { normalizeResumeText } from "./normalizer";
+import { normalizeResumeSkillGroups, normalizeResumeText } from "./normalizer";
 import type { NormalizedResume, ResumeSkillGroup } from "./types";
 
 export function isAiResumeNormalizerEnabled() {
@@ -92,12 +92,12 @@ function normalizeParsedSkills(
   }
 
   if (parsedSkills.every((skill) => typeof skill === "string")) {
-    return [
+    return normalizeResumeSkillGroups([
       {
         category: "Skills",
         items: parsedSkills.filter((skill): skill is string => typeof skill === "string"),
       },
-    ];
+    ]);
   }
 
   const groups = parsedSkills
@@ -125,5 +125,5 @@ function normalizeParsedSkills(
     })
     .filter((skill): skill is ResumeSkillGroup => Boolean(skill));
 
-  return groups.length > 0 ? groups : fallbackSkills;
+  return groups.length > 0 ? normalizeResumeSkillGroups(groups) : fallbackSkills;
 }
