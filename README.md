@@ -170,6 +170,9 @@ make build-prd
 make prd
 ```
 
+These commands load `apps/job-coach-web/.env.production.local` before running the
+production-like Next.js app on `http://localhost:3001`.
+
 Reset only disposable development data:
 
 ```bash

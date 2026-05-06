@@ -39,17 +39,10 @@ dev:
 	pnpm --filter job-coach-web dev
 
 build-prd:
-	NEXT_PUBLIC_APP_ENV=production \
-	APP_ENV=production \
-	pnpm --filter job-coach-web build
+	pnpm build:job-coach:prd
 
 prd:
-	NEXT_PUBLIC_APP_ENV=production \
-	JOB_COACH_APP_URL="http://localhost:3001" \
-	APP_ENV=production \
-	NODE_ENV=production \
-	PORT=3001 \
-	pnpm --filter job-coach-web start
+	pnpm prd:job-coach
 
 build:
 	pnpm --filter job-coach-web build

@@ -57,6 +57,11 @@ SUPABASE_SERVICE_ROLE_KEY=<personal production-like service role key>
 OPENAI_API_KEY=<OpenAI API key>
 ```
 
+Both production-like commands explicitly load `apps/job-coach-web/.env.production.local`,
+force `APP_ENV=production`, `NEXT_PUBLIC_APP_ENV=production`, `JOB_COACH_APP_URL=http://localhost:3001`,
+`NODE_ENV=production`, and `PORT=3001`, then validate that `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, and `OPENAI_API_KEY` are present.
+
 Build and start the production-like app:
 
 ```bash
@@ -76,8 +81,8 @@ pnpm prd:job-coach
 - `APP_ENV=development` is safe to reset.
 - `APP_ENV=production` is stable personal data.
 - `pnpm db:reset` and `pnpm db:reset:dev` only run with `APP_ENV=development`.
-- `pnpm db:reset:prd` refuses to run unless `CONFIRM_PRODUCTION_RESET` is set to
-  `RESET_PRODUCTION_JOB_COACH_DATA`.
+- `pnpm db:reset:prd` is emergency-only. It refuses to run unless `CONFIRM_PRODUCTION_RESET`
+  is set to `RESET_PRODUCTION_JOB_COACH_DATA`.
 - Do not store real secrets in tracked env files.
 
 ## Backup and Export
