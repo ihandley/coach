@@ -56,10 +56,20 @@ function createBackupClient(env: BackupEnv) {
 }
 
 function formatTimestamp(date: Date) {
-  return date
-    .toISOString()
-    .replaceAll(":", "-")
-    .replace(/\.\d{3}Z$/, "Z");
+  return date.toISOString().replaceAll(":", "-");
+}
+
+function createUniqueBackupFilePath(backupDir: string, reason: BackupReason, timestamp: string) {
+  const baseFile = path.join(backupDir, `job-coach-${reason}-${timestamp}`);
+  let file = `${baseFile}.json`;
+  let suffix = 2;
+
+  while (fs.existsSync(file)) {
+    file = `${baseFile}-${suffix}.json`;
+    suffix += 1;
+  }
+
+  return file;
 }
 
 async function selectAll(client: BackupClient, table: string) {
@@ -99,9 +109,9 @@ export async function writeDataBackup({
     reason,
   };
   const timestamp = formatTimestamp(now);
-  const file = path.join(backupDir, `job-coach-${reason}-${timestamp}.json`);
 
   fs.mkdirSync(backupDir, { recursive: true });
+  const file = createUniqueBackupFilePath(backupDir, reason, timestamp);
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 
   return {

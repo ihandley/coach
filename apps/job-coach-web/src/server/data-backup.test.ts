@@ -68,7 +68,7 @@ describe("writeDataBackup", () => {
     }
 
     expect(result.file).toBe(
-      path.join(backupDir, "job-coach-job-import-2026-05-05T12-34-56Z.json"),
+      path.join(backupDir, "job-coach-job-import-2026-05-05T12-34-56.000Z.json"),
     );
 
     const backup = JSON.parse(fs.readFileSync(result.file, "utf8"));
@@ -119,7 +119,43 @@ describe("writeDataBackup", () => {
     }
 
     expect(result.file).toBe(
-      path.join(backupDir, "job-coach-manual-export-2026-05-05T12-34-56Z.json"),
+      path.join(backupDir, "job-coach-manual-export-2026-05-05T12-34-56.000Z.json"),
     );
+  });
+
+  it("preserves repeated backups with the same timestamp, reason, and directory", async () => {
+    const backupDir = createTempDir();
+    const options = {
+      backupDir,
+      client: createClient() as never,
+      env: {
+        APP_ENV: "production",
+      },
+      now: new Date("2026-05-05T12:34:56.789Z"),
+      reason: "job-import" as const,
+    };
+
+    const first = await writeDataBackup(options);
+    const second = await writeDataBackup(options);
+
+    expect(first.status).toBe("written");
+    expect(second.status).toBe("written");
+
+    if (first.status !== "written" || second.status !== "written") {
+      throw new Error("Expected both backups to be written");
+    }
+
+    expect(first.file).toBe(
+      path.join(backupDir, "job-coach-job-import-2026-05-05T12-34-56.789Z.json"),
+    );
+    expect(second.file).toBe(
+      path.join(backupDir, "job-coach-job-import-2026-05-05T12-34-56.789Z-2.json"),
+    );
+    expect(fs.existsSync(first.file)).toBe(true);
+    expect(fs.existsSync(second.file)).toBe(true);
+    expect(fs.readdirSync(backupDir).sort()).toEqual([
+      "job-coach-job-import-2026-05-05T12-34-56.789Z-2.json",
+      "job-coach-job-import-2026-05-05T12-34-56.789Z.json",
+    ]);
   });
 });

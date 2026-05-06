@@ -91,7 +91,7 @@ Production-like job imports automatically write a local JSON backup before savin
 Backup files are timestamped and written to the ignored `backups/` directory:
 
 ```txt
-backups/job-coach-job-import-YYYY-MM-DDTHH-MM-SSZ.json
+backups/job-coach-job-import-YYYY-MM-DDTHH-MM-SS.sssZ.json
 ```
 
 Manual exports use the same backup path and production guard:
@@ -103,11 +103,13 @@ pnpm db:export:prd
 Manual export files use this pattern:
 
 ```txt
-backups/job-coach-manual-export-YYYY-MM-DDTHH-MM-SSZ.json
+backups/job-coach-manual-export-YYYY-MM-DDTHH-MM-SS.sssZ.json
 ```
 
 Backups are written only when `APP_ENV=production`. Development backups are skipped by
 default and require the explicit `JOB_COACH_ALLOW_DEV_BACKUP=1` override.
+If a backup already exists for the same millisecond timestamp, the next file receives a
+short numeric suffix such as `-2` so existing backups are not overwritten.
 
 Keep important backups outside the repository as well.
 
