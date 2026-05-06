@@ -3,7 +3,9 @@ import { test, expect } from "@playwright/test";
 test("expanded job row shows detail tabs and the tailoring action", async ({ page }) => {
   await page.goto("/jobs");
 
-  const rows = page.locator('[data-testid="job-row"]');
+  const rows = page.locator('[data-testid="job-row"]').filter({
+    hasText: "Staff Software Engineer, Predict",
+  });
   await expect(rows.first()).toBeVisible();
 
   await rows.first().click();
@@ -20,7 +22,9 @@ test("job description can switch between structured and original posting tabs", 
 }) => {
   await page.goto("/jobs");
 
-  const rows = page.locator('[data-testid="job-row"]');
+  const rows = page.locator('[data-testid="job-row"]').filter({
+    hasText: "Staff Software Engineer, Predict",
+  });
   await expect(rows.first()).toBeVisible();
 
   await rows.first().click();

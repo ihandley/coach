@@ -126,6 +126,12 @@ test.describe("jobs bulk selection", () => {
 
     await page.reload();
 
-    await expect(row).toContainText(/applied/i);
+    await expect(
+      page
+        .locator('[data-testid="job-row"]')
+        .filter({ hasText: "Test Job (HAS DESCRIPTION)" })
+        .filter({ hasText: /applied/i })
+        .first(),
+    ).toBeVisible();
   });
 });

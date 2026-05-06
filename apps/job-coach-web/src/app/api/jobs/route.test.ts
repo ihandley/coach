@@ -9,6 +9,29 @@ const findJobBySourceUrl = vi.fn();
 const fetchJobPageAsDependency = vi.fn();
 const generateStructuredSummary = vi.fn();
 const writeAutomatedImportBackup = vi.fn();
+const jobMatchUpsert = vi.fn();
+const dbFrom = vi.fn();
+
+const fakeDb = {
+  from: dbFrom,
+};
+
+function createMaybeSingleQuery(result: unknown) {
+  const query = {
+    select: vi.fn(() => query),
+    order: vi.fn(() => query),
+    limit: vi.fn(() => query),
+    maybeSingle: vi.fn(async () => result),
+  };
+
+  return query;
+}
+
+function createJobMatchesQuery() {
+  return {
+    upsert: jobMatchUpsert,
+  };
+}
 
 vi.mock("@coach/ai", async () => {
   const actual = await vi.importActual<object>("@coach/ai");
@@ -39,7 +62,7 @@ vi.mock("@coach/db", async () => {
 
   return {
     ...actual,
-    createServerClient: vi.fn(() => ({})),
+    createServerClient: vi.fn(() => fakeDb),
     DbJobRepository: MockDbJobRepository,
     createDbJobImporter: vi.fn(
       (dependencies: { fetchPage: unknown; extractJob: unknown }) =>
@@ -59,7 +82,35 @@ beforeEach(() => {
   fetchJobPageAsDependency.mockReset();
   generateStructuredSummary.mockReset();
   writeAutomatedImportBackup.mockReset();
+  jobMatchUpsert.mockReset();
+  dbFrom.mockReset();
   writeAutomatedImportBackup.mockResolvedValue(undefined);
+  jobMatchUpsert.mockResolvedValue({ error: null });
+  dbFrom.mockImplementation((table: string) => {
+    if (table === "resume_profiles") {
+      return createMaybeSingleQuery({
+        data: {
+          id: "resume-profile-1",
+          normalized_resume: {
+            basics: {
+              summary: "TypeScript product workflows",
+            },
+            skills: ["TypeScript"],
+            experience: [],
+            education: [],
+          },
+          created_at: "2026-04-20T10:00:00.000Z",
+        },
+        error: null,
+      });
+    }
+
+    if (table === "job_matches") {
+      return createJobMatchesQuery();
+    }
+
+    return createMaybeSingleQuery({ data: null, error: null });
+  });
   vi.resetModules();
 });
 
@@ -160,6 +211,14 @@ describe("POST /api/jobs", () => {
     );
     expect(createJob.mock.calls[0][0].sourceText).not.toContain("Report this job");
     expect(writeAutomatedImportBackup).toHaveBeenCalledTimes(1);
+    expect(jobMatchUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        job_id: "job-123",
+        resume_profile_id: "resume-profile-1",
+        score: expect.any(Number),
+        created_at: expect.any(String),
+      }),
+    );
     await expect(response.json()).resolves.toMatchObject({
       id: "job-123",
       company: "Pattern",
@@ -192,6 +251,14 @@ describe("POST /api/jobs", () => {
     expect(writeAutomatedImportBackup).toHaveBeenCalledTimes(1);
     expect(writeAutomatedImportBackup.mock.invocationCallOrder[0]).toBeLessThan(
       createJob.mock.invocationCallOrder[0],
+    );
+    expect(jobMatchUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        job_id: "job-456",
+        resume_profile_id: "resume-profile-1",
+        score: expect.any(Number),
+        created_at: expect.any(String),
+      }),
     );
   });
 });

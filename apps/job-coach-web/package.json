@@ -22,6 +22,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
+    "test:e2e": "cd ../.. && playwright test",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

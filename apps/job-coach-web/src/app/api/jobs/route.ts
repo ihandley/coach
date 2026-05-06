@@ -4,6 +4,7 @@ import { createDbJobImporter, DbJobRepository, createServerClient } from "@coach
 import { generateStructuredSummary } from "@/server/ai/structured-job-summary";
 import { fetchJobPageAsDependency, extractJobStub } from "@coach/ai";
 import { writeAutomatedImportBackup } from "@/server/data-backup";
+import { persistJobMatchForDefaultResume } from "@/server/match/persist-job-match";
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       });
 
       const job = await importer.importJobFromUrl(body.sourceUrl);
+      await persistJobMatchForDefaultResume(db, job);
 
       return Response.json(job, { status: 201 });
     } catch (error: unknown) {
@@ -84,6 +86,8 @@ export async function POST(request: Request) {
       structuredSummary,
       status: "saved",
     });
+
+    await persistJobMatchForDefaultResume(db, job);
 
     return Response.json(job, { status: 201 });
   }

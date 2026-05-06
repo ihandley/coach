@@ -6,7 +6,9 @@ test("can tailor a resume from job row", async ({ page }) => {
 
   await page.goto("/jobs");
 
-  const rows = page.locator('[data-testid="job-row"]');
+  const rows = page.locator('[data-testid="job-row"]').filter({
+    hasText: "Staff Software Engineer, Predict",
+  });
   await expect(rows.first()).toBeVisible();
 
   await rows.first().click();
