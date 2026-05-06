@@ -938,10 +938,76 @@ function JobDetailsPanel({
   );
 }
 
+function hasStructuredSummaryValue(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.some(hasStructuredSummaryValue);
+  if (typeof value === "object") return Object.values(value).some(hasStructuredSummaryValue);
+  return false;
+}
+
+function formatStructuredSummaryLabel(key: string) {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (value) => value.toUpperCase());
+}
+
+function renderStructuredSummaryValue(value: unknown): React.ReactNode {
+  if (!hasStructuredSummaryValue(value)) return null;
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return <span>{String(value)}</span>;
+  }
+
+  if (Array.isArray(value)) {
+    return (
+      <ul className="ml-5 list-disc space-y-1">
+        {value.map((item, index) =>
+          hasStructuredSummaryValue(item) ? (
+            <li key={index}>{renderStructuredSummaryValue(item)}</li>
+          ) : null,
+        )}
+      </ul>
+    );
+  }
+
+  if (value && typeof value === "object") {
+    return (
+      <dl className="space-y-2">
+        {Object.entries(value).map(([key, nestedValue]) =>
+          hasStructuredSummaryValue(nestedValue) ? (
+            <div key={key} className="grid gap-1 sm:grid-cols-[12rem_1fr]">
+              <dt className="font-medium text-gray-700">{formatStructuredSummaryLabel(key)}</dt>
+              <dd className="text-gray-700">{renderStructuredSummaryValue(nestedValue)}</dd>
+            </div>
+          ) : null,
+        )}
+      </dl>
+    );
+  }
+
+  return null;
+}
+
+function StructuredSummarySection({ title, value }: { title: string; value: unknown }) {
+  if (!hasStructuredSummaryValue(value)) return null;
+
+  return (
+    <div>
+      <h4 className="mb-1 font-semibold">{title}</h4>
+      {renderStructuredSummaryValue(value)}
+    </div>
+  );
+}
+
 function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   const summary = structuredSummary;
 
-  if (!summary) {
+  if (!summary || typeof summary !== "object") {
     return (
       <div className="text-sm text-muted-foreground">
         No structured summary available yet. Use Original Posting view for the original posting.
@@ -951,57 +1017,31 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
 
   return (
     <div className="flex max-w-3xl flex-col gap-4">
-      <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
-        {summary.location && <div>📍 {summary.location}</div>}
-        <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
+      <div className="flex flex-col gap-2 border-b pb-2 text-sm text-muted-foreground sm:flex-row sm:gap-4">
+        {hasStructuredSummaryValue(summary.location) ? (
+          <div className="flex gap-1">
+            <span aria-hidden="true">📍</span>
+            <div>{renderStructuredSummaryValue(summary.location)}</div>
+          </div>
+        ) : null}
+        <div className="flex gap-1">
+          <span aria-hidden="true">💰</span>
+          <div>
+            {hasStructuredSummaryValue(summary.salaryRange)
+              ? renderStructuredSummaryValue(summary.salaryRange)
+              : "Salary range not listed"}
+          </div>
+        </div>
       </div>
 
-      {summary.companyInfo?.length > 0 && (
-        <div>
-          <h4 className="mb-1 font-semibold">Company</h4>
-          <ul className="ml-5 list-disc">
-            {summary.companyInfo.map((item: string, i: number) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {summary.jobDescription?.length > 0 && (
-        <div>
-          <h4 className="mb-1 font-semibold">Description</h4>
-          <ul className="ml-5 list-disc">
-            {summary.jobDescription.map((item: string, i: number) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {summary.requirements?.length > 0 && (
-        <div>
-          <h4 className="mb-1 font-semibold">Requirements</h4>
-          <ul className="ml-5 list-disc">
-            {summary.requirements.map((item: string, i: number) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {summary.benefits?.length > 0 && (
-        <div>
-          <h4 className="mb-1 font-semibold">Benefits</h4>
-          <ul className="ml-5 list-disc">
-            {summary.benefits.map((item: string, i: number) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <StructuredSummarySection title="Company" value={summary.companyInfo} />
+      <StructuredSummarySection title="Description" value={summary.jobDescription} />
+      <StructuredSummarySection title="Requirements" value={summary.requirements} />
+      <StructuredSummarySection title="Benefits" value={summary.benefits} />
     </div>
   );
 }
+
 function ResumeTailor({ jobId }: { jobId: string }) {
   const [resumes, setResumes] = useState<ResumeProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);

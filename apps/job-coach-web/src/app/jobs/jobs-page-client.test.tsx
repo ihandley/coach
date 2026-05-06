@@ -30,7 +30,11 @@ describe("JobsPageClient", () => {
     updatedAt: "2026-04-26T12:00:00.000Z",
     score: 0.82,
     structuredSummary: {
-      location: "Remote",
+      location: {
+        Canada: "$120,000 CAD to $140,000 CAD",
+        California: "$130,000 to $160,000",
+        "US outside California": "$120,000 to $150,000",
+      },
       salaryRange: "$120,000 to $140,000",
       companyInfo: ["Pattern builds hiring tools."],
       jobDescription: ["Build product workflows."],
@@ -473,6 +477,10 @@ describe("JobsPageClient", () => {
 
     expect(within(details).getByRole("button", { name: "Delete job" })).toBeInTheDocument();
     expect(within(details).getByRole("button", { name: "Tailor Resume" })).toBeInTheDocument();
+    expect(within(details).getByText("Canada")).toBeInTheDocument();
+    expect(within(details).getByText("$120,000 CAD to $140,000 CAD")).toBeInTheDocument();
+    expect(within(details).getByText("California")).toBeInTheDocument();
+    expect(within(details).getByText("US outside California")).toBeInTheDocument();
     expect(within(details).getByText("Company")).toBeInTheDocument();
     expect(within(details).getByText("Pattern builds hiring tools.")).toBeInTheDocument();
     expect(within(details).getByText("Description")).toBeInTheDocument();
