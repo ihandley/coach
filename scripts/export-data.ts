@@ -1,31 +1,20 @@
-import { createClient } from "@supabase/supabase-js";
-import fs from "fs";
-
-const url = process.env.SUPABASE_URL!;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(url, key);
+import { writeDataBackup } from "../apps/job-coach-web/src/server/data-backup";
 
 async function run() {
   console.log("Exporting data...");
 
-  const [jobs, resumes] = await Promise.all([
-    supabase.from("jobs").select("*"),
-    supabase.from("resume_profiles").select("*"),
-  ]);
+  const result = await writeDataBackup({
+    reason: "manual-export",
+  });
 
-  const data = {
-    jobs: jobs.data ?? [],
-    resumes: resumes.data ?? [],
-    exportedAt: new Date().toISOString(),
-  };
+  if (result.status === "skipped") {
+    console.log(
+      "Export skipped: APP_ENV is not production. Set JOB_COACH_ALLOW_DEV_BACKUP=1 to export DEV.",
+    );
+    return;
+  }
 
-  fs.mkdirSync("backups", { recursive: true });
-
-  const file = `backups/export-${Date.now()}.json`;
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-
-  console.log("Export complete:", file);
+  console.log("Export complete:", result.file);
 }
 
 run().catch((e) => {

@@ -8,6 +8,7 @@ const createJob = vi.fn();
 const findJobBySourceUrl = vi.fn();
 const fetchJobPageAsDependency = vi.fn();
 const generateStructuredSummary = vi.fn();
+const writeAutomatedImportBackup = vi.fn();
 
 vi.mock("@coach/ai", async () => {
   const actual = await vi.importActual<object>("@coach/ai");
@@ -20,6 +21,10 @@ vi.mock("@coach/ai", async () => {
 
 vi.mock("@/server/ai/structured-job-summary", () => ({
   generateStructuredSummary,
+}));
+
+vi.mock("@/server/data-backup", () => ({
+  writeAutomatedImportBackup,
 }));
 
 vi.mock("@coach/db", async () => {
@@ -53,6 +58,8 @@ beforeEach(() => {
   findJobBySourceUrl.mockReset();
   fetchJobPageAsDependency.mockReset();
   generateStructuredSummary.mockReset();
+  writeAutomatedImportBackup.mockReset();
+  writeAutomatedImportBackup.mockResolvedValue(undefined);
   vi.resetModules();
 });
 
@@ -152,11 +159,39 @@ describe("POST /api/jobs", () => {
       }),
     );
     expect(createJob.mock.calls[0][0].sourceText).not.toContain("Report this job");
+    expect(writeAutomatedImportBackup).toHaveBeenCalledTimes(1);
     await expect(response.json()).resolves.toMatchObject({
       id: "job-123",
       company: "Pattern",
       title: "Staff Software Engineer, Predict",
       structuredSummary,
     });
+  });
+
+  it("backs up data before manually imported source text is saved", async () => {
+    generateStructuredSummary.mockResolvedValue(null);
+    createJob.mockImplementation(async (input) => ({
+      id: "job-456",
+      createdAt: "2026-04-20T10:00:00.000Z",
+      updatedAt: "2026-04-23T10:00:00.000Z",
+      ...input,
+    }));
+
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("http://localhost/api/jobs", {
+        method: "POST",
+        body: JSON.stringify({
+          sourceText: "Company: Acme\nTitle: Staff Engineer\nBuild reliable workflows.",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(writeAutomatedImportBackup).toHaveBeenCalledTimes(1);
+    expect(writeAutomatedImportBackup.mock.invocationCallOrder[0]).toBeLessThan(
+      createJob.mock.invocationCallOrder[0],
+    );
   });
 });

@@ -6,7 +6,7 @@
     "test": "turbo run test && pnpm run test:scripts",
     "test:scripts": "vitest run scripts/*.test.ts",
     "typecheck": "turbo run typecheck && pnpm run typecheck:scripts",
-    "typecheck:scripts": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --types node scripts/require-dev-env.ts scripts/require-dev-env.test.ts scripts/run-job-coach-prd.ts",
+    "typecheck:scripts": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck --types node scripts/require-dev-env.ts scripts/require-dev-env.test.ts scripts/run-job-coach-prd.ts scripts/export-data.ts",
     "dev:job-coach": "echo 'Job Coach DEV — http://localhost:3000' && APP_ENV=development NEXT_PUBLIC_APP_ENV=development PORT=3000 pnpm --filter job-coach-web dev",
     "prd:job-coach": "pnpm tsx scripts/run-job-coach-prd.ts start",
     "build:job-coach:prd": "pnpm tsx scripts/run-job-coach-prd.ts build",

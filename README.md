@@ -179,6 +179,44 @@ Reset only disposable development data:
 pnpm db:reset:dev
 ```
 
+## Backup and Export
+
+Production-like job imports automatically write a local JSON backup before saving new job
+data. This runs for both URL imports and pasted job descriptions.
+
+Backup files are written to the ignored `backups/` directory. Each backup includes:
+
+- jobs
+- resume profiles
+- export timestamp
+- backup reason
+
+Manual production-like export uses the same backup flow:
+
+```bash
+pnpm db:export:prd
+```
+
+Backups only write when `APP_ENV=production`. Development backups are skipped by default
+and require the explicit override:
+
+```bash
+JOB_COACH_ALLOW_DEV_BACKUP=1
+```
+
+Verify automated backups locally:
+
+```bash
+pnpm prd:job-coach
+```
+
+Import a job in the production-like app, then inspect the backup output:
+
+```bash
+ls -la backups
+cat backups/<backup-file>.json
+```
+
 ## Testing and CI expectations
 
 The rebuilt path should be validated through:

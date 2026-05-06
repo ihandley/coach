@@ -3,6 +3,7 @@ import type { ExtractedJobData, FetchedJobPage } from "@coach/core";
 import { createDbJobImporter, DbJobRepository, createServerClient } from "@coach/db";
 import { generateStructuredSummary } from "@/server/ai/structured-job-summary";
 import { fetchJobPageAsDependency, extractJobStub } from "@coach/ai";
+import { writeAutomatedImportBackup } from "@/server/data-backup";
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -44,6 +45,8 @@ export async function POST(request: Request) {
 
   if (isNonEmptyString(body?.sourceUrl)) {
     try {
+      await writeAutomatedImportBackup(db);
+
       const importer = createDbJobImporter({
         fetchPage: fetchJobPageAsDependency,
         extractJob: extractJobWithStructuredSummary,
@@ -67,6 +70,8 @@ export async function POST(request: Request) {
 
   if (isNonEmptyString(body?.sourceText)) {
     const repo = new DbJobRepository(db);
+    await writeAutomatedImportBackup(db);
+
     const sourceText = cleanJobText(body.sourceText);
     const fields = extractJobFields(sourceText);
     const structuredSummary = await generateStoredStructuredSummary(sourceText);

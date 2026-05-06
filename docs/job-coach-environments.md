@@ -87,14 +87,31 @@ pnpm prd:job-coach
 
 ## Backup and Export
 
-Before running risky production-like maintenance, export current data:
+Production-like job imports automatically write a local JSON backup before saving new job data.
+Backup files are timestamped and written to the ignored `backups/` directory:
+
+```txt
+backups/job-coach-job-import-YYYY-MM-DDTHH-MM-SS.sssZ.json
+```
+
+Manual exports use the same backup path and production guard:
 
 ```bash
 pnpm db:export:prd
 ```
 
-Exports are written to the ignored `backups/` directory. Keep important backups outside
-the repository as well.
+Manual export files use this pattern:
+
+```txt
+backups/job-coach-manual-export-YYYY-MM-DDTHH-MM-SS.sssZ.json
+```
+
+Backups are written only when `APP_ENV=production`. Development backups are skipped by
+default and require the explicit `JOB_COACH_ALLOW_DEV_BACKUP=1` override.
+If a backup already exists for the same millisecond timestamp, the next file receives a
+short numeric suffix such as `-2` so existing backups are not overwritten.
+
+Keep important backups outside the repository as well.
 
 ## Future Hosted Path
 
@@ -103,5 +120,5 @@ The first stable environment is local-only. A hosted deployment should add:
 - hosted application runtime
 - production Supabase project management
 - authentication and user isolation
-- scheduled backups
+- scheduled backups beyond import-time local backups
 - deployment-specific secret management
