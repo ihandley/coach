@@ -1,4 +1,4 @@
-.PHONY: help install test typecheck dev prd build-prd build start session-handoff
+.PHONY: help install test typecheck dev prd build-prd build start issue-checkpoint session-handoff
 
 help:
 	@echo "Available commands:"
@@ -10,7 +10,8 @@ help:
 	@echo "  make prd                Start the production-like web app on port 3001"
 	@echo "  make build              Build the web app"
 	@echo "  make start              Start the built web app"
-	@echo "  make session-handoff N=44 Start or hand off an issue session"
+	@echo "  make issue-checkpoint N=44 Start or checkpoint an issue session"
+	@echo "  make session-handoff N=44 Compatibility alias for issue-checkpoint"
 
 install:
 	pnpm install
@@ -50,6 +51,8 @@ build:
 start:
 	pnpm --filter job-coach-web start
 
-session-handoff:
-	@test -n "$(N)" || (echo "Usage: make session-handoff N=<issue-number> OR make session-handoff" && exit 1)
-	./scripts/session-handoff.sh $(N)
+issue-checkpoint:
+	@test -n "$(N)" || (echo "Usage: make issue-checkpoint N=<issue-number>" && exit 1)
+	./scripts/issue-checkpoint.sh $(N)
+
+session-handoff: issue-checkpoint
