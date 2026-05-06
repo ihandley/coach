@@ -1,9 +1,5 @@
 import { createCoverLetterDraft, InMemoryCoverLetterDraftRepository } from "@coach/core";
-import {
-  createDbGetResumeProfile,
-  createDbResumeVersionRepository,
-  DbJobRepository,
-} from "@coach/db";
+import { createDbGetResumeProfile, DbJobRepository } from "@coach/db";
 
 interface FromJobBody {
   jobId: string;
@@ -47,7 +43,6 @@ export async function POST(
   }
 
   const getResumeProfile = createDbGetResumeProfile({} as never);
-  const resumeVersions = createDbResumeVersionRepository({ db: {} as never });
   const jobs = new DbJobRepository({} as never);
   const resumeProfileResult = await getResumeProfile({
     resumeProfileId,

@@ -144,7 +144,9 @@ export default function FilesPageClient() {
   }
 
   useEffect(() => {
-    loadFiles();
+    queueMicrotask(() => {
+      void loadFiles();
+    });
   }, []);
 
   async function handleImport() {
@@ -202,7 +204,9 @@ export default function FilesPageClient() {
 
   useEffect(() => {
     if (!previewResume) {
-      setPreviewData(null);
+      queueMicrotask(() => {
+        setPreviewData(null);
+      });
       return;
     }
 
@@ -228,7 +232,9 @@ export default function FilesPageClient() {
       setPreviewLoading(false);
     }
 
-    loadPreview();
+    queueMicrotask(() => {
+      void loadPreview();
+    });
 
     return () => {
       isCurrent = false;

@@ -14,7 +14,7 @@ async function normalizeResumeForImport(text: string) {
     return (await normalizeResumeWithAi(text)) ?? normalizeResumeText(text);
   } catch (error) {
     console.error("AI resume normalization failed", error);
-    throw new Error("AI resume normalization failed");
+    throw new Error("AI resume normalization failed", { cause: error });
   }
 }
 

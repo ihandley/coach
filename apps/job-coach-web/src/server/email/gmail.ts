@@ -1,5 +1,4 @@
 import { classifyEmailLLM } from "./classify-email-llm";
-import { applyStatusUpdates } from "./apply-status-updates";
 import { execFileSync } from "node:child_process";
 import { google } from "googleapis";
 import { buildGmailQuery } from "./build-query";

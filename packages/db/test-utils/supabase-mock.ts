@@ -2,7 +2,7 @@ export function createSupabaseMock() {
   const store = new Map<string, any>();
 
   return {
-    from(table: string) {
+    from(_table: string) {
       return {
         insert(input: any) {
           const row = {

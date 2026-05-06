@@ -1,9 +1,6 @@
 import { createServerClient } from "@coach/db";
 
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ jobId: string }> },
-) {
+export async function PATCH(request: Request, context: { params: Promise<{ jobId: string }> }) {
   const { jobId } = await context.params;
   const body = await request.json();
   const company = typeof body?.company === "string" ? body.company.trim() : "";

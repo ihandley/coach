@@ -41,46 +41,42 @@ Subject: ${input.subject}
 Snippet: ${input.snippet}
 `;
 
-  try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
 
-    const content = response.choices[0]?.message?.content;
+  const content = response.choices[0]?.message?.content;
 
-    if (!content) {
-      throw new Error("No response content from LLM");
-    }
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      throw new Error("Failed to parse LLM JSON");
-    }
-
-    if (!isValidStatus(parsed.status)) {
-      throw new Error("Invalid status from LLM");
-    }
-
-    if (typeof parsed.confidence !== "number" || parsed.confidence < 0 || parsed.confidence > 1) {
-      throw new Error("Invalid confidence from LLM");
-    }
-
-    return {
-      status: parsed.status,
-      confidence: parsed.confidence,
-    };
-  } catch (error) {
-    throw error;
+  if (!content) {
+    throw new Error("No response content from LLM");
   }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error("Failed to parse LLM JSON");
+  }
+
+  if (!isValidStatus(parsed.status)) {
+    throw new Error("Invalid status from LLM");
+  }
+
+  if (typeof parsed.confidence !== "number" || parsed.confidence < 0 || parsed.confidence > 1) {
+    throw new Error("Invalid confidence from LLM");
+  }
+
+  return {
+    status: parsed.status,
+    confidence: parsed.confidence,
+  };
 }
 
 export function isAboveConfidenceThreshold(result: LLMClassificationResult): boolean {

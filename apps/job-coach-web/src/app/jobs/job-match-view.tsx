@@ -3,11 +3,19 @@
 import { useEffect, useState } from "react";
 
 export function JobMatchView({ jobId }: { jobId: string }) {
-  const [matches, setMatches] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [matchState, setMatchState] = useState<{
+    jobId: string;
+    matches: any[];
+    loading: boolean;
+  }>({
+    jobId,
+    matches: [],
+    loading: true,
+  });
 
   useEffect(() => {
-    setLoading(true);
+    let isCurrent = true;
+
     fetch("/api/match", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -17,9 +25,24 @@ export function JobMatchView({ jobId }: { jobId: string }) {
       }),
     })
       .then((r) => r.json())
-      .then((data) => setMatches([data]))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        if (isCurrent) {
+          setMatchState({ jobId, matches: [data], loading: false });
+        }
+      })
+      .catch(() => {
+        if (isCurrent) {
+          setMatchState({ jobId, matches: [], loading: false });
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
   }, [jobId]);
+
+  const loading = matchState.jobId !== jobId || matchState.loading;
+  const matches = loading ? [] : matchState.matches;
 
   if (loading) {
     return <div className="text-sm text-gray-500">Loading match details...</div>;
