@@ -2,6 +2,15 @@
 set -euo pipefail
 
 ISSUE_NUMBER="${1:-}"
+LIST_OPEN_ISSUES="false"
+
+if [[ "${1:-}" == "--list-open" ]]; then
+  LIST_OPEN_ISSUES="true"
+  ISSUE_NUMBER="${2:-}"
+elif [[ "${2:-}" == "--list-open" ]]; then
+  LIST_OPEN_ISSUES="true"
+fi
+
 MAX_BRANCH_LEN=60
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -38,6 +47,8 @@ ISSUE_BODY=""
 BRANCH_NAME=""
 PR_URL=""
 PR_STATUS_NOTE=""
+PR_STATE=""
+PR_IS_DRAFT=""
 
 if [[ -n "$ISSUE_NUMBER" ]]; then
   echo "Syncing main..."
@@ -73,6 +84,8 @@ if [[ -n "$ISSUE_NUMBER" ]]; then
 
     if [[ -n "$EXISTING_PR" && "$EXISTING_PR" != "null" ]]; then
       PR_URL="$EXISTING_PR"
+      PR_STATE=$(gh pr view "$PR_URL" --json state --jq '.state' 2>/dev/null || true)
+      PR_IS_DRAFT=$(gh pr view "$PR_URL" --json isDraft --jq '.isDraft' 2>/dev/null || true)
     else
       echo "Attempting to create draft PR..."
 
@@ -96,6 +109,8 @@ Closes #$ISSUE_NUMBER" \
 
       if [[ $PR_CREATE_EXIT_CODE -eq 0 ]]; then
         PR_URL="$PR_CREATE_OUTPUT"
+        PR_STATE=$(gh pr view "$PR_URL" --json state --jq '.state' 2>/dev/null || true)
+        PR_IS_DRAFT=$(gh pr view "$PR_URL" --json isDraft --jq '.isDraft' 2>/dev/null || true)
       elif echo "$PR_CREATE_OUTPUT" | grep -q "No commits between"; then
         PR_STATUS_NOTE="Draft PR not created yet. Create the first checkpoint commit, push, then re-run this script."
       else
@@ -107,9 +122,9 @@ Closes #$ISSUE_NUMBER" \
 fi
 
 echo ""
-echo "===== SESSION HANDOFF ====="
+echo "===== ISSUE CHECKPOINT ====="
 echo ""
-echo "Paste everything below into the next ChatGPT session."
+echo "Paste everything below into the next ChatGPT session or use it to orient the current issue/PR review."
 echo ""
 
 echo "----- REPO -----"
@@ -124,6 +139,10 @@ echo ""
 echo "----- RECENT COMMITS -----"
 git log --oneline -5 || true
 
+echo ""
+echo "----- CHANGED FILES VS MAIN -----"
+git diff --stat main...HEAD || true
+
 if [[ -n "$ISSUE_NUMBER" ]]; then
   echo ""
   echo "----- CURRENT ISSUE -----"
@@ -131,6 +150,10 @@ if [[ -n "$ISSUE_NUMBER" ]]; then
   echo "Title:  $ISSUE_TITLE"
   echo "Branch: $BRANCH_NAME"
   echo "PR:     ${PR_URL:-"(not created yet)"}"
+
+  if [[ -n "$PR_STATE" || -n "$PR_IS_DRAFT" ]]; then
+    echo "PR status: state=${PR_STATE:-unknown}, draft=${PR_IS_DRAFT:-unknown}"
+  fi
 
   if [[ -n "$PR_STATUS_NOTE" ]]; then
     echo "Note:   $PR_STATUS_NOTE"
@@ -143,21 +166,64 @@ if [[ -n "$ISSUE_NUMBER" ]]; then
   fi
 fi
 
-echo ""
-echo "----- OPEN ISSUES -----"
-if command -v gh >/dev/null 2>&1; then
-  gh issue list --state open --limit 10 || true
-else
-  echo "gh not found"
+if [[ "$LIST_OPEN_ISSUES" == "true" ]]; then
+  echo ""
+  echo "----- OPEN ISSUES -----"
+  if command -v gh >/dev/null 2>&1; then
+    gh issue list --state open --limit 10 || true
+  else
+    echo "gh not found"
+  fi
 fi
 
 echo ""
-echo "----- AGENT RULES (.ai/AGENT.md) -----"
-if [[ -f .ai/AGENT.md ]]; then
-  cat .ai/AGENT.md
-else
-  echo ".ai/AGENT.md not found"
+echo "----- REPO GUIDANCE -----"
+GUIDANCE_FOUND="false"
+
+if [[ -f .github/copilot-instructions.md ]]; then
+  echo "# .github/copilot-instructions.md"
+  cat .github/copilot-instructions.md
+  GUIDANCE_FOUND="true"
+fi
+
+if compgen -G ".github/instructions/*.instructions.md" >/dev/null; then
+  for guidance_file in .github/instructions/*.instructions.md; do
+    echo ""
+    echo "# $guidance_file"
+    cat "$guidance_file"
+    GUIDANCE_FOUND="true"
+  done
+fi
+
+if [[ -f AGENTS.md ]]; then
+  echo ""
+  echo "# AGENTS.md"
+  cat AGENTS.md
+  GUIDANCE_FOUND="true"
+fi
+
+if [[ -f CODEX.md ]]; then
+  echo ""
+  echo "# CODEX.md"
+  cat CODEX.md
+  GUIDANCE_FOUND="true"
+fi
+
+if [[ "$GUIDANCE_FOUND" == "false" ]]; then
+  echo "No repo guidance files found."
 fi
 
 echo ""
-echo "===== END HANDOFF ====="
+echo "----- SUGGESTED NEXT STEPS -----"
+if [[ -n "$(git status --short)" ]]; then
+  echo "Working tree has uncommitted changes. Review, stage, commit, and push them before final PR review."
+elif [[ -z "$PR_URL" ]]; then
+  echo "No PR exists yet. Create a checkpoint commit, push it, then re-run this script."
+elif [[ "$PR_IS_DRAFT" == "true" ]]; then
+  echo "Draft PR exists. Continue Codex/review workflow, then mark ready when complete."
+else
+  echo "Working tree is clean and PR exists. Ready for review/merge workflow."
+fi
+
+echo ""
+echo "===== END CHECKPOINT ====="
