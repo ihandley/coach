@@ -1,10 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createApplicationAnswerMock, getResumeProfileMock, getJobByIdMock } = vi.hoisted(() => {
+const {
+  createApplicationAnswerMock,
+  createServerClientMock,
+  resumeProfileQueryMock,
+  resumeVersionQueryMock,
+  getJobByIdMock,
+  serverClient,
+  DbJobRepositoryMock,
+} = vi.hoisted(() => {
+  const resumeProfileQueryMock = vi.fn();
+  const resumeVersionQueryMock = vi.fn();
+  const serverClient = { from: vi.fn() };
+
   return {
     createApplicationAnswerMock: vi.fn(),
-    getResumeProfileMock: vi.fn(),
+    createServerClientMock: vi.fn(() => serverClient),
+    resumeProfileQueryMock,
+    resumeVersionQueryMock,
     getJobByIdMock: vi.fn(),
+    serverClient,
+    DbJobRepositoryMock: vi.fn().mockImplementation(function DbJobRepository() {
+      return {
+        getJobById: vi.fn(),
+      };
+    }),
   };
 });
 
@@ -22,8 +42,8 @@ vi.mock("@coach/db", async () => {
 
   return {
     ...actual,
-    createDbGetResumeProfile: () => getResumeProfileMock,
-    DbJobRepository: vi.fn().mockImplementation(function DbJobRepository() {
+    createServerClient: createServerClientMock,
+    DbJobRepository: DbJobRepositoryMock.mockImplementation(function DbJobRepository() {
       return {
         getJobById: getJobByIdMock,
       };
@@ -34,27 +54,49 @@ vi.mock("@coach/db", async () => {
 describe("POST /api/resume-profiles/[id]/application-answers/from-job", () => {
   beforeEach(() => {
     createApplicationAnswerMock.mockReset();
-    getResumeProfileMock.mockReset();
+    createServerClientMock.mockReset();
+    createServerClientMock.mockReturnValue(serverClient);
+    DbJobRepositoryMock.mockClear();
+    resumeProfileQueryMock.mockReset();
+    resumeVersionQueryMock.mockReset();
     getJobByIdMock.mockReset();
+    serverClient.from.mockImplementation((table: string) => {
+      if (table === "resume_profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: resumeProfileQueryMock,
+            }),
+          }),
+        };
+      }
+
+      if (table === "resume_versions") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: resumeVersionQueryMock,
+            }),
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    });
   });
 
   it("creates an application answer from stored job and resume data", async () => {
-    getResumeProfileMock.mockResolvedValue({
-      profile: {
+    resumeProfileQueryMock.mockResolvedValue({
+      data: {
         id: "resume-profile-123",
-        name: "Primary Resume",
-        currentVersionId: "resume-version-123",
+        current_version_id: "resume-version-123",
       },
-      currentVersion: {
+      error: null,
+    });
+    resumeVersionQueryMock.mockResolvedValue({
+      data: {
         id: "resume-version-123",
-        profileId: "resume-profile-123",
-        versionNumber: 1,
-        kind: "baseline",
-        source: {
-          kind: "manual",
-          label: "Baseline Resume",
-        },
-        normalizedResume: {
+        normalized_resume: {
           basics: {
             fullName: "Ian Handley",
             headline: "Senior Software Engineer",
@@ -66,6 +108,7 @@ describe("POST /api/resume-profiles/[id]/application-answers/from-job", () => {
           education: [],
         },
       },
+      error: null,
     });
 
     getJobByIdMock.mockResolvedValue({
@@ -104,6 +147,10 @@ describe("POST /api/resume-profiles/[id]/application-answers/from-job", () => {
     });
 
     expect(response.status).toBe(201);
+    expect(createServerClientMock).toHaveBeenCalledTimes(1);
+    expect(serverClient.from).toHaveBeenCalledWith("resume_profiles");
+    expect(serverClient.from).toHaveBeenCalledWith("resume_versions");
+    expect(DbJobRepositoryMock).toHaveBeenCalledWith(serverClient);
 
     expect(createApplicationAnswerMock).toHaveBeenCalledWith({
       question: "Why are you interested in this role?",
@@ -145,6 +192,11 @@ describe("POST /api/resume-profiles/[id]/application-answers/from-job", () => {
     });
 
     expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "Invalid request body",
+    });
+    expect(createServerClientMock).not.toHaveBeenCalled();
+    expect(createApplicationAnswerMock).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed json", async () => {
@@ -171,5 +223,46 @@ describe("POST /api/resume-profiles/[id]/application-answers/from-job", () => {
     expect(await response.json()).toEqual({
       error: "Invalid request body",
     });
+    expect(createServerClientMock).not.toHaveBeenCalled();
+    expect(createApplicationAnswerMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when stored resume or job data is missing", async () => {
+    resumeProfileQueryMock.mockResolvedValue({
+      data: {
+        id: "resume-profile-123",
+        current_version_id: null,
+      },
+      error: null,
+    });
+    getJobByIdMock.mockResolvedValue(null);
+
+    const { POST } = await import("./route");
+
+    const request = new Request(
+      "http://localhost/api/resume-profiles/resume-profile-123/application-answers/from-job",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          jobId: "job-123",
+          question: "Why are you interested in this role?",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const response = await POST(request, {
+      params: Promise.resolve({
+        id: "resume-profile-123",
+      }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: "Required data not found",
+    });
+    expect(createApplicationAnswerMock).not.toHaveBeenCalled();
   });
 });

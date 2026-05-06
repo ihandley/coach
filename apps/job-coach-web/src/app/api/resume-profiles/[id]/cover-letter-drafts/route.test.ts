@@ -56,6 +56,22 @@ describe("POST /api/resume-profiles/[id]/cover-letter-drafts", () => {
     });
 
     expect(response.status).toBe(201);
+    expect(createCoverLetterDraftMock).toHaveBeenCalledWith(expect.anything(), {
+      resumeProfileId: "resume-profile-123",
+      jobId: "job-123",
+      candidateName: "Ian Handley",
+      companyName: "Acme",
+      jobTitle: "Senior Software Engineer",
+      jobSummary: "Build product features.",
+      resumeSummary: "Built web apps and APIs.",
+    });
+    expect(await response.json()).toEqual({
+      id: "cover-letter-draft-123",
+      resumeProfileId: "resume-profile-123",
+      jobId: "job-123",
+      content: "Draft content",
+      createdAt: "2026-04-22T12:00:00.000Z",
+    });
   });
 
   it("returns 400 for invalid input", async () => {
@@ -81,6 +97,10 @@ describe("POST /api/resume-profiles/[id]/cover-letter-drafts", () => {
     });
 
     expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "Invalid request body",
+    });
+    expect(createCoverLetterDraftMock).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed json", async () => {

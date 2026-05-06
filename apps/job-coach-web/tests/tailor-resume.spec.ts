@@ -53,10 +53,16 @@ test("can tailor a resume from job row", async ({ page }) => {
   const response = await responsePromise;
   expect(response.ok()).toBeTruthy();
 
-  await expect(page.getByText(/Tailored resume created:\s*E2E Resume - Pattern/)).toBeVisible();
+  await expect(page.getByText("Tailored resume created.")).toBeVisible();
 
-  await page.getByRole("link", { name: "E2E Resume - Pattern" }).click();
+  await page.getByRole("link", { name: "View resumes" }).click();
   await expect(page).toHaveURL(/\/resumes$/);
   await expect(page.getByText("E2E Resume", { exact: true })).toBeVisible();
   await expect(page.getByText("E2E Resume - Pattern", { exact: true })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download E2E Resume - Pattern" }).first().click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toMatch(/^resume-.+\.pdf$/);
 });

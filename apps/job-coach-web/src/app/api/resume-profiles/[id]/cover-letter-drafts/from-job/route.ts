@@ -1,5 +1,5 @@
 import { createCoverLetterDraft, InMemoryCoverLetterDraftRepository } from "@coach/core";
-import { createDbGetResumeProfile, DbJobRepository } from "@coach/db";
+import { createServerClient, DbJobRepository } from "@coach/db";
 
 interface FromJobBody {
   jobId: string;
@@ -25,6 +25,48 @@ function parseBody(value: unknown): FromJobBody | null {
   };
 }
 
+async function getCurrentResumeProfile(
+  db: ReturnType<typeof createServerClient>,
+  resumeProfileId: string,
+) {
+  const { data: profile, error: profileError } = await db
+    .from("resume_profiles")
+    .select("id,current_version_id")
+    .eq("id", resumeProfileId)
+    .maybeSingle();
+
+  if (profileError) {
+    throw profileError;
+  }
+
+  if (!profile?.current_version_id) {
+    return {
+      profile,
+      currentVersion: null,
+    };
+  }
+
+  const { data: version, error: versionError } = await db
+    .from("resume_versions")
+    .select("id,normalized_resume")
+    .eq("id", profile.current_version_id)
+    .maybeSingle();
+
+  if (versionError) {
+    throw versionError;
+  }
+
+  return {
+    profile,
+    currentVersion: version
+      ? {
+          id: version.id,
+          normalizedResume: version.normalized_resume,
+        }
+      : null,
+  };
+}
+
 export async function POST(
   request: Request,
   context: {
@@ -42,11 +84,9 @@ export async function POST(
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const getResumeProfile = createDbGetResumeProfile({} as never);
-  const jobs = new DbJobRepository({} as never);
-  const resumeProfileResult = await getResumeProfile({
-    resumeProfileId,
-  });
+  const db = createServerClient();
+  const jobs = new DbJobRepository(db);
+  const resumeProfileResult = await getCurrentResumeProfile(db, resumeProfileId);
 
   const resumeProfile = resumeProfileResult?.profile ?? null;
   const resumeVersion = resumeProfileResult?.currentVersion ?? null;

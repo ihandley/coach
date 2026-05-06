@@ -109,11 +109,11 @@ test("uploads, previews, and deletes a structured resume", async ({ page }) => {
   await expect(page.getByLabel("Resume")).toContainText(filename);
   await page.getByLabel("Resume").selectOption({ label: filename });
   await page.getByRole("button", { name: "Tailor Resume" }).click();
-  await expect(page.getByText(`Tailor Resume completed for ${filename}`)).toBeVisible();
+  await expect(page.getByText("Tailored resume created.")).toBeVisible();
 
   await page.goto("/resumes");
-  await page.getByRole("button", { name: `Delete ${filename}` }).click();
-  await expect(page.getByText(filename)).toHaveCount(0);
+  await page.getByRole("button", { name: `Delete ${filename}`, exact: true }).click();
+  await expect(page.getByText(filename, { exact: true })).toHaveCount(0);
 });
 
 test("invalid file type shows an error", async ({ page }) => {
