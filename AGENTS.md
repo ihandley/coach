@@ -207,7 +207,7 @@ Do not rely on manual session-state files for active progress tracking.
 
 Before implementing any issue work:
 
-1. Run `./scripts/session-handoff.sh <issue_number>`
+1. Run `./scripts/issue-checkpoint.sh <issue_number>`
 2. Confirm the active branch matches the issue
 3. Confirm the draft PR exists or was reused
 4. Begin the next small, testable block of work

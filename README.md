@@ -129,6 +129,16 @@ The new app supports explicit, bounded flows such as:
 pnpm install
 ```
 
+### Environments
+
+Job Coach has two explicit local operating modes:
+
+- development on `http://localhost:3000` for disposable data and free resets
+- production-like personal use on `http://localhost:3001` for stable real job tracking data
+
+See `docs/job-coach-environments.md` for setup, reset guardrails, backups, and the future
+hosted deployment path.
+
 ### Run tests
 
 ```bash
@@ -147,9 +157,27 @@ pnpm --filter job-coach-web typecheck
 
 ### Run the web app
 
-Use the normal app workflow for the Next.js app in `apps/job-coach-web`.
+Run the development app:
 
-If additional environment setup is required, treat the application code and repository docs as the source of truth rather than legacy OpenCode setup.
+```bash
+make dev
+```
+
+Build and run the production-like app:
+
+```bash
+make build-prd
+make prd
+```
+
+These commands load `apps/job-coach-web/.env.production.local` before running the
+production-like Next.js app on `http://localhost:3001`.
+
+Reset only disposable development data:
+
+```bash
+pnpm db:reset:dev
+```
 
 ## Testing and CI expectations
 

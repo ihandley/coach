@@ -1,4 +1,4 @@
-.PHONY: help install test typecheck dev build start session-handoff
+.PHONY: help install test typecheck dev prd build-prd build start issue-checkpoint session-handoff
 
 help:
 	@echo "Available commands:"
@@ -6,9 +6,12 @@ help:
 	@echo "  make test               Run workspace tests"
 	@echo "  make typecheck          Run workspace typecheck"
 	@echo "  make dev                Start the web app dev server"
+	@echo "  make build-prd          Build the production-like web app"
+	@echo "  make prd                Start the production-like web app on port 3001"
 	@echo "  make build              Build the web app"
 	@echo "  make start              Start the built web app"
-	@echo "  make session-handoff N=44 Start or hand off an issue session"
+	@echo "  make issue-checkpoint N=44 Start or checkpoint an issue session"
+	@echo "  make session-handoff N=44 Compatibility alias for issue-checkpoint"
 
 install:
 	pnpm install
@@ -24,19 +27,23 @@ typecheck:
 	pnpm --filter job-coach-web typecheck
 
 dev:
+	@echo "Starting Supabase..."
+	supabase start >/dev/null 2>&1 || true
+	@echo "Job Coach DEV — http://localhost:3000"
+	SUPABASE_URL="http://127.0.0.1:54321" \
+	SUPABASE_URL_DEV="http://127.0.0.1:54321" \
+	SUPABASE_SERVICE_ROLE_KEY="$$(supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2 | tr -d '\"')" \
+	SUPABASE_SERVICE_ROLE_KEY_DEV="$$(supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2 | tr -d '\"')" \
+	NEXT_PUBLIC_APP_ENV=development \
+	APP_ENV=development \
+	PORT=3000 \
 	pnpm --filter job-coach-web dev
 
-.PHONY: prd
+build-prd:
+	pnpm build:job-coach:prd
 
 prd:
-	NEXT_PUBLIC_APP_ENV=production \
-	JOB_COACH_APP_URL="http://localhost:3001" \
-	SUPABASE_URL="https://akmlurgldseksxgvksut.supabase.co" \
-	SUPABASE_SERVICE_ROLE_KEY="$$(security find-generic-password -s SUPABASE_SERVICE_ROLE_KEY -w)" \
-	OPENAI_API_KEY="$$(security find-generic-password -s OPENAI_API_KEY -w)" \
-	NODE_ENV=production \
-	PORT=3001 \
-	pnpm --filter job-coach-web start
+	pnpm prd:job-coach
 
 build:
 	pnpm --filter job-coach-web build
@@ -44,6 +51,8 @@ build:
 start:
 	pnpm --filter job-coach-web start
 
-session-handoff:
-	@test -n "$(N)" || (echo "Usage: make session-handoff N=<issue-number> OR make session-handoff" && exit 1)
-	./scripts/session-handoff.sh $(N)
+issue-checkpoint:
+	@test -n "$(N)" || (echo "Usage: make issue-checkpoint N=<issue-number>" && exit 1)
+	./scripts/issue-checkpoint.sh $(N)
+
+session-handoff: issue-checkpoint
