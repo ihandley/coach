@@ -170,7 +170,7 @@ describe("JobsPageClient", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ranked jobs unavailable.");
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
-    expect(screen.queryByText("No jobs yet. Import one to get started.")).not.toBeInTheDocument();
+    expect(screen.queryByText("No jobs yet")).not.toBeInTheDocument();
 
     shouldFail = false;
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -310,6 +310,17 @@ describe("JobsPageClient", () => {
     expect(screen.getByText("Apr 25, 2026")).toBeInTheDocument();
     expect(screen.queryByText("2026-04-26T12:00:00.000Z")).not.toBeInTheDocument();
     expect(screen.queryByText("2026-04-25T12:00:00.000Z")).not.toBeInTheDocument();
+  });
+
+  it("focuses the import URL input and does not render selection checkboxes", async () => {
+    render(<JobsPageClient />);
+
+    const importInput = screen.getByPlaceholderText("Paste job URL");
+
+    expect(importInput).toHaveFocus();
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Select all visible jobs")).not.toBeInTheDocument();
   });
 
   it("renders missing and invalid dates gracefully", async () => {
@@ -608,7 +619,10 @@ describe("JobsPageClient", () => {
     });
 
     expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
-    expect(screen.getByText("No jobs yet. Import one to get started.")).toBeInTheDocument();
+    expect(screen.getByText("No jobs yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("Paste a job posting URL above to import your first opportunity."),
+    ).toBeInTheDocument();
   });
 
   it("shows a visible error when delete fails", async () => {

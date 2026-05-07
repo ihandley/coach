@@ -97,7 +97,6 @@ export function JobsPageClient() {
   const [isImporting, setIsImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
   const [lastImportedJobId, setLastImportedJobId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -184,11 +183,6 @@ export function JobsPageClient() {
       }
 
       setJobs((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
-      setSelectedJobIds((currentIds) => {
-        const nextIds = new Set(currentIds);
-        nextIds.delete(jobId);
-        return nextIds;
-      });
       setExpandedId((currentId) => (currentId === jobId ? null : currentId));
     } catch (err) {
       console.error(err);
@@ -298,54 +292,6 @@ export function JobsPageClient() {
   const columns = useMemo<ColumnDef<RankedJob>[]>(
     () => [
       {
-        id: "select",
-        header: ({ table }) => {
-          const visibleIds = table.getRowModel().rows.map((row) => row.original.id);
-          const allVisibleSelected =
-            visibleIds.length > 0 && visibleIds.every((id) => selectedJobIds.has(id));
-
-          return (
-            <input
-              aria-label="Select all visible jobs"
-              type="checkbox"
-              checked={allVisibleSelected}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedJobIds(new Set([...selectedJobIds, ...visibleIds]));
-                } else {
-                  setSelectedJobIds(
-                    new Set([...selectedJobIds].filter((id) => !visibleIds.includes(id))),
-                  );
-                }
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
-          );
-        },
-        cell: ({ row }) => {
-          const id = row.original.id;
-          const checked = selectedJobIds.has(id);
-
-          return (
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={(e) => {
-                const next = new Set(selectedJobIds);
-                if (e.target.checked) next.add(id);
-                else next.delete(id);
-                setSelectedJobIds(next);
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
-          );
-        },
-      },
-      {
         accessorKey: "score",
         header: "Match",
         sortingFn: (first, second) => {
@@ -411,7 +357,7 @@ export function JobsPageClient() {
         },
       },
     ],
-    [handleUpdateCompany, handleUpdateStatus, lastImportedJobId, selectedJobIds],
+    [handleUpdateCompany, handleUpdateStatus, lastImportedJobId],
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -467,7 +413,12 @@ export function JobsPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Jobs</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Import, review, and manage each opportunity from one workspace.
+          </p>
+        </div>
       </div>
 
       {error ? (
@@ -492,6 +443,7 @@ export function JobsPageClient() {
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex gap-2">
           <input
+            autoFocus
             value={url}
             disabled={isImporting}
             onChange={(e) => setUrl(e.target.value)}
@@ -518,65 +470,13 @@ export function JobsPageClient() {
         <JobsTableSkeleton />
       ) : jobs.length === 0 && !error ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">No jobs yet. Import one to get started.</p>
+          <p className="font-medium text-gray-900">No jobs yet</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Paste a job posting URL above to import your first opportunity.
+          </p>
         </div>
       ) : jobs.length > 0 ? (
         <>
-          {selectedJobIds.size > 0 && (
-            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
-              <span>{selectedJobIds.size} selected</span>
-
-              <div className="flex items-center gap-2">
-                <select
-                  aria-label="Bulk status update"
-                  onChange={async (e) => {
-                    const value = e.target.value;
-                    if (!value) return;
-
-                    const ids = Array.from(selectedJobIds);
-
-                    const prevJobs = jobs;
-
-                    // optimistic update
-                    const updatedJobs = jobs.map((job) =>
-                      ids.includes(job.id) ? { ...job, status: value } : job,
-                    );
-
-                    setJobs(updatedJobs);
-
-                    try {
-                      await fetch("/api/jobs/bulk-update", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ids, status: value }),
-                      });
-                    } catch (err) {
-                      console.error("Bulk update failed", err);
-                      setJobs(prevJobs); // rollback
-                    }
-
-                    setSelectedJobIds(new Set());
-                  }}
-                  className="border border-gray-300 rounded px-2 py-1"
-                >
-                  <option value="">Set status...</option>
-                  {JOB_STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {getJobStatusLabel(status)}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={() => setSelectedJobIds(new Set())}
-                  className="text-blue-600 underline"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
-
           <StatusFilterChips />
 
           <p className="mb-3 text-xs text-gray-500">{activeSortLabel}</p>
