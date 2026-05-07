@@ -4,6 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JobsPageClient } from "./jobs-page-client";
 
+const routerRefresh = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: routerRefresh }),
+}));
+
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
     headers: {
@@ -44,6 +50,7 @@ describe("JobsPageClient", () => {
   let companyUpdateShouldFail: boolean;
 
   beforeEach(() => {
+    routerRefresh.mockReset();
     deleteShouldFail = false;
     companyUpdateShouldFail = false;
 
@@ -171,7 +178,7 @@ describe("JobsPageClient", () => {
     expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
   });
 
-  it("renders score states, NEW badges, and the default sort label", async () => {
+  it("renders score states without marking recently seeded jobs as NEW", async () => {
     const recentlyCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const olderCreatedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -220,10 +227,79 @@ describe("JobsPageClient", () => {
     expect(
       screen.getByText("Default sort: NEW jobs first, then matched jobs by score."),
     ).toBeInTheDocument();
+    expect(screen.queryByText("NEW")).not.toBeInTheDocument();
 
     const titleCell = screen.getByText("Recently Imported").closest("td");
     expect(titleCell).not.toBeNull();
-    expect(within(titleCell as HTMLElement).getByText("NEW")).toBeInTheDocument();
+    expect(within(titleCell as HTMLElement).queryByText("NEW")).not.toBeInTheDocument();
+  });
+
+  it("marks only the imported job as NEW and moves it to the top by default", async () => {
+    const seededRecentJob = {
+      ...rankedJob,
+      id: "job-recent-seeded",
+      title: "Seeded Recent Job",
+      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      score: null,
+    };
+    const importedJob = {
+      ...rankedJob,
+      id: "job-new",
+      title: "Imported Job",
+      company: "Imported Co",
+      createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      score: null,
+    };
+    let rankedLoadCount = 0;
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        rankedLoadCount += 1;
+
+        return rankedLoadCount === 1
+          ? jsonResponse([seededRecentJob, rankedJob])
+          : jsonResponse([seededRecentJob, rankedJob, importedJob]);
+      }
+
+      if (url === "/api/jobs" && init?.method === "POST") {
+        return jsonResponse(
+          {
+            id: "job-new",
+            title: "Imported Job",
+          },
+          { status: 201 },
+        );
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Seeded Recent Job")).toBeInTheDocument();
+    expect(screen.queryByText("NEW")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Paste job URL"), {
+      target: {
+        value: "https://example.com/imported-job",
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    expect(await screen.findByText("Job imported successfully.")).toBeInTheDocument();
+
+    const rows = screen.getAllByTestId("job-row");
+    expect(within(rows[0]).getByText("Imported Job")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("NEW")).toBeInTheDocument();
+    expect(screen.getAllByText("NEW")).toHaveLength(1);
+
+    const seededRecentRow = screen.getByText("Seeded Recent Job").closest("tr");
+    expect(seededRecentRow).not.toBeNull();
+    expect(within(seededRecentRow as HTMLElement).queryByText("NEW")).not.toBeInTheDocument();
   });
 
   it("renders readable created and updated dates instead of raw timestamps", async () => {
@@ -473,6 +549,7 @@ describe("JobsPageClient", () => {
 
     expect(within(details).getByRole("button", { name: "Delete job" })).toBeInTheDocument();
     expect(within(details).getByRole("button", { name: "Tailor Resume" })).toBeInTheDocument();
+    expect(within(details).getByRole("button", { name: "Re-import from URL" })).toBeInTheDocument();
     expect(within(details).getByText("Company")).toBeInTheDocument();
     expect(within(details).getByText("Pattern builds hiring tools.")).toBeInTheDocument();
     expect(within(details).getByText("Description")).toBeInTheDocument();

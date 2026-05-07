@@ -10,9 +10,10 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 
-import { getMatchScoreState, isRecentlyImported } from "@/lib/jobs-table-signals";
+import { getMatchScoreState } from "@/lib/jobs-table-signals";
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
+import { ReimportJobPanel } from "./[jobId]/reimport-job-panel";
 import {
   areAllJobStatusesVisible,
   countJobsByStatus,
@@ -97,6 +98,7 @@ export function JobsPageClient() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
+  const [lastImportedJobId, setLastImportedJobId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -146,6 +148,11 @@ export function JobsPageClient() {
         throw new Error("Import job failed.");
       }
 
+      const importedJob = await res.json().catch(() => null);
+      const importedJobId =
+        importedJob && typeof importedJob.id === "string" ? importedJob.id : null;
+
+      setLastImportedJobId(importedJobId);
       await load();
       setUrl("");
       setImportSuccess("Job imported successfully.");
@@ -357,7 +364,7 @@ export function JobsPageClient() {
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
             <span className="font-medium text-gray-900">{row.original.title}</span>
-            {isRecentlyImported(row.original.createdAt) ? (
+            {lastImportedJobId === row.original.id ? (
               <span className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-700">
                 NEW
               </span>
@@ -404,16 +411,26 @@ export function JobsPageClient() {
         },
       },
     ],
-    [handleUpdateCompany, handleUpdateStatus, selectedJobIds],
+    [handleUpdateCompany, handleUpdateStatus, lastImportedJobId, selectedJobIds],
   );
 
   const filteredJobs = React.useMemo(() => {
-    return jobs.filter((job) => {
+    const visibleJobs = jobs.filter((job) => {
       const status = normalizeJobStatus(job.status);
 
       return status ? visibleStatuses.has(status) : false;
     });
-  }, [jobs, visibleStatuses]);
+
+    if (!lastImportedJobId || sorting.length > 0) {
+      return visibleJobs;
+    }
+
+    return [...visibleJobs].sort((first, second) => {
+      if (first.id === lastImportedJobId) return -1;
+      if (second.id === lastImportedJobId) return 1;
+      return 0;
+    });
+  }, [jobs, lastImportedJobId, sorting.length, visibleStatuses]);
 
   const activeSortLabel = React.useMemo(() => {
     const activeSort = sorting[0];
@@ -910,6 +927,10 @@ function JobDetailsPanel({
         </div>
       </div>
 
+      <div className="mt-4">
+        <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} />
+      </div>
+
       {showResumeTailor && <ResumeTailor jobId={job.id} />}
 
       <div className="mt-4 max-h-96 overflow-y-auto text-sm">
@@ -987,7 +1008,8 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   const summary = structuredSummary;
 
   const location = formatStructuredSummaryValue(summary?.location);
-  const salaryRange = formatStructuredSummaryValue(summary?.salaryRange) ?? "Salary range not listed";
+  const salaryRange =
+    formatStructuredSummaryValue(summary?.salaryRange) ?? "Salary range not listed";
   const companyInfo = getStructuredSummaryList(summary?.companyInfo);
   const jobDescription = getStructuredSummaryList(summary?.jobDescription);
   const requirements = getStructuredSummaryList(summary?.requirements);
