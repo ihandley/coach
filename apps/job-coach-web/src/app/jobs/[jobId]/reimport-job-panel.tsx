@@ -11,6 +11,12 @@ type JobReimportPanelProps = {
 
 type PreviewResponse = {
   sourceUrl: string;
+  current: {
+    company: string;
+    title: string;
+    sourceText: string;
+    structuredSummary: unknown;
+  };
   preview: {
     company: string;
     title: string;
@@ -58,8 +64,8 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
   const [structuredSummary, setStructuredSummary] = useState("");
   const [previewSourceText, setPreviewSourceText] = useState("");
   const [structuredSummaryEdited, setStructuredSummaryEdited] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [structuredDataOpen, setStructuredDataOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,12 +78,11 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
       return;
     }
 
-    setDrawerOpen(true);
     setPreview(null);
     setLoadingPreview(true);
     setError(null);
     setMessage(null);
-    setStructuredDataOpen(false);
+    setAdvancedOpen(false);
 
     try {
       const res = await fetch(`/api/jobs/${jobId}/reimport/preview`, {
@@ -98,6 +103,7 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
       setPreviewSourceText(data.preview.sourceText);
       setStructuredSummary(JSON.stringify(data.preview.structuredSummary ?? null, null, 2));
       setStructuredSummaryEdited(false);
+      setModalOpen(true);
     } catch {
       setError("Unable to re-import this job right now.");
     } finally {
@@ -154,18 +160,25 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
     }
   }
 
+  function keepCurrentValues() {
+    if (!preview) return;
+
+    setCompany(preview.current.company);
+    setTitle(preview.current.title);
+  }
+
   function cancelPreview() {
     setPreview(null);
     setPreviewSourceText("");
     setStructuredSummaryEdited(false);
-    setStructuredDataOpen(false);
-    setDrawerOpen(false);
+    setAdvancedOpen(false);
+    setModalOpen(false);
     setError(null);
     setMessage(null);
   }
 
-  function closeDrawer() {
-    setDrawerOpen(false);
+  function closeModal() {
+    setModalOpen(false);
   }
 
   const trigger = (
@@ -179,33 +192,33 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
     </button>
   );
 
-  const drawer = drawerOpen ? (
-    <div className="fixed inset-0 z-50">
+  const modal = modalOpen ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        aria-label="Close re-import drawer"
-        onClick={closeDrawer}
-        className="absolute inset-0 cursor-default bg-black/20"
+        aria-label="Close re-import modal"
+        onClick={closeModal}
+        className="absolute inset-0 cursor-default bg-black/30"
       />
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby={`reimport-title-${jobId}`}
-        className="absolute inset-y-0 right-0 flex w-full max-w-[700px] flex-col bg-white shadow-2xl sm:w-[45vw]"
+        className="relative flex max-h-[90vh] w-full max-w-[720px] flex-col rounded-lg bg-white shadow-2xl"
       >
         <header className="border-b border-gray-200 px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 id={`reimport-title-${jobId}`} className="text-lg font-semibold text-gray-900">
-                Re-import from URL
+                Review imported job data
               </h2>
               {sourceUrl ? (
-                <p className="mt-1 break-all text-sm text-gray-600">{sourceUrl}</p>
+                <p className="mt-1 break-all text-sm text-gray-500">{sourceUrl}</p>
               ) : null}
             </div>
             <button
               type="button"
-              onClick={closeDrawer}
+              onClick={closeModal}
               className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
               Close
@@ -215,66 +228,98 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <div className="space-y-5">
-            {loadingPreview ? <p className="text-sm text-gray-600">Loading preview...</p> : null}
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
             {preview ? (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Company
-                    <input
-                      value={company}
-                      onChange={(event) => setCompany(event.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    />
-                  </label>
-
-                  <label className="block text-sm font-medium text-gray-700">
-                    Title
-                    <input
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
-                    />
-                  </label>
+                <div className="overflow-hidden rounded-md border border-gray-200">
+                  <div className="grid grid-cols-3 bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+                    <div className="px-3 py-2">Field</div>
+                    <div className="px-3 py-2">Current</div>
+                    <div className="px-3 py-2">Imported</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-t border-gray-200 text-sm">
+                    <div className="px-3 py-2 font-medium text-gray-700">Company</div>
+                    <div className="px-3 py-2 text-gray-700">{preview.current.company}</div>
+                    <div className="px-3 py-2 text-gray-900">{preview.preview.company}</div>
+                  </div>
+                  <div className="grid grid-cols-3 border-t border-gray-200 text-sm">
+                    <div className="px-3 py-2 font-medium text-gray-700">Title</div>
+                    <div className="px-3 py-2 text-gray-700">{preview.current.title}</div>
+                    <div className="px-3 py-2 text-gray-900">{preview.preview.title}</div>
+                  </div>
                 </div>
 
-                <label className="block text-sm font-medium text-gray-700">
-                  Raw View
-                  <textarea
-                    value={sourceText}
-                    onChange={(event) => setSourceText(event.target.value)}
-                    rows={16}
-                    className="mt-1 min-h-[360px] w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
-                  />
-                </label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-gray-900">Final values</h3>
+                    <button
+                      type="button"
+                      onClick={keepCurrentValues}
+                      className="text-sm font-medium text-blue-600 underline"
+                    >
+                      Keep current values
+                    </button>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Final company
+                      <input
+                        value={company}
+                        onChange={(event) => setCompany(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      />
+                    </label>
+
+                    <label className="block text-sm font-medium text-gray-700">
+                      Final title
+                      <input
+                        value={title}
+                        onChange={(event) => setTitle(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                      />
+                    </label>
+                  </div>
+                </div>
 
                 <div className="rounded-md border border-gray-200">
                   <button
                     type="button"
-                    aria-expanded={structuredDataOpen}
-                    onClick={() => setStructuredDataOpen((value) => !value)}
+                    aria-expanded={advancedOpen}
+                    onClick={() => setAdvancedOpen((value) => !value)}
                     className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-gray-700"
                   >
-                    <span>Advanced Structured Data</span>
-                    <span aria-hidden="true">{structuredDataOpen ? "-" : "+"}</span>
+                    <span>Advanced import details</span>
+                    <span aria-hidden="true">{advancedOpen ? "-" : "+"}</span>
                   </button>
 
-                  {structuredDataOpen ? (
-                    <label className="block border-t border-gray-200 px-3 pb-3 pt-2 text-sm font-medium text-gray-700">
-                      Structured View
-                      <textarea
-                        value={structuredSummary}
-                        onChange={(event) => {
-                          setStructuredSummary(event.target.value);
-                          setStructuredSummaryEdited(true);
-                        }}
-                        rows={10}
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
-                      />
-                    </label>
+                  {advancedOpen ? (
+                    <div className="space-y-4 border-t border-gray-200 px-3 pb-3 pt-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Raw posting text
+                        <textarea
+                          value={sourceText}
+                          onChange={(event) => setSourceText(event.target.value)}
+                          rows={8}
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
+                        />
+                      </label>
+
+                      <label className="block text-sm font-medium text-gray-700">
+                        Structured summary JSON
+                        <textarea
+                          value={structuredSummary}
+                          onChange={(event) => {
+                            setStructuredSummary(event.target.value);
+                            setStructuredSummaryEdited(true);
+                          }}
+                          rows={8}
+                          className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
+                        />
+                      </label>
+                    </div>
                   ) : null}
                 </div>
               </>
@@ -308,7 +353,7 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
     return (
       <>
         {trigger}
-        {drawer}
+        {modal}
       </>
     );
   }
@@ -325,7 +370,8 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
         </div>
 
         {!canReimport ? <p className="text-sm text-gray-600">{noRealSourceUrlMessage}</p> : null}
-        {drawer}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {modal}
       </div>
     </section>
   );

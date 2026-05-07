@@ -30,6 +30,14 @@ describe("ReimportJobPanel", () => {
       if (url === "/api/jobs/job-123/reimport/preview" && init?.method === "POST") {
         return jsonResponse({
           sourceUrl: "https://example.com/jobs/123",
+          current: {
+            company: "Current Co",
+            title: "Current Title",
+            sourceText: "Current source text",
+            structuredSummary: {
+              current: true,
+            },
+          },
           preview: {
             company: "Preview Co",
             title: "Preview Title",
@@ -65,28 +73,59 @@ describe("ReimportJobPanel", () => {
     vi.unstubAllGlobals();
   });
 
-  it("loads preview data, lets the user edit it, and saves explicitly", async () => {
+  it("opens a preview modal with current, imported, and editable final values", async () => {
     render(<ReimportJobPanel jobId="job-123" sourceUrl="https://example.com/jobs/123" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Re-import from URL" }));
 
-    expect(await screen.findByRole("dialog", { name: "Re-import from URL" })).toBeInTheDocument();
-    const company = await screen.findByLabelText("Company");
+    expect(
+      await screen.findByRole("dialog", { name: "Review imported job data" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Current Co")).toBeInTheDocument();
+    expect(screen.getByText("Current Title")).toBeInTheDocument();
+    expect(screen.getByText("Preview Co")).toBeInTheDocument();
+    expect(screen.getByText("Preview Title")).toBeInTheDocument();
+
+    const company = screen.getByLabelText("Final company");
     expect(company).toHaveValue("Preview Co");
-    expect(screen.getByLabelText("Title")).toHaveValue("Preview Title");
-    expect(screen.getByLabelText("Raw View")).toHaveValue("Preview source text");
-    expect(screen.queryByLabelText("Structured View")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Final title")).toHaveValue("Preview Title");
+    expect(screen.queryByLabelText("Raw posting text")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Structured summary JSON")).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "Advanced Structured Data" }));
+  it("resets final company and title to current values", async () => {
+    render(<ReimportJobPanel jobId="job-123" sourceUrl="https://example.com/jobs/123" />);
 
-    expect(screen.getByLabelText("Structured View")).toHaveValue(
+    fireEvent.click(screen.getByRole("button", { name: "Re-import from URL" }));
+
+    const company = await screen.findByLabelText("Final company");
+    fireEvent.change(company, { target: { value: "Edited Co" } });
+    fireEvent.change(screen.getByLabelText("Final title"), { target: { value: "Edited Title" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep current values" }));
+
+    expect(company).toHaveValue("Current Co");
+    expect(screen.getByLabelText("Final title")).toHaveValue("Current Title");
+  });
+
+  it("lets the user edit advanced details and saves explicitly", async () => {
+    render(<ReimportJobPanel jobId="job-123" sourceUrl="https://example.com/jobs/123" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Re-import from URL" }));
+
+    const company = await screen.findByLabelText("Final company");
+    fireEvent.click(screen.getByRole("button", { name: "Advanced import details" }));
+
+    expect(screen.getByLabelText("Raw posting text")).toHaveValue("Preview source text");
+
+    expect(screen.getByLabelText("Structured summary JSON")).toHaveValue(
       JSON.stringify({ requirements: ["TypeScript"] }, null, 2),
     );
-    expect(fetchMock).toHaveBeenCalledTimes(1);
 
     fireEvent.change(company, { target: { value: "Edited Co" } });
-    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Edited Title" } });
-    fireEvent.change(screen.getByLabelText("Raw View"), {
+    fireEvent.change(screen.getByLabelText("Final title"), { target: { value: "Edited Title" } });
+    fireEvent.change(screen.getByLabelText("Raw posting text"), {
       target: { value: "Edited source text" },
     });
 
@@ -115,25 +154,31 @@ describe("ReimportJobPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Re-import from URL" }));
 
-    expect(await screen.findByLabelText("Company")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Final company")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(screen.queryByRole("dialog", { name: "Re-import from URL" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Company")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Review imported job data" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Final company")).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("closes the drawer without saving changes", async () => {
+  it("closes the modal without saving changes", async () => {
     render(<ReimportJobPanel jobId="job-123" sourceUrl="https://example.com/jobs/123" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Re-import from URL" }));
 
-    expect(await screen.findByRole("dialog", { name: "Re-import from URL" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Review imported job data" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
-    expect(screen.queryByRole("dialog", { name: "Re-import from URL" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Review imported job data" }),
+    ).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
