@@ -1,4 +1,5 @@
 import { JobStatusSelect } from "./job-status-select";
+import { ReimportJobPanel } from "./reimport-job-panel";
 import { ResumeTailorPanel } from "./resume-tailor-panel";
 import { notFound } from "next/navigation";
 
@@ -43,6 +44,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <JobStatusSelect jobId={job.id} initialStatus={job.status} />
       </div>
+
+      <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} />
 
       <ResumeTailorPanel jobId={job.id} />
 
