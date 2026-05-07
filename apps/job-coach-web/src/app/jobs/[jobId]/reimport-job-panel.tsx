@@ -58,6 +58,8 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
   const [structuredSummary, setStructuredSummary] = useState("");
   const [previewSourceText, setPreviewSourceText] = useState("");
   const [structuredSummaryEdited, setStructuredSummaryEdited] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [structuredDataOpen, setStructuredDataOpen] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -70,9 +72,12 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
       return;
     }
 
+    setDrawerOpen(true);
+    setPreview(null);
     setLoadingPreview(true);
     setError(null);
     setMessage(null);
+    setStructuredDataOpen(false);
 
     try {
       const res = await fetch(`/api/jobs/${jobId}/reimport/preview`, {
@@ -153,11 +158,15 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
     setPreview(null);
     setPreviewSourceText("");
     setStructuredSummaryEdited(false);
+    setStructuredDataOpen(false);
+    setDrawerOpen(false);
     setError(null);
     setMessage(null);
   }
 
-  const hasPanelContent = !canReimport || error || message || preview;
+  function closeDrawer() {
+    setDrawerOpen(false);
+  }
 
   const trigger = (
     <button
@@ -169,97 +178,137 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
       {loadingPreview ? "Re-importing..." : "Re-import from URL"}
     </button>
   );
-  const panelContent = (
-    <div className="space-y-4">
-      {variant === "inline" ? (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Source import</h2>
-          {sourceUrl ? <p className="break-all text-sm text-gray-600">{sourceUrl}</p> : null}
-        </div>
-      ) : null}
 
-      {!canReimport ? <p className="text-sm text-gray-600">{noRealSourceUrlMessage}</p> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
-
-      {preview ? (
-        <div className="space-y-4 border-t border-gray-200 pt-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Company
-              <input
-                value={company}
-                onChange={(event) => setCompany(event.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
-              />
-            </label>
-
-            <label className="block text-sm font-medium text-gray-700">
-              Title
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
-              />
-            </label>
-          </div>
-
-          <label className="block text-sm font-medium text-gray-700">
-            Raw View
-            <textarea
-              value={sourceText}
-              onChange={(event) => setSourceText(event.target.value)}
-              rows={10}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
-            />
-          </label>
-
-          <label className="block text-sm font-medium text-gray-700">
-            Structured View
-            <textarea
-              value={structuredSummary}
-              onChange={(event) => {
-                setStructuredSummary(event.target.value);
-                setStructuredSummaryEdited(true);
-              }}
-              rows={8}
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
-            />
-          </label>
-
-          <div className="flex gap-3">
+  const drawer = drawerOpen ? (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        aria-label="Close re-import drawer"
+        onClick={closeDrawer}
+        className="absolute inset-0 cursor-default bg-black/20"
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`reimport-title-${jobId}`}
+        className="absolute inset-y-0 right-0 flex w-full max-w-[700px] flex-col bg-white shadow-2xl sm:w-[45vw]"
+      >
+        <header className="border-b border-gray-200 px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 id={`reimport-title-${jobId}`} className="text-lg font-semibold text-gray-900">
+                Re-import from URL
+              </h2>
+              {sourceUrl ? (
+                <p className="mt-1 break-all text-sm text-gray-600">{sourceUrl}</p>
+              ) : null}
+            </div>
             <button
               type="button"
-              onClick={saveChanges}
-              disabled={saving}
-              className="btn-primary disabled:opacity-50"
+              onClick={closeDrawer}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
-              {saving ? "Saving..." : "Save changes"}
-            </button>
-            <button
-              type="button"
-              onClick={cancelPreview}
-              disabled={saving}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
-            >
-              Cancel
+              Close
             </button>
           </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="space-y-5">
+            {loadingPreview ? <p className="text-sm text-gray-600">Loading preview...</p> : null}
+            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {message ? <p className="text-sm text-green-700">{message}</p> : null}
+
+            {preview ? (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Company
+                    <input
+                      value={company}
+                      onChange={(event) => setCompany(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                    />
+                  </label>
+
+                  <label className="block text-sm font-medium text-gray-700">
+                    Title
+                    <input
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+                    />
+                  </label>
+                </div>
+
+                <label className="block text-sm font-medium text-gray-700">
+                  Raw View
+                  <textarea
+                    value={sourceText}
+                    onChange={(event) => setSourceText(event.target.value)}
+                    rows={16}
+                    className="mt-1 min-h-[360px] w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
+                  />
+                </label>
+
+                <div className="rounded-md border border-gray-200">
+                  <button
+                    type="button"
+                    aria-expanded={structuredDataOpen}
+                    onClick={() => setStructuredDataOpen((value) => !value)}
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-gray-700"
+                  >
+                    <span>Advanced Structured Data</span>
+                    <span aria-hidden="true">{structuredDataOpen ? "-" : "+"}</span>
+                  </button>
+
+                  {structuredDataOpen ? (
+                    <label className="block border-t border-gray-200 px-3 pb-3 pt-2 text-sm font-medium text-gray-700">
+                      Structured View
+                      <textarea
+                        value={structuredSummary}
+                        onChange={(event) => {
+                          setStructuredSummary(event.target.value);
+                          setStructuredSummaryEdited(true);
+                        }}
+                        rows={10}
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+          </div>
         </div>
-      ) : null}
+
+        <footer className="sticky bottom-0 flex justify-end gap-3 border-t border-gray-200 bg-white px-5 py-4">
+          <button
+            type="button"
+            onClick={cancelPreview}
+            disabled={saving}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={saveChanges}
+            disabled={saving || !preview}
+            className="btn-primary disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </footer>
+      </section>
     </div>
-  );
+  ) : null;
 
   if (variant === "inline") {
     return (
       <>
         {trigger}
-
-        {hasPanelContent ? (
-          <section className="w-full rounded-lg border border-gray-200 bg-white p-4">
-            {panelContent}
-          </section>
-        ) : null}
+        {drawer}
       </>
     );
   }
@@ -275,7 +324,8 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
           {trigger}
         </div>
 
-        {hasPanelContent ? panelContent : null}
+        {!canReimport ? <p className="text-sm text-gray-600">{noRealSourceUrlMessage}</p> : null}
+        {drawer}
       </div>
     </section>
   );
