@@ -938,8 +938,60 @@ function JobDetailsPanel({
   );
 }
 
+function formatStructuredSummaryValue(value: unknown): string | null {
+  if (value == null) return null;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => formatStructuredSummaryValue(item))
+      .filter((item): item is string => Boolean(item));
+
+    return parts.length > 0 ? parts.join(", ") : null;
+  }
+
+  if (typeof value === "object") {
+    const parts = Object.entries(value as Record<string, unknown>)
+      .map(([key, nestedValue]) => {
+        const formattedNestedValue = formatStructuredSummaryValue(nestedValue);
+        return formattedNestedValue ? `${key}: ${formattedNestedValue}` : key;
+      })
+      .filter((item) => item.trim().length > 0);
+
+    return parts.length > 0 ? parts.join("; ") : null;
+  }
+
+  return null;
+}
+
+function getStructuredSummaryList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    const formattedValue = formatStructuredSummaryValue(value);
+    return formattedValue ? [formattedValue] : [];
+  }
+
+  return value
+    .map((item) => formatStructuredSummaryValue(item))
+    .filter((item): item is string => Boolean(item));
+}
+
 function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   const summary = structuredSummary;
+
+  const location = formatStructuredSummaryValue(summary?.location);
+  const salaryRange = formatStructuredSummaryValue(summary?.salaryRange) ?? "Salary range not listed";
+  const companyInfo = getStructuredSummaryList(summary?.companyInfo);
+  const jobDescription = getStructuredSummaryList(summary?.jobDescription);
+  const requirements = getStructuredSummaryList(summary?.requirements);
+  const benefits = getStructuredSummaryList(summary?.benefits);
 
   if (!summary) {
     return (
@@ -952,48 +1004,48 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
-        {summary.location && <div>📍 {summary.location}</div>}
-        <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
+        {location && <div>📍 {location}</div>}
+        <div>💰 {salaryRange}</div>
       </div>
 
-      {summary.companyInfo?.length > 0 && (
+      {companyInfo.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Company</h4>
           <ul className="ml-5 list-disc">
-            {summary.companyInfo.map((item: string, i: number) => (
+            {companyInfo.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {summary.jobDescription?.length > 0 && (
+      {jobDescription.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Description</h4>
           <ul className="ml-5 list-disc">
-            {summary.jobDescription.map((item: string, i: number) => (
+            {jobDescription.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {summary.requirements?.length > 0 && (
+      {requirements.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Requirements</h4>
           <ul className="ml-5 list-disc">
-            {summary.requirements.map((item: string, i: number) => (
+            {requirements.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {summary.benefits?.length > 0 && (
+      {benefits.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Benefits</h4>
           <ul className="ml-5 list-disc">
-            {summary.benefits.map((item: string, i: number) => (
+            {benefits.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
