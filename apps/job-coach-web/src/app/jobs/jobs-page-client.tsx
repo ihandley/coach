@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -190,49 +190,53 @@ export function JobsPageClient() {
     }
   }
 
-  const handleUpdateCompany = useCallback(
-    async (jobId: string, company: string, previousCompany: string) => {
-      const nextCompany = company.trim();
+  const handleUpdateJobDetails = useCallback(
+    async (jobId: string, input: { company: string; title: string }) => {
+      const company = input.company.trim();
+      const title = input.title.trim();
 
-      if (!nextCompany) {
-        return;
+      if (!company || !title) {
+        throw new Error("INVALID_JOB_DETAILS");
       }
 
       setError(null);
+
+      const previousJobs = jobs;
+
       setJobs((currentJobs) =>
-        currentJobs.map((job) => (job.id === jobId ? { ...job, company: nextCompany } : job)),
+        currentJobs.map((job) => (job.id === jobId ? { ...job, company, title } : job)),
       );
 
       try {
         const res = await fetch(`/api/jobs/${jobId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ company: nextCompany }),
+          body: JSON.stringify({ company, title }),
         });
 
         if (!res.ok) {
-          throw new Error("Update company failed.");
+          throw new Error("Update job details failed.");
         }
 
         const body = await res.json().catch(() => null);
         const savedCompany =
-          body && typeof body.company === "string" && body.company.trim()
-            ? body.company
-            : nextCompany;
+          body && typeof body.company === "string" && body.company.trim() ? body.company : company;
+        const savedTitle =
+          body && typeof body.title === "string" && body.title.trim() ? body.title : title;
 
         setJobs((currentJobs) =>
-          currentJobs.map((job) => (job.id === jobId ? { ...job, company: savedCompany } : job)),
+          currentJobs.map((job) =>
+            job.id === jobId ? { ...job, company: savedCompany, title: savedTitle } : job,
+          ),
         );
       } catch (err) {
         console.error(err);
-        setJobs((currentJobs) =>
-          currentJobs.map((job) => (job.id === jobId ? { ...job, company: previousCompany } : job)),
-        );
-        setError("Unable to update company.");
+        setJobs(previousJobs);
+        setError("Unable to update job details.");
         throw err;
       }
     },
-    [],
+    [jobs],
   );
 
   const handleUpdateStatus = useCallback((jobId: string, status: JobStatusOption) => {
@@ -321,7 +325,7 @@ export function JobsPageClient() {
       {
         accessorKey: "company",
         header: "Company",
-        cell: ({ row }) => <CompanyCell job={row.original} onUpdateCompany={handleUpdateCompany} />,
+        cell: ({ row }) => <CompanyCell job={row.original} />,
       },
       {
         accessorKey: "status",
@@ -357,7 +361,7 @@ export function JobsPageClient() {
         },
       },
     ],
-    [handleUpdateCompany, handleUpdateStatus, lastImportedJobId],
+    [handleUpdateStatus, lastImportedJobId],
   );
 
   const filteredJobs = React.useMemo(() => {
@@ -525,7 +529,11 @@ export function JobsPageClient() {
                           colSpan={row.getVisibleCells().length}
                           className="bg-gray-50 px-4 py-3 text-sm"
                         >
-                          <JobDetailsPanel job={row.original} onDeleteJob={handleDeleteJob} />
+                          <JobDetailsPanel
+                            job={row.original}
+                            onDeleteJob={handleDeleteJob}
+                            onUpdateJobDetails={handleUpdateJobDetails}
+                          />
                         </td>
                       </tr>
                     )}
@@ -604,119 +612,8 @@ function DateCell({ value }: { value: string | null | undefined }) {
   return <span>{formattedDate}</span>;
 }
 
-function CompanyCell({
-  job,
-  onUpdateCompany,
-}: {
-  job: RankedJob;
-  onUpdateCompany: (jobId: string, company: string, previousCompany: string) => Promise<void>;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(job.company);
-  const [isSaving, setIsSaving] = useState(false);
-  const skipBlurSaveRef = useRef(false);
-
-  async function saveCompany() {
-    if (isSaving) {
-      return;
-    }
-
-    const nextCompany = draft.trim();
-
-    if (!nextCompany || nextCompany === job.company) {
-      setDraft(job.company);
-      setIsEditing(false);
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      await onUpdateCompany(job.id, nextCompany, job.company);
-      setDraft(nextCompany);
-      setIsEditing(false);
-    } catch {
-      setDraft(job.company);
-      setIsEditing(false);
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function cancelEdit() {
-    skipBlurSaveRef.current = true;
-    setDraft(job.company);
-    setIsEditing(false);
-  }
-
-  if (isEditing) {
-    return (
-      <input
-        aria-label={`Company for ${job.title}`}
-        autoFocus
-        disabled={isSaving}
-        value={draft}
-        onBlur={() => {
-          if (skipBlurSaveRef.current) {
-            skipBlurSaveRef.current = false;
-            return;
-          }
-
-          void saveCompany();
-        }}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          event.stopPropagation();
-
-          if (event.key === "Enter") {
-            event.preventDefault();
-            void saveCompany();
-          }
-
-          if (event.key === "Escape") {
-            event.preventDefault();
-            cancelEdit();
-          }
-        }}
-        onClick={(event) => event.stopPropagation()}
-        onMouseDown={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        className="w-44 rounded-md border border-blue-300 px-2 py-1 text-sm"
-      />
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span>{job.company}</span>
-      <button
-        type="button"
-        aria-label={`Edit company for ${job.title}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setDraft(job.company);
-          setIsEditing(true);
-        }}
-        onMouseDown={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        className="rounded p-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
-      >
-        <svg
-          aria-hidden="true"
-          className="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-        >
-          <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
-          <path d="m19.5 7.125-2.625-2.625" />
-        </svg>
-      </button>
-    </div>
-  );
+function CompanyCell({ job }: { job: RankedJob }) {
+  return <span>{job.company}</span>;
 }
 
 function JobsTableSkeleton() {
@@ -729,7 +626,7 @@ function JobsTableSkeleton() {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {["", "Match", "Title", "Company", "Status", "Updated", "Created", "Source"].map(
+            {["Match", "Title", "Company", "Status", "Updated", "Created", "Source"].map(
               (header) => (
                 <th key={header} className="px-4 py-2 text-left font-medium text-gray-700">
                   {header}
@@ -741,7 +638,7 @@ function JobsTableSkeleton() {
         <tbody>
           {[0, 1, 2].map((row) => (
             <tr key={row} className="border-t">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((cell) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
                 <td key={cell} className="px-4 py-3">
                   <div className="h-3 w-full max-w-28 rounded bg-gray-200" />
                 </td>
@@ -757,12 +654,16 @@ function JobsTableSkeleton() {
 function JobDetailsPanel({
   job,
   onDeleteJob,
+  onUpdateJobDetails,
 }: {
   job: RankedJob;
   onDeleteJob: (jobId: string) => void | Promise<void>;
+  onUpdateJobDetails: (jobId: string, input: { company: string; title: string }) => Promise<void>;
 }) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
   const [showResumeTailor, setShowResumeTailor] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const structuredPanelId = `job-${job.id}-structured-view`;
   const rawPanelId = `job-${job.id}-original-posting`;
   const safeText = job.sourceText || "No job description available.";
@@ -805,30 +706,71 @@ function JobDetailsPanel({
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="relative">
           <button
             type="button"
-            onClick={() => {
-              void onDeleteJob(job.id);
-            }}
-            className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50"
+            aria-expanded={actionsOpen}
+            aria-haspopup="menu"
+            onClick={() => setActionsOpen((value) => !value)}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
-            Delete job
+            Actions
           </button>
-          <button
-            type="button"
-            aria-expanded={showResumeTailor}
-            aria-controls={`resume-tailor-panel-${job.id}`}
-            onClick={() => setShowResumeTailor((value) => !value)}
-            className="btn-primary text-sm"
-          >
-            Tailor Resume
-          </button>
-          <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} variant="inline" />
+
+          {actionsOpen ? (
+            <div
+              role="menu"
+              className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setShowResumeTailor((value) => !value);
+                  setActionsOpen(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Tailor Resume
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setEditDetailsOpen(true);
+                  setActionsOpen(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Edit Details
+              </button>
+              <div>
+                <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} variant="menu-item" />
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setActionsOpen(false);
+                  void onDeleteJob(job.id);
+                }}
+                className="w-full border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50"
+              >
+                Delete Job
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
       {showResumeTailor && <ResumeTailor jobId={job.id} />}
+      {editDetailsOpen ? (
+        <EditJobDetailsDialog
+          job={job}
+          onClose={() => setEditDetailsOpen(false)}
+          onSave={onUpdateJobDetails}
+        />
+      ) : null}
 
       <div className="mt-4 max-h-96 overflow-y-auto text-sm">
         {mode === "raw" ? (
@@ -852,6 +794,108 @@ function JobDetailsPanel({
           View Job Posting
         </a>
       )}
+    </div>
+  );
+}
+
+function EditJobDetailsDialog({
+  job,
+  onClose,
+  onSave,
+}: {
+  job: RankedJob;
+  onClose: () => void;
+  onSave: (jobId: string, input: { company: string; title: string }) => Promise<void>;
+}) {
+  const [company, setCompany] = useState(job.company);
+  const [title, setTitle] = useState(job.title);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function saveDetails() {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await onSave(job.id, { company, title });
+      onClose();
+    } catch {
+      setError("Unable to save job details.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close edit details modal"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/30"
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`edit-job-details-title-${job.id}`}
+        className="relative w-full max-w-lg rounded-lg bg-white shadow-2xl"
+      >
+        <header className="border-b border-gray-200 px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <h2 id={`edit-job-details-title-${job.id}`} className="text-lg font-semibold">
+              Edit Details
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </header>
+
+        <div className="space-y-4 px-5 py-4">
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+          <label className="block text-sm font-medium text-gray-700">
+            Company
+            <input
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+            />
+          </label>
+
+          <label className="block text-sm font-medium text-gray-700">
+            Title
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+            />
+          </label>
+        </div>
+
+        <footer className="flex justify-end gap-3 border-t border-gray-200 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={saveDetails}
+            disabled={saving || !company.trim() || !title.trim()}
+            className="btn-primary disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { useState } from "react";
 type JobReimportPanelProps = {
   jobId: string;
   sourceUrl?: string;
-  variant?: "card" | "inline";
+  variant?: "card" | "inline" | "menu-item";
 };
 
 type PreviewResponse = {
@@ -184,9 +184,14 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
   const trigger = (
     <button
       type="button"
+      role={variant === "menu-item" ? "menuitem" : undefined}
       onClick={loadPreview}
       disabled={loadingPreview || !canReimport}
-      className="btn-primary text-sm disabled:opacity-50"
+      className={
+        variant === "menu-item"
+          ? "w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-white"
+          : "btn-primary text-sm disabled:opacity-50"
+      }
     >
       {loadingPreview ? "Re-importing..." : "Re-import from URL"}
     </button>
@@ -349,7 +354,7 @@ export function ReimportJobPanel({ jobId, sourceUrl, variant = "card" }: JobReim
     </div>
   ) : null;
 
-  if (variant === "inline") {
+  if (variant === "inline" || variant === "menu-item") {
     return (
       <>
         {trigger}

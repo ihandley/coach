@@ -109,10 +109,11 @@ describe("JobsPageClient", () => {
         const body = JSON.parse(String(init.body));
 
         return companyUpdateShouldFail
-          ? jsonResponse({ error: "Unable to update company." }, { status: 500 })
+          ? jsonResponse({ error: "Unable to update job details." }, { status: 500 })
           : jsonResponse({
               id: "job-1",
               company: body.company,
+              title: body.title,
             });
       }
 
@@ -358,85 +359,56 @@ describe("JobsPageClient", () => {
     expect(screen.queryByText("also-not-a-date")).not.toBeInTheDocument();
   });
 
-  it("edits the company inline without expanding the job row", async () => {
+  it("renders company as plain table text without inline edit affordances", async () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Pattern")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Edit company for Product Engineer" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
-
+      screen.queryByRole("button", { name: "Edit company for Product Engineer" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Company for Product Engineer")).not.toBeInTheDocument();
     expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+  });
 
-    const companyInput = screen.getByLabelText("Company for Product Engineer");
+  it("edits job details from the expanded action menu", async () => {
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit Details" }));
+
+    const companyInput = screen.getByLabelText("Company");
+    const titleInput = screen.getByLabelText("Title");
+
     fireEvent.change(companyInput, {
       target: {
         value: "Pattern Labs",
       },
     });
-    fireEvent.keyDown(companyInput, { key: "Enter" });
+    fireEvent.change(titleInput, {
+      target: {
+        value: "Principal Product Engineer",
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/jobs/job-1",
         expect.objectContaining({
           method: "PATCH",
-          body: JSON.stringify({ company: "Pattern Labs" }),
+          body: JSON.stringify({
+            company: "Pattern Labs",
+            title: "Principal Product Engineer",
+          }),
         }),
       );
     });
 
     expect(await screen.findByText("Pattern Labs")).toBeInTheDocument();
-    expect(screen.queryByText("Pattern")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
-  });
-
-  it("saves company edits on blur and reverts on failure", async () => {
-    companyUpdateShouldFail = true;
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-    render(<JobsPageClient />);
-
-    expect(await screen.findByText("Pattern")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
-
-    const companyInput = screen.getByLabelText("Company for Product Engineer");
-    fireEvent.change(companyInput, {
-      target: {
-        value: "Pattern Labs",
-      },
-    });
-    fireEvent.blur(companyInput);
-
-    expect(await screen.findByText("Unable to update company.")).toBeInTheDocument();
-    expect(screen.getByText("Pattern")).toBeInTheDocument();
-    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
-  });
-
-  it("cancels company edits on escape", async () => {
-    render(<JobsPageClient />);
-
-    expect(await screen.findByText("Pattern")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
-
-    const companyInput = screen.getByLabelText("Company for Product Engineer");
-    fireEvent.change(companyInput, {
-      target: {
-        value: "Pattern Labs",
-      },
-    });
-    fireEvent.keyDown(companyInput, { key: "Escape" });
-
-    expect(screen.getByText("Pattern")).toBeInTheDocument();
-    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalledWith(
-      "/api/jobs/job-1",
-      expect.objectContaining({ method: "PATCH" }),
-    );
+    expect(screen.getByText("Principal Product Engineer")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Edit Details" })).not.toBeInTheDocument();
   });
 
   it("includes every current status in the default All status view", async () => {
@@ -538,17 +510,27 @@ describe("JobsPageClient", () => {
     expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
   });
 
-  it("shows the delete action only inside the expanded job details card", async () => {
+  it("shows job actions only inside the expanded action menu", async () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delete job" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Delete Job" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("job-row"));
 
+    const details = screen.getByTestId("job-details");
+    expect(within(details).getByRole("button", { name: "Actions" })).toBeInTheDocument();
+    expect(within(details).queryByRole("menuitem", { name: "Delete Job" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
+
+    expect(within(details).getByRole("menuitem", { name: "Tailor Resume" })).toBeInTheDocument();
+    expect(within(details).getByRole("menuitem", { name: "Edit Details" })).toBeInTheDocument();
     expect(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(details).getByRole("menuitem", { name: "Re-import from URL" }),
     ).toBeInTheDocument();
+    expect(within(details).getByRole("menuitem", { name: "Delete Job" })).toBeInTheDocument();
   });
 
   it("renders structured and original posting details with expanded-card controls", async () => {
@@ -558,9 +540,7 @@ describe("JobsPageClient", () => {
 
     const details = screen.getByTestId("job-details");
 
-    expect(within(details).getByRole("button", { name: "Delete job" })).toBeInTheDocument();
-    expect(within(details).getByRole("button", { name: "Tailor Resume" })).toBeInTheDocument();
-    expect(within(details).getByRole("button", { name: "Re-import from URL" })).toBeInTheDocument();
+    expect(within(details).getByRole("button", { name: "Actions" })).toBeInTheDocument();
     expect(within(details).getByText("Company")).toBeInTheDocument();
     expect(within(details).getByText("Pattern builds hiring tools.")).toBeInTheDocument();
     expect(within(details).getByText("Description")).toBeInTheDocument();
@@ -585,7 +565,10 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
     fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
     );
 
     expect(confirmSpy).toHaveBeenCalledWith("Delete this job? This cannot be undone.");
@@ -604,7 +587,10 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
     fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
     );
 
     await waitFor(() => {
@@ -634,7 +620,10 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
     fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
     );
 
     expect(await screen.findByText("Unable to delete job.")).toBeInTheDocument();
@@ -654,7 +643,8 @@ describe("JobsPageClient", () => {
     expect(screen.queryByRole("button", { name: "Maybe" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ignore" })).not.toBeInTheDocument();
 
-    fireEvent.click(within(tabRow).getByRole("button", { name: "Tailor Resume" }));
+    fireEvent.click(within(tabRow).getByRole("button", { name: "Actions" }));
+    fireEvent.click(within(tabRow).getByRole("menuitem", { name: "Tailor Resume" }));
 
     const submitButton = await screen.findByRole("button", { name: "Generate Tailored Resume" });
     expect(submitButton).toBeDisabled();

@@ -113,10 +113,53 @@ describe("PATCH /api/jobs/[jobId]", () => {
       updated_at: expect.any(String),
     });
     expect(eq).toHaveBeenCalledWith("id", "job-123");
-    expect(select).toHaveBeenCalledWith("id, company");
+    expect(select).toHaveBeenCalledWith("id, company, title");
     await expect(response.json()).resolves.toEqual({
       id: "job-123",
       company: "Acme Labs",
+    });
+  });
+
+  it("updates company and title fields together", async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: {
+        id: "job-123",
+        company: "Acme Labs",
+        title: "Principal Engineer",
+      },
+      error: null,
+    });
+    const select = vi.fn(() => ({ single }));
+    const eq = vi.fn(() => ({ select }));
+    const update = vi.fn(() => ({ eq }));
+
+    from.mockReturnValue({ update });
+
+    const { PATCH } = await import("./route");
+
+    const response = await PATCH(
+      new Request("http://localhost/api/jobs/job-123", {
+        method: "PATCH",
+        body: JSON.stringify({
+          company: " Acme Labs ",
+          title: " Principal Engineer ",
+        }),
+      }),
+      {
+        params: Promise.resolve({ jobId: "job-123" }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(update).toHaveBeenCalledWith({
+      company: "Acme Labs",
+      title: "Principal Engineer",
+      updated_at: expect.any(String),
+    });
+    await expect(response.json()).resolves.toEqual({
+      id: "job-123",
+      company: "Acme Labs",
+      title: "Principal Engineer",
     });
   });
 });
