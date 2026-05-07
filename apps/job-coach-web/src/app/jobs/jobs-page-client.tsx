@@ -905,7 +905,7 @@ function JobDetailsPanel({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => {
@@ -924,11 +924,8 @@ function JobDetailsPanel({
           >
             Tailor Resume
           </button>
+          <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} variant="inline" />
         </div>
-      </div>
-
-      <div className="mt-4">
-        <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} />
       </div>
 
       {showResumeTailor && <ResumeTailor jobId={job.id} />}
