@@ -661,7 +661,7 @@ function JobDetailsPanel({
   onUpdateJobDetails: (jobId: string, input: { company: string; title: string }) => Promise<void>;
 }) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
-  const [showResumeTailor, setShowResumeTailor] = useState(false);
+  const [resumeTailorOpen, setResumeTailorOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const structuredPanelId = `job-${job.id}-structured-view`;
@@ -726,12 +726,12 @@ function JobDetailsPanel({
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  setShowResumeTailor((value) => !value);
+                  setResumeTailorOpen(true);
                   setActionsOpen(false);
                 }}
                 className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
-                Tailor Resume
+                Generate Tailored Resume
               </button>
               <button
                 type="button"
@@ -763,7 +763,9 @@ function JobDetailsPanel({
         </div>
       </div>
 
-      {showResumeTailor && <ResumeTailor jobId={job.id} />}
+      {resumeTailorOpen ? (
+        <ResumeTailorDialog jobId={job.id} onClose={() => setResumeTailorOpen(false)} />
+      ) : null}
       {editDetailsOpen ? (
         <EditJobDetailsDialog
           job={job}
@@ -1017,7 +1019,7 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
     </div>
   );
 }
-function ResumeTailor({ jobId }: { jobId: string }) {
+function ResumeTailorDialog({ jobId, onClose }: { jobId: string; onClose: () => void }) {
   const [resumes, setResumes] = useState<ResumeProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -1043,12 +1045,17 @@ function ResumeTailor({ jobId }: { jobId: string }) {
       .then((data) => {
         if (!isCurrent) return;
 
-        setResumes(
-          data.map((r: any) => ({
-            id: r.id,
-            name: r.name || "Untitled Resume",
-            currentVersionId: r.currentVersionId || r.current_version_id || "",
-          })),
+        const profiles = data.map((r: any) => ({
+          id: r.id,
+          name: r.name || "Untitled Resume",
+          currentVersionId: r.currentVersionId || r.current_version_id || "",
+        }));
+
+        setResumes(profiles);
+        setSelectedProfile(
+          profiles.find((profile: ResumeProfile) => profile.currentVersionId) ??
+            profiles[0] ??
+            null,
         );
       })
       .catch(() => {
@@ -1114,66 +1121,103 @@ function ResumeTailor({ jobId }: { jobId: string }) {
   }
 
   return (
-    <div
-      id={`resume-tailor-panel-${jobId}`}
-      className="mt-3 space-y-3 rounded-md border border-gray-200 bg-white p-3 shadow-sm"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="flex-1 text-sm font-medium text-gray-700">
-          Resume profile
-          <select
-            aria-label="Resume profile"
-            value={selectedProfile?.id ?? ""}
-            onChange={(e) => {
-              const profile = resumes.find((resume) => resume.id === e.target.value);
-              setSelectedProfile(profile ?? null);
-            }}
-            disabled={loadingProfiles || resumes.length === 0}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
-          >
-            <option value="">{loadingProfiles ? "Loading resumes..." : "Select resume..."}</option>
-            {resumes.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close tailored resume modal"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/30"
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`generate-tailored-resume-title-${jobId}`}
+        className="relative w-full max-w-lg rounded-lg bg-white shadow-2xl"
+      >
+        <header className="border-b border-gray-200 px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <h2 id={`generate-tailored-resume-title-${jobId}`} className="text-lg font-semibold">
+              Generate tailored resume
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </header>
+
+        <div className="space-y-4 px-5 py-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Resume profile
+            <select
+              aria-label="Resume profile"
+              value={selectedProfile?.id ?? ""}
+              onChange={(e) => {
+                const profile = resumes.find((resume) => resume.id === e.target.value);
+                setSelectedProfile(profile ?? null);
+              }}
+              disabled={loadingProfiles || resumes.length === 0}
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+            >
+              <option value="">
+                {loadingProfiles ? "Loading resumes..." : "Select resume..."}
               </option>
-            ))}
-          </select>
-        </label>
+              {resumes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={!canTailor || loading}
-          className="btn-primary text-sm disabled:opacity-50"
-        >
-          {loading ? "Generating..." : "Generate Tailored Resume"}
-        </button>
-      </div>
+          {!loadingProfiles && resumes.length === 0 && (
+            <p className="text-sm text-gray-600">Import a resume to enable tailoring.</p>
+          )}
 
-      {!loadingProfiles && resumes.length === 0 && (
-        <p className="text-sm text-gray-600">Import a resume to enable tailoring.</p>
-      )}
+          {selectedProfile && !selectedProfile.currentVersionId && (
+            <p className="text-sm text-gray-600">
+              Selected resume has no current version. Import a resume version before tailoring.
+            </p>
+          )}
 
-      {selectedProfile && !selectedProfile.currentVersionId && (
-        <p className="text-sm text-gray-600">
-          Selected resume has no current version. Import a resume version before tailoring.
-        </p>
-      )}
+          {tailorError && (
+            <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {tailorError}
+            </div>
+          )}
 
-      {tailorError && (
-        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {tailorError}
+          {createdTailoredResume && (
+            <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+              Tailored resume created.{" "}
+              <a href="/resumes" className="font-medium underline">
+                View resumes
+              </a>
+            </div>
+          )}
         </div>
-      )}
 
-      {createdTailoredResume && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-          Tailored resume created.{" "}
-          <a href="/resumes" className="font-medium underline">
-            View resumes
-          </a>
-        </div>
-      )}
+        <footer className="flex justify-end gap-3 border-t border-gray-200 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={!canTailor || loading}
+            className="btn-primary text-sm disabled:opacity-50"
+          >
+            {loading ? "Generating..." : "Generate Tailored Resume"}
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }

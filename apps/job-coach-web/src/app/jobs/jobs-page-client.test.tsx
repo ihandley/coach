@@ -525,7 +525,9 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
 
-    expect(within(details).getByRole("menuitem", { name: "Tailor Resume" })).toBeInTheDocument();
+    expect(
+      within(details).getByRole("menuitem", { name: "Generate Tailored Resume" }),
+    ).toBeInTheDocument();
     expect(within(details).getByRole("menuitem", { name: "Edit Details" })).toBeInTheDocument();
     expect(
       within(details).getByRole("menuitem", { name: "Re-import from URL" }),
@@ -630,7 +632,7 @@ describe("JobsPageClient", () => {
     expect(screen.getByText("Product Engineer")).toBeInTheDocument();
   });
 
-  it("tailors a resume from the expanded job details panel", async () => {
+  it("tailors a resume from the expanded action menu modal", async () => {
     render(<JobsPageClient />);
 
     fireEvent.click(await screen.findByTestId("job-row"));
@@ -642,15 +644,19 @@ describe("JobsPageClient", () => {
     expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Maybe" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ignore" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Resume profile")).not.toBeInTheDocument();
 
     fireEvent.click(within(tabRow).getByRole("button", { name: "Actions" }));
-    fireEvent.click(within(tabRow).getByRole("menuitem", { name: "Tailor Resume" }));
+    fireEvent.click(within(tabRow).getByRole("menuitem", { name: "Generate Tailored Resume" }));
 
+    expect(
+      await screen.findByRole("dialog", { name: "Generate tailored resume" }),
+    ).toBeInTheDocument();
     const submitButton = await screen.findByRole("button", { name: "Generate Tailored Resume" });
-    expect(submitButton).toBeDisabled();
-
     await screen.findByRole("option", { name: "No Current Resume" });
     const select = screen.getByLabelText("Resume profile");
+    expect(select).toHaveValue("profile-current");
+    expect(submitButton).toBeEnabled();
 
     fireEvent.change(select, {
       target: {
