@@ -1,30 +1,30 @@
-.PHONY: help install test typecheck dev prd build-prd build start issue-checkpoint session-handoff
+.PHONY: \
+	build \
+	build-prd \
+	clean \
+	dev \
+	fix \
+	format \
+	help \
+	install \
+	issue-checkpoint \
+	lint \
+	lint-fix \
+	prd \
+	session-handoff \
+	start \
+	test \
+	typecheck
 
-help:
-	@echo "Available commands:"
-	@echo "  make install            Install dependencies"
-	@echo "  make test               Run workspace tests"
-	@echo "  make typecheck          Run workspace typecheck"
-	@echo "  make dev                Start the web app dev server"
-	@echo "  make build-prd          Build the production-like web app"
-	@echo "  make prd                Start the production-like web app on port 3001"
-	@echo "  make build              Build the web app"
-	@echo "  make start              Start the built web app"
-	@echo "  make issue-checkpoint N=44 Start or checkpoint an issue session"
-	@echo "  make session-handoff N=44 Compatibility alias for issue-checkpoint"
+build:
+	pnpm --filter job-coach-web build
 
-install:
-	pnpm install
+build-prd:
+	pnpm build:job-coach:prd
 
-test:
-	pnpm --filter @coach/core exec vitest run
-	pnpm --filter @coach/db exec vitest run
-	pnpm --filter job-coach-web exec vitest run
-
-typecheck:
-	pnpm --filter @coach/core typecheck
-	pnpm --filter @coach/db typecheck
-	pnpm --filter job-coach-web typecheck
+clean:
+	rm -rf apps/job-coach-web/.next
+	rm -rf node_modules/.cache
 
 dev:
 	@echo "Starting Supabase..."
@@ -39,20 +39,57 @@ dev:
 	PORT=3000 \
 	pnpm --filter job-coach-web dev
 
-build-prd:
-	pnpm build:job-coach:prd
+fix: lint-fix format
 
-prd:
-	pnpm prd:job-coach
+format:
+	pnpm prettier --write .
 
-build:
-	pnpm --filter job-coach-web build
+help:
+	@echo "Available commands:"
+	@echo "  make build              Build the web app"
+	@echo "  make build-prd          Build the production-like web app"
+	@echo "  make clean              Remove local build/cache artifacts"
+	@echo "  make dev                Start the web app dev server"
+	@echo "  make fix                Run lint/prettier auto-fixes"
+	@echo "  make format             Format files with Prettier"
+	@echo "  make install            Install dependencies"
+	@echo "  make issue-checkpoint N=44 Start or checkpoint an issue session"
+	@echo "  make lint               Run lint checks"
+	@echo "  make lint-fix           Run lint auto-fixes"
+	@echo "  make prd                Start the production-like web app on port 3001"
+	@echo "  make session-handoff N=44 Compatibility alias for issue-checkpoint"
+	@echo "  make start              Start the built web app"
+	@echo "  make test               Run lint, typecheck, unit tests, and Playwright"
+	@echo "  make typecheck          Run workspace typecheck"
 
-start:
-	pnpm --filter job-coach-web start
+install:
+	pnpm install
 
 issue-checkpoint:
 	@test -n "$(N)" || (echo "Usage: make issue-checkpoint N=<issue-number>" && exit 1)
 	./scripts/issue-checkpoint.sh $(N)
 
+lint:
+	pnpm lint
+
+lint-fix:
+	pnpm lint --fix
+
+prd:
+	pnpm prd:job-coach
+
 session-handoff: issue-checkpoint
+
+start:
+	pnpm --filter job-coach-web start
+
+test: lint typecheck
+	pnpm --filter @coach/core exec vitest run
+	pnpm --filter @coach/db exec vitest run
+	pnpm --filter job-coach-web exec vitest run
+	pnpm --filter job-coach-web exec playwright test
+
+typecheck:
+	pnpm --filter @coach/core typecheck
+	pnpm --filter @coach/db typecheck
+	pnpm --filter job-coach-web typecheck
