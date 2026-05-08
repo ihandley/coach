@@ -49,6 +49,13 @@ describe("JobsPageClient", () => {
       requirements: ["TypeScript"],
       benefits: ["Remote work"],
     },
+    matchDetails: {
+      strengths: ["Strong TypeScript alignment"],
+      gaps: ["No explicit Postgres signal"],
+      reasons: ["Good keyword overlap"],
+      summary: "Strong fit for product workflow work.",
+      recommendation: "apply",
+    },
   };
 
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -313,6 +320,14 @@ describe("JobsPageClient", () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+      "Company",
+      "Title",
+      "Fit",
+      "Status",
+      "Updated",
+      "Created",
+    ]);
     expect(screen.getByText("Apr 26, 2026")).toBeInTheDocument();
     expect(screen.getByText("Apr 25, 2026")).toBeInTheDocument();
     expect(screen.queryByText("2026-04-26T12:00:00.000Z")).not.toBeInTheDocument();
@@ -608,6 +623,10 @@ describe("JobsPageClient", () => {
     expect(
       within(details).getByRole("menuitem", { name: "Re-import from URL" }),
     ).toBeInTheDocument();
+    expect(within(details).getByRole("menuitem", { name: "View Job Posting" })).toHaveAttribute(
+      "href",
+      "https://example.com/job",
+    );
     expect(within(details).getByRole("menuitem", { name: "Delete Job" })).toBeInTheDocument();
   });
 
@@ -619,6 +638,12 @@ describe("JobsPageClient", () => {
     const details = screen.getByTestId("job-details");
 
     expect(within(details).getByRole("button", { name: "Actions" })).toBeInTheDocument();
+    expect(within(details).getByRole("tab", { name: "Structured View" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(within(details).getByRole("tab", { name: "Original Posting" })).toBeInTheDocument();
+    expect(within(details).getByRole("tab", { name: "Match Details" })).toBeInTheDocument();
     expect(within(details).getByText("Company")).toBeInTheDocument();
     expect(within(details).getByText("Pattern builds hiring tools.")).toBeInTheDocument();
     expect(within(details).getByText("Description")).toBeInTheDocument();
@@ -632,8 +657,60 @@ describe("JobsPageClient", () => {
 
     expect(within(details).getByText("Build thoughtful product workflows.")).toBeInTheDocument();
     expect(
-      within(details).queryByText("No structured summary available yet.", { exact: false }),
+      within(details).queryByText("Structured data not available", { exact: false }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
+
+    expect(within(details).getByText("Fit: 82%")).toBeInTheDocument();
+    expect(within(details).getByText("Strong Match")).toBeInTheDocument();
+    expect(within(details).getByText("Strong fit for product workflow work.")).toBeInTheDocument();
+    expect(within(details).getByText("Strengths")).toBeInTheDocument();
+    expect(within(details).getByText("Strong TypeScript alignment")).toBeInTheDocument();
+    expect(within(details).getByText("Gaps")).toBeInTheDocument();
+    expect(within(details).getByText("No explicit Postgres signal")).toBeInTheDocument();
+    expect(within(details).getByText("Recommendation")).toBeInTheDocument();
+    expect(
+      within(details).getByText(
+        "Strong fit. Prioritize this role and tailor the resume around the strongest matches.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(details).queryByText("Build thoughtful product workflows."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows fallback copy when structured data or match analysis is missing", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            score: null,
+            matchDetails: null,
+            structuredSummary: null,
+          },
+        ]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+
+    const details = screen.getByTestId("job-details");
+    expect(within(details).getByText("Structured data not available")).toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
+
+    expect(within(details).getByText("Fit: Not matched")).toBeInTheDocument();
+    expect(
+      within(details).getByText("Not enough information to generate a recommendation."),
+    ).toBeInTheDocument();
   });
 
   it("does not delete the job when confirmation is canceled", async () => {
@@ -713,17 +790,19 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
 
+    const details = screen.getByTestId("job-details");
     const tabRow = screen.getByTestId("job-details-tab-row");
     expect(within(tabRow).getByRole("tab", { name: "Structured View" })).toBeInTheDocument();
     expect(within(tabRow).getByRole("tab", { name: "Original Posting" })).toBeInTheDocument();
+    expect(within(tabRow).getByRole("tab", { name: "Match Details" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Maybe" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ignore" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Resume profile")).not.toBeInTheDocument();
 
-    fireEvent.click(within(tabRow).getByRole("button", { name: "Actions" }));
-    fireEvent.click(within(tabRow).getByRole("menuitem", { name: "Generate Tailored Resume" }));
+    fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
+    fireEvent.click(within(details).getByRole("menuitem", { name: "Generate Tailored Resume" }));
 
     expect(
       await screen.findByRole("dialog", { name: "Generate tailored resume" }),

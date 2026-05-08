@@ -7,12 +7,28 @@ type JobMatchRow = {
   score: unknown;
 };
 
+type RankedMatchDetails = {
+  strengths: string[];
+  gaps: string[];
+  reasons: string[];
+};
+
 export function normalizeRankedScore(score: unknown) {
   if (typeof score !== "number" || Number.isNaN(score)) {
     return null;
   }
 
   return Math.max(0, Math.min(score / 100, 1));
+}
+
+export function createRankedMatchDetails(score: number): RankedMatchDetails {
+  const reason = score > 30 ? "Good keyword overlap" : "Low keyword overlap";
+
+  return {
+    strengths: score > 30 ? [reason] : [],
+    gaps: score > 30 ? [] : [reason],
+    reasons: [reason],
+  };
 }
 
 export async function GET() {
@@ -38,13 +54,16 @@ export async function GET() {
 
   const { data: matches } = await db.from("job_matches").select("job_id, score");
 
-  const matchMap = new Map<string, number>();
+  const matchMap = new Map<string, { score: number; matchDetails: RankedMatchDetails }>();
 
   for (const match of (matches || []) as JobMatchRow[]) {
     const normalizedScore = normalizeRankedScore(match.score);
 
     if (normalizedScore !== null) {
-      matchMap.set(match.job_id, normalizedScore);
+      matchMap.set(match.job_id, {
+        score: normalizedScore,
+        matchDetails: createRankedMatchDetails(match.score as number),
+      });
     }
   }
 
@@ -59,7 +78,8 @@ export async function GET() {
       structuredSummary: job.structuredSummary,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
-      score: matchMap.has(job.id) ? matchMap.get(job.id)! : null,
+      score: matchMap.get(job.id)?.score ?? null,
+      matchDetails: matchMap.get(job.id)?.matchDetails ?? null,
     }))
     .sort(compareRankedJobSignals);
 

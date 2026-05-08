@@ -47,7 +47,16 @@ type RankedJob = {
   updatedAt: string;
   score: number | null;
   structuredSummary?: any;
+  matchDetails?: {
+    strengths?: unknown;
+    gaps?: unknown;
+    reasons?: unknown;
+    summary?: unknown;
+    recommendation?: unknown;
+  } | null;
 };
+
+type JobDetailMode = "structured" | "raw" | "match";
 
 type ResumeProfile = {
   id: string;
@@ -309,17 +318,9 @@ export function JobsPageClient() {
   const columns = useMemo<ColumnDef<RankedJob>[]>(
     () => [
       {
-        accessorKey: "score",
-        header: "Match",
-        sortingFn: (first, second) => {
-          const firstScore = getMatchScoreState(first.original.score);
-          const secondScore = getMatchScoreState(second.original.score);
-          const firstValue = firstScore.state === "matched" ? firstScore.score : -1;
-          const secondValue = secondScore.state === "matched" ? secondScore.score : -1;
-
-          return firstValue - secondValue;
-        },
-        cell: (info) => <MatchScoreCell score={info.getValue<number | null>()} />,
+        accessorKey: "company",
+        header: "Company",
+        cell: ({ row }) => <CompanyCell job={row.original} />,
       },
       {
         accessorKey: "title",
@@ -336,9 +337,17 @@ export function JobsPageClient() {
         ),
       },
       {
-        accessorKey: "company",
-        header: "Company",
-        cell: ({ row }) => <CompanyCell job={row.original} />,
+        accessorKey: "score",
+        header: "Fit",
+        sortingFn: (first, second) => {
+          const firstScore = getMatchScoreState(first.original.score);
+          const secondScore = getMatchScoreState(second.original.score);
+          const firstValue = firstScore.state === "matched" ? firstScore.score : -1;
+          const secondValue = secondScore.state === "matched" ? secondScore.score : -1;
+
+          return firstValue - secondValue;
+        },
+        cell: (info) => <MatchScoreCell score={info.getValue<number | null>()} />,
       },
       {
         accessorKey: "status",
@@ -354,24 +363,6 @@ export function JobsPageClient() {
         accessorKey: "createdAt",
         header: "Created",
         cell: (info) => <DateCell value={info.getValue<string | null>()} />,
-      },
-      {
-        accessorKey: "sourceUrl",
-        header: "Source",
-        cell: (info) => {
-          const url = info.getValue<string>();
-          if (!url) return null;
-          return (
-            <a
-              href={url}
-              target="_blank"
-              className="text-blue-600 underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Link
-            </a>
-          );
-        },
       },
     ],
     [handleUpdateStatus, lastImportedJobId],
@@ -403,7 +394,7 @@ export function JobsPageClient() {
     }
 
     const labels: Record<string, string> = {
-      score: "match",
+      score: "fit",
       title: "title",
       company: "company",
       status: "status",
@@ -639,19 +630,17 @@ function JobsTableSkeleton() {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {["Match", "Title", "Company", "Status", "Updated", "Created", "Source"].map(
-              (header) => (
-                <th key={header} className="px-4 py-2 text-left font-medium text-gray-700">
-                  {header}
-                </th>
-              ),
-            )}
+            {["Company", "Title", "Fit", "Status", "Updated", "Created"].map((header) => (
+              <th key={header} className="px-4 py-2 text-left font-medium text-gray-700">
+                {header}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {[0, 1, 2].map((row) => (
             <tr key={row} className="border-t">
-              {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
+              {[0, 1, 2, 3, 4, 5].map((cell) => (
                 <td key={cell} className="px-4 py-3">
                   <div className="h-3 w-full max-w-28 rounded bg-gray-200" />
                 </td>
@@ -673,52 +662,26 @@ function JobDetailsPanel({
   onDeleteJob: (jobId: string) => void | Promise<void>;
   onUpdateJobDetails: (jobId: string, input: { company: string; title: string }) => Promise<void>;
 }) {
-  const [mode, setMode] = useState<"structured" | "raw">("structured");
+  const [mode, setMode] = useState<JobDetailMode>("structured");
   const [resumeTailorOpen, setResumeTailorOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const structuredPanelId = `job-${job.id}-structured-view`;
   const rawPanelId = `job-${job.id}-original-posting`;
+  const matchPanelId = `job-${job.id}-match-details`;
   const safeText = job.sourceText || "No job description available.";
 
   const tabClassName = (active: boolean) =>
-    `rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+    `relative -mb-px border px-4 py-3 text-sm transition ${
       active
-        ? "border-slate-900 bg-slate-900 text-white"
-        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+        ? "border-gray-200 border-b-white bg-white font-semibold text-gray-950"
+        : "border-transparent font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
     }`;
 
   return (
-    <div className="mt-4 border-t pt-4">
-      <div
-        data-testid="job-details-tab-row"
-        className="flex flex-wrap items-center justify-between gap-3"
-      >
-        <div role="tablist" aria-label="Job detail views" className="flex items-center gap-2">
-          <button
-            id={`${structuredPanelId}-tab`}
-            type="button"
-            role="tab"
-            aria-selected={mode === "structured"}
-            aria-controls={structuredPanelId}
-            onClick={() => setMode("structured")}
-            className={tabClassName(mode === "structured")}
-          >
-            Structured View
-          </button>
-          <button
-            id={`${rawPanelId}-tab`}
-            type="button"
-            role="tab"
-            aria-selected={mode === "raw"}
-            aria-controls={rawPanelId}
-            onClick={() => setMode("raw")}
-            className={tabClassName(mode === "raw")}
-          >
-            Original Posting
-          </button>
-        </div>
-
+    <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-900">Job Details</h3>
         <div className="relative">
           <button
             type="button"
@@ -760,6 +723,17 @@ function JobDetailsPanel({
               <div>
                 <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} variant="menu-item" />
               </div>
+              {job.sourceUrl ? (
+                <a
+                  href={job.sourceUrl}
+                  target="_blank"
+                  role="menuitem"
+                  onClick={() => setActionsOpen(false)}
+                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  View Job Posting
+                </a>
+              ) : null}
               <button
                 type="button"
                 role="menuitem"
@@ -776,6 +750,44 @@ function JobDetailsPanel({
         </div>
       </div>
 
+      <div data-testid="job-details-tab-row" className="border-b border-gray-200 bg-gray-50 px-4">
+        <div role="tablist" aria-label="Job detail views" className="flex flex-wrap items-end">
+          <button
+            id={`${structuredPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "structured"}
+            aria-controls={structuredPanelId}
+            onClick={() => setMode("structured")}
+            className={tabClassName(mode === "structured")}
+          >
+            Structured View
+          </button>
+          <button
+            id={`${rawPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "raw"}
+            aria-controls={rawPanelId}
+            onClick={() => setMode("raw")}
+            className={tabClassName(mode === "raw")}
+          >
+            Original Posting
+          </button>
+          <button
+            id={`${matchPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "match"}
+            aria-controls={matchPanelId}
+            onClick={() => setMode("match")}
+            className={tabClassName(mode === "match")}
+          >
+            Match Details
+          </button>
+        </div>
+      </div>
+
       {resumeTailorOpen ? (
         <ResumeTailorDialog jobId={job.id} onClose={() => setResumeTailorOpen(false)} />
       ) : null}
@@ -787,10 +799,14 @@ function JobDetailsPanel({
         />
       ) : null}
 
-      <div className="mt-4 max-h-96 overflow-y-auto text-sm">
+      <div className="max-h-96 overflow-y-auto px-4 py-4 text-sm">
         {mode === "raw" ? (
           <div id={rawPanelId} role="tabpanel" aria-labelledby={`${rawPanelId}-tab`}>
             {formatRawText(safeText)}
+          </div>
+        ) : mode === "match" ? (
+          <div id={matchPanelId} role="tabpanel" aria-labelledby={`${matchPanelId}-tab`}>
+            <JobMatchDetails score={job.score} matchDetails={job.matchDetails} />
           </div>
         ) : (
           <div id={structuredPanelId} role="tabpanel" aria-labelledby={`${structuredPanelId}-tab`}>
@@ -798,17 +814,133 @@ function JobDetailsPanel({
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {job.sourceUrl && (
-        <a
-          href={job.sourceUrl}
-          target="_blank"
-          className="mt-4 inline-block text-blue-600 underline"
-          onClick={(event) => event.stopPropagation()}
-        >
-          View Job Posting
-        </a>
-      )}
+function getMatchDetailItems(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function getMatchDetailText(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function getFitLabel(score: number | null) {
+  if (score == null) return "Not matched";
+
+  const percentage = Math.round(score * 100);
+
+  if (percentage >= 80) return "Strong Match";
+  if (percentage >= 60) return "Good Match";
+  if (percentage >= 40) return "Moderate Match";
+  return "Weak Match";
+}
+
+function getFitRecommendation(score: number | null) {
+  if (score == null) return "Not enough information to generate a recommendation.";
+
+  const percentage = Math.round(score * 100);
+
+  if (percentage >= 80) {
+    return "Strong fit. Prioritize this role and tailor the resume around the strongest matches.";
+  }
+
+  if (percentage >= 60) {
+    return "Good fit. Worth applying with a tailored resume.";
+  }
+
+  if (percentage >= 40) {
+    return "Moderate fit. Consider applying if the role is interesting, but tailor carefully around gaps.";
+  }
+
+  return "Weak fit. Apply only if there is strong interest or missing resume context.";
+}
+
+function MatchDetailList({ items, fallback }: { items: string[]; fallback: string }) {
+  if (items.length === 0) {
+    return <p className="text-sm text-gray-500">{fallback}</p>;
+  }
+
+  return (
+    <ul className="space-y-2">
+      {items.map((item, index) => (
+        <li key={index} className="flex gap-2 text-sm text-gray-700">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function MatchDetailSection({
+  title,
+  items,
+  fallback,
+}: {
+  title: string;
+  items: string[];
+  fallback: string;
+}) {
+  return (
+    <section className="rounded-md border border-gray-200 bg-white p-3">
+      <h4 className="mb-2 text-xs font-semibold uppercase text-gray-500">{title}</h4>
+      <MatchDetailList items={items} fallback={fallback} />
+    </section>
+  );
+}
+
+function JobMatchDetails({
+  score,
+  matchDetails,
+}: {
+  score: number | null;
+  matchDetails?: RankedJob["matchDetails"];
+}) {
+  const strengths = getMatchDetailItems(matchDetails?.strengths);
+  const gaps = getMatchDetailItems(matchDetails?.gaps);
+  const reasons = getMatchDetailItems(matchDetails?.reasons);
+  const summary = getMatchDetailText(matchDetails?.summary);
+  const fallbackStrengths = strengths.length === 0 && gaps.length === 0 ? reasons : [];
+  const fitLabel = getFitLabel(score);
+  const fitRecommendation = getFitRecommendation(score);
+
+  return (
+    <div className="flex max-w-4xl flex-col gap-4">
+      <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h4 className="text-base font-semibold text-gray-950">
+            Fit: {score == null ? "Not matched" : `${Math.round(score * 100)}%`}
+          </h4>
+          <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700">
+            {fitLabel}
+          </span>
+        </div>
+        {summary ? <p className="mt-2 text-sm text-gray-600">{summary}</p> : null}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <MatchDetailSection
+          title="Strengths"
+          items={strengths.length > 0 ? strengths : fallbackStrengths}
+          fallback="No specific strengths were saved for this match yet."
+        />
+        <MatchDetailSection
+          title="Gaps"
+          items={gaps}
+          fallback="No specific gaps were saved for this match yet."
+        />
+      </div>
+
+      <section className="rounded-md border border-gray-200 bg-white p-3">
+        <h4 className="mb-2 text-xs font-semibold uppercase text-gray-500">Recommendation</h4>
+        <p className="text-sm text-gray-700">{fitRecommendation}</p>
+      </section>
     </div>
   );
 }
@@ -972,11 +1104,7 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   const benefits = getStructuredSummaryList(summary?.benefits);
 
   if (!summary) {
-    return (
-      <div className="text-sm text-muted-foreground">
-        No structured summary available yet. Use Original Posting view for the original posting.
-      </div>
-    );
+    return <div className="text-sm text-muted-foreground">Structured data not available</div>;
   }
 
   return (
