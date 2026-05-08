@@ -692,54 +692,16 @@ function JobDetailsPanel({
   const safeText = job.sourceText || "No job description available.";
 
   const tabClassName = (active: boolean) =>
-    `rounded-md border px-3 py-1.5 text-sm font-medium transition ${
+    `relative -mb-px border px-4 py-3 text-sm transition ${
       active
-        ? "border-slate-900 bg-slate-900 text-white"
-        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+        ? "border-gray-200 border-b-white bg-white font-semibold text-gray-950"
+        : "border-transparent font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-800"
     }`;
 
   return (
-    <div className="mt-4 border-t pt-4">
-      <div
-        data-testid="job-details-tab-row"
-        className="flex flex-wrap items-center justify-between gap-3"
-      >
-        <div role="tablist" aria-label="Job detail views" className="flex items-center gap-2">
-          <button
-            id={`${structuredPanelId}-tab`}
-            type="button"
-            role="tab"
-            aria-selected={mode === "structured"}
-            aria-controls={structuredPanelId}
-            onClick={() => setMode("structured")}
-            className={tabClassName(mode === "structured")}
-          >
-            Structured View
-          </button>
-          <button
-            id={`${rawPanelId}-tab`}
-            type="button"
-            role="tab"
-            aria-selected={mode === "raw"}
-            aria-controls={rawPanelId}
-            onClick={() => setMode("raw")}
-            className={tabClassName(mode === "raw")}
-          >
-            Original Posting
-          </button>
-          <button
-            id={`${matchPanelId}-tab`}
-            type="button"
-            role="tab"
-            aria-selected={mode === "match"}
-            aria-controls={matchPanelId}
-            onClick={() => setMode("match")}
-            className={tabClassName(mode === "match")}
-          >
-            Match Details
-          </button>
-        </div>
-
+    <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3">
+        <h3 className="text-sm font-semibold text-gray-900">Job Details</h3>
         <div className="relative">
           <button
             type="button"
@@ -797,6 +759,44 @@ function JobDetailsPanel({
         </div>
       </div>
 
+      <div data-testid="job-details-tab-row" className="border-b border-gray-200 bg-white px-4">
+        <div role="tablist" aria-label="Job detail views" className="flex flex-wrap items-end">
+          <button
+            id={`${structuredPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "structured"}
+            aria-controls={structuredPanelId}
+            onClick={() => setMode("structured")}
+            className={tabClassName(mode === "structured")}
+          >
+            Structured View
+          </button>
+          <button
+            id={`${rawPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "raw"}
+            aria-controls={rawPanelId}
+            onClick={() => setMode("raw")}
+            className={tabClassName(mode === "raw")}
+          >
+            Original Posting
+          </button>
+          <button
+            id={`${matchPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "match"}
+            aria-controls={matchPanelId}
+            onClick={() => setMode("match")}
+            className={tabClassName(mode === "match")}
+          >
+            Match Details
+          </button>
+        </div>
+      </div>
+
       {resumeTailorOpen ? (
         <ResumeTailorDialog jobId={job.id} onClose={() => setResumeTailorOpen(false)} />
       ) : null}
@@ -808,7 +808,7 @@ function JobDetailsPanel({
         />
       ) : null}
 
-      <div className="mt-4 max-h-96 overflow-y-auto text-sm">
+      <div className="max-h-96 overflow-y-auto px-4 py-4 text-sm">
         {mode === "raw" ? (
           <div id={rawPanelId} role="tabpanel" aria-labelledby={`${rawPanelId}-tab`}>
             {formatRawText(safeText)}
@@ -828,7 +828,7 @@ function JobDetailsPanel({
         <a
           href={job.sourceUrl}
           target="_blank"
-          className="mt-4 inline-block text-blue-600 underline"
+          className="mx-4 mb-4 inline-block text-sm text-blue-600 underline"
           onClick={(event) => event.stopPropagation()}
         >
           View Job Posting

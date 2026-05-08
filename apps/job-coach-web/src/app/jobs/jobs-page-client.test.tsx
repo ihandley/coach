@@ -770,6 +770,7 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
 
+    const details = screen.getByTestId("job-details");
     const tabRow = screen.getByTestId("job-details-tab-row");
     expect(within(tabRow).getByRole("tab", { name: "Structured View" })).toBeInTheDocument();
     expect(within(tabRow).getByRole("tab", { name: "Original Posting" })).toBeInTheDocument();
@@ -780,8 +781,8 @@ describe("JobsPageClient", () => {
     expect(screen.queryByRole("button", { name: "Ignore" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Resume profile")).not.toBeInTheDocument();
 
-    fireEvent.click(within(tabRow).getByRole("button", { name: "Actions" }));
-    fireEvent.click(within(tabRow).getByRole("menuitem", { name: "Generate Tailored Resume" }));
+    fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
+    fireEvent.click(within(details).getByRole("menuitem", { name: "Generate Tailored Resume" }));
 
     expect(
       await screen.findByRole("dialog", { name: "Generate tailored resume" }),
