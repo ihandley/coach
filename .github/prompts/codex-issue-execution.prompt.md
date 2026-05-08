@@ -1,30 +1,42 @@
-# Codex Issue Execution Prompt
+# Codex Issue Execution
 
 CODING MODE
 
 Work on Issue #{ISSUE_NUMBER}.
 
-Use the GitHub issue description as the source of truth.
+Use the GitHub issue as source of truth.
 
-Constraints:
+## Goal
 
-- Only modify code directly related to this issue.
-- Do NOT refactor unrelated files.
-- Do NOT restore deprecated UI or logic.
-- Do NOT replace current implementations with older branch versions.
-- Preserve existing behavior unless explicitly required by the issue.
-- If the diff grows beyond ~10 files, stop and explain why.
+Make the smallest viable change that satisfies the acceptance criteria.
 
-Implementation:
+## Rules
 
-- Follow the issue Implementation Plan and Acceptance Criteria exactly.
-- Do not infer extra features.
-- Implement the smallest correct version.
-- Add or update relevant tests only.
+- Inspect only relevant files
+- Keep the diff narrow
+- Reuse existing patterns
+- Preserve existing behavior unless the issue requires changing it
+- Avoid unrelated refactors, reformatting, and rewrites
+- Do not infer extra features
+- Stop and explain if scope grows beyond the issue
 
-Validation:
+## Token Discipline
 
-- pnpm lint
-- pnpm format
-- pnpm typecheck
-- pnpm test
+- Do not restate the issue
+- Do not summarize unrelated files
+- Avoid broad scans
+- Avoid large outputs
+- Keep updates short
+
+## Validation
+
+- Do not run the full test suite by default
+- Run only targeted checks directly related to the change
+- Use Playwright only for UI flow changes or when explicitly requested
+- Avoid rerunning the same failing command without code changes
+- After two failed attempts, stop and report the likely cause
+- If validation is skipped, say what was skipped and why
+
+## Stop
+
+Stop after implementation, targeted validation or stated skip rationale, and remaining risks/manual checks.
