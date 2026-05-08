@@ -615,6 +615,10 @@ describe("JobsPageClient", () => {
     expect(
       within(details).getByRole("menuitem", { name: "Re-import from URL" }),
     ).toBeInTheDocument();
+    expect(within(details).getByRole("menuitem", { name: "View Job Posting" })).toHaveAttribute(
+      "href",
+      "https://example.com/job",
+    );
     expect(within(details).getByRole("menuitem", { name: "Delete Job" })).toBeInTheDocument();
   });
 
