@@ -318,17 +318,9 @@ export function JobsPageClient() {
   const columns = useMemo<ColumnDef<RankedJob>[]>(
     () => [
       {
-        accessorKey: "score",
-        header: "Match",
-        sortingFn: (first, second) => {
-          const firstScore = getMatchScoreState(first.original.score);
-          const secondScore = getMatchScoreState(second.original.score);
-          const firstValue = firstScore.state === "matched" ? firstScore.score : -1;
-          const secondValue = secondScore.state === "matched" ? secondScore.score : -1;
-
-          return firstValue - secondValue;
-        },
-        cell: (info) => <MatchScoreCell score={info.getValue<number | null>()} />,
+        accessorKey: "company",
+        header: "Company",
+        cell: ({ row }) => <CompanyCell job={row.original} />,
       },
       {
         accessorKey: "title",
@@ -345,9 +337,17 @@ export function JobsPageClient() {
         ),
       },
       {
-        accessorKey: "company",
-        header: "Company",
-        cell: ({ row }) => <CompanyCell job={row.original} />,
+        accessorKey: "score",
+        header: "Fit",
+        sortingFn: (first, second) => {
+          const firstScore = getMatchScoreState(first.original.score);
+          const secondScore = getMatchScoreState(second.original.score);
+          const firstValue = firstScore.state === "matched" ? firstScore.score : -1;
+          const secondValue = secondScore.state === "matched" ? secondScore.score : -1;
+
+          return firstValue - secondValue;
+        },
+        cell: (info) => <MatchScoreCell score={info.getValue<number | null>()} />,
       },
       {
         accessorKey: "status",
@@ -394,7 +394,7 @@ export function JobsPageClient() {
     }
 
     const labels: Record<string, string> = {
-      score: "match",
+      score: "fit",
       title: "title",
       company: "company",
       status: "status",
@@ -630,7 +630,7 @@ function JobsTableSkeleton() {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {["Match", "Title", "Company", "Status", "Updated", "Created"].map((header) => (
+            {["Company", "Title", "Fit", "Status", "Updated", "Created"].map((header) => (
               <th key={header} className="px-4 py-2 text-left font-medium text-gray-700">
                 {header}
               </th>
@@ -830,13 +830,68 @@ function getMatchDetailText(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
-function MatchDetailList({ items }: { items: string[] }) {
+function getFitLabel(score: number | null) {
+  if (score == null) return "Not matched";
+
+  const percentage = Math.round(score * 100);
+
+  if (percentage >= 80) return "Strong Match";
+  if (percentage >= 60) return "Good Match";
+  if (percentage >= 40) return "Moderate Match";
+  return "Weak Match";
+}
+
+function getFitRecommendation(score: number | null) {
+  if (score == null) return "Not enough information to generate a recommendation.";
+
+  const percentage = Math.round(score * 100);
+
+  if (percentage >= 80) {
+    return "Strong fit. Prioritize this role and tailor the resume around the strongest matches.";
+  }
+
+  if (percentage >= 60) {
+    return "Good fit. Worth applying with a tailored resume.";
+  }
+
+  if (percentage >= 40) {
+    return "Moderate fit. Consider applying if the role is interesting, but tailor carefully around gaps.";
+  }
+
+  return "Weak fit. Apply only if there is strong interest or missing resume context.";
+}
+
+function MatchDetailList({ items, fallback }: { items: string[]; fallback: string }) {
+  if (items.length === 0) {
+    return <p className="text-sm text-gray-500">{fallback}</p>;
+  }
+
   return (
-    <ul className="ml-5 list-disc">
+    <ul className="space-y-2">
       {items.map((item, index) => (
-        <li key={index}>{item}</li>
+        <li key={index} className="flex gap-2 text-sm text-gray-700">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
+          <span>{item}</span>
+        </li>
       ))}
     </ul>
+  );
+}
+
+function MatchDetailSection({
+  title,
+  items,
+  fallback,
+}: {
+  title: string;
+  items: string[];
+  fallback: string;
+}) {
+  return (
+    <section className="rounded-md border border-gray-200 bg-white p-3">
+      <h4 className="mb-2 text-xs font-semibold uppercase text-gray-500">{title}</h4>
+      <MatchDetailList items={items} fallback={fallback} />
+    </section>
   );
 }
 
@@ -851,60 +906,41 @@ function JobMatchDetails({
   const gaps = getMatchDetailItems(matchDetails?.gaps);
   const reasons = getMatchDetailItems(matchDetails?.reasons);
   const summary = getMatchDetailText(matchDetails?.summary);
-  const recommendation = getMatchDetailText(matchDetails?.recommendation);
-  const hasMatchDetails =
-    summary || recommendation || strengths.length > 0 || gaps.length > 0 || reasons.length > 0;
-
-  if (score == null) {
-    return <div className="text-sm text-muted-foreground">No match analysis available</div>;
-  }
+  const fallbackStrengths = strengths.length === 0 && gaps.length === 0 ? reasons : [];
+  const fitLabel = getFitLabel(score);
+  const fitRecommendation = getFitRecommendation(score);
 
   return (
-    <div className="flex max-w-3xl flex-col gap-4">
-      <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
-        <div>Match score: {Math.round(score * 100)}%</div>
+    <div className="flex max-w-4xl flex-col gap-4">
+      <div className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h4 className="text-base font-semibold text-gray-950">
+            Fit: {score == null ? "Not matched" : `${Math.round(score * 100)}%`}
+          </h4>
+          <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-700">
+            {fitLabel}
+          </span>
+        </div>
+        {summary ? <p className="mt-2 text-sm text-gray-600">{summary}</p> : null}
       </div>
 
-      {summary && (
-        <div>
-          <h4 className="mb-1 font-semibold">Summary</h4>
-          <p>{summary}</p>
-        </div>
-      )}
+      <div className="grid gap-3 md:grid-cols-2">
+        <MatchDetailSection
+          title="Strengths"
+          items={strengths.length > 0 ? strengths : fallbackStrengths}
+          fallback="No specific strengths were saved for this match yet."
+        />
+        <MatchDetailSection
+          title="Gaps"
+          items={gaps}
+          fallback="No specific gaps were saved for this match yet."
+        />
+      </div>
 
-      {strengths.length > 0 && (
-        <div>
-          <h4 className="mb-1 font-semibold">Strengths</h4>
-          <MatchDetailList items={strengths} />
-        </div>
-      )}
-
-      {gaps.length > 0 && (
-        <div>
-          <h4 className="mb-1 font-semibold">Gaps</h4>
-          <MatchDetailList items={gaps} />
-        </div>
-      )}
-
-      {reasons.length > 0 && (
-        <div>
-          <h4 className="mb-1 font-semibold">Match Reasoning</h4>
-          <MatchDetailList items={reasons} />
-        </div>
-      )}
-
-      {recommendation && (
-        <div>
-          <h4 className="mb-1 font-semibold">Recommendation</h4>
-          <p>{recommendation}</p>
-        </div>
-      )}
-
-      {!hasMatchDetails && (
-        <p className="text-sm text-muted-foreground">
-          Detailed match analysis has not been saved for this job yet.
-        </p>
-      )}
+      <section className="rounded-md border border-gray-200 bg-white p-3">
+        <h4 className="mb-2 text-xs font-semibold uppercase text-gray-500">Recommendation</h4>
+        <p className="text-sm text-gray-700">{fitRecommendation}</p>
+      </section>
     </div>
   );
 }

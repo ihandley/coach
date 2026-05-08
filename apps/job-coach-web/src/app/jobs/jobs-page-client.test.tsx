@@ -320,6 +320,14 @@ describe("JobsPageClient", () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+      "Company",
+      "Title",
+      "Fit",
+      "Status",
+      "Updated",
+      "Created",
+    ]);
     expect(screen.getByText("Apr 26, 2026")).toBeInTheDocument();
     expect(screen.getByText("Apr 25, 2026")).toBeInTheDocument();
     expect(screen.queryByText("2026-04-26T12:00:00.000Z")).not.toBeInTheDocument();
@@ -654,14 +662,19 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
 
-    expect(within(details).getByText("Match score: 82%")).toBeInTheDocument();
+    expect(within(details).getByText("Fit: 82%")).toBeInTheDocument();
+    expect(within(details).getByText("Strong Match")).toBeInTheDocument();
     expect(within(details).getByText("Strong fit for product workflow work.")).toBeInTheDocument();
     expect(within(details).getByText("Strengths")).toBeInTheDocument();
     expect(within(details).getByText("Strong TypeScript alignment")).toBeInTheDocument();
     expect(within(details).getByText("Gaps")).toBeInTheDocument();
     expect(within(details).getByText("No explicit Postgres signal")).toBeInTheDocument();
-    expect(within(details).getByText("Match Reasoning")).toBeInTheDocument();
-    expect(within(details).getByText("Good keyword overlap")).toBeInTheDocument();
+    expect(within(details).getByText("Recommendation")).toBeInTheDocument();
+    expect(
+      within(details).getByText(
+        "Strong fit. Prioritize this role and tailor the resume around the strongest matches.",
+      ),
+    ).toBeInTheDocument();
     expect(
       within(details).queryByText("Build thoughtful product workflows."),
     ).not.toBeInTheDocument();
@@ -694,7 +707,10 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
 
-    expect(within(details).getByText("No match analysis available")).toBeInTheDocument();
+    expect(within(details).getByText("Fit: Not matched")).toBeInTheDocument();
+    expect(
+      within(details).getByText("Not enough information to generate a recommendation."),
+    ).toBeInTheDocument();
   });
 
   it("does not delete the job when confirmation is canceled", async () => {
