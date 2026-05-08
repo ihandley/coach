@@ -6,6 +6,13 @@ export type JobStatusOption = (typeof JOB_STATUS_OPTIONS)[number];
 
 const JOB_STATUS_SET = new Set<string>(JOB_STATUS_OPTIONS);
 
+const ALWAYS_VISIBLE_STATUS_FILTERS = new Set<JobStatusOption>([
+  "saved",
+  "applying",
+  "applied",
+  "interviewing",
+]);
+
 const STATUS_LABELS: Record<JobStatusOption, string> = {
   saved: "Saved",
   researching: "Researching",
@@ -73,6 +80,43 @@ export function countJobsByStatus(jobs: Array<{ status?: string | null }>) {
 
 export function areAllJobStatusesVisible(visibleStatuses: ReadonlySet<JobStatusOption>) {
   return JOB_STATUS_OPTIONS.every((status) => visibleStatuses.has(status));
+}
+
+export function getVisibleStatusFilterOptions(counts: Record<JobStatusOption, number>) {
+  return JOB_STATUS_OPTIONS.filter(
+    (status) => ALWAYS_VISIBLE_STATUS_FILTERS.has(status) || counts[status] > 0,
+  );
+}
+
+export function pruneHiddenStatusFilters(
+  visibleStatuses: ReadonlySet<JobStatusOption>,
+  counts: Record<JobStatusOption, number>,
+) {
+  if (areAllJobStatusesVisible(visibleStatuses)) {
+    return visibleStatuses;
+  }
+
+  const renderedStatuses = new Set(getVisibleStatusFilterOptions(counts));
+  const next = new Set<JobStatusOption>();
+
+  for (const status of visibleStatuses) {
+    if (renderedStatuses.has(status)) {
+      next.add(status);
+    }
+  }
+
+  if (next.size === 0) {
+    return createVisibleJobStatuses();
+  }
+
+  if (
+    next.size === visibleStatuses.size &&
+    [...next].every((status) => visibleStatuses.has(status))
+  ) {
+    return visibleStatuses;
+  }
+
+  return next;
 }
 
 export function getJobStatusLabel(status: JobStatusOption) {

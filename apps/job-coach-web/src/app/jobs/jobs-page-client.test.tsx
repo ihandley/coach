@@ -4,6 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JobsPageClient } from "./jobs-page-client";
 
+const routerRefresh = vi.hoisted(() => vi.fn());
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: routerRefresh }),
+}));
+
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
     headers: {
@@ -16,6 +22,12 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
 
 function getStatusLabel(status: string) {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function getStatusFilterButtonNames() {
+  return within(screen.getByLabelText("Job status filters"))
+    .getAllByRole("button")
+    .map((button) => button.textContent);
 }
 
 describe("JobsPageClient", () => {
@@ -44,6 +56,7 @@ describe("JobsPageClient", () => {
   let companyUpdateShouldFail: boolean;
 
   beforeEach(() => {
+    routerRefresh.mockReset();
     deleteShouldFail = false;
     companyUpdateShouldFail = false;
 
@@ -102,18 +115,19 @@ describe("JobsPageClient", () => {
         const body = JSON.parse(String(init.body));
 
         return companyUpdateShouldFail
-          ? jsonResponse({ error: "Unable to update company." }, { status: 500 })
+          ? jsonResponse({ error: "Unable to update job details." }, { status: 500 })
           : jsonResponse({
               id: "job-1",
               company: body.company,
+              title: body.title,
             });
       }
 
-      if (url === "/api/jobs/job-1/status" && init?.method === "POST") {
+      if (/^\/api\/jobs\/[^/]+\/status$/.test(url) && init?.method === "POST") {
         const body = JSON.parse(String(init.body));
 
         return jsonResponse({
-          id: "job-1",
+          id: url.split("/")[3],
           status: body.status,
         });
       }
@@ -163,7 +177,7 @@ describe("JobsPageClient", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ranked jobs unavailable.");
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
-    expect(screen.queryByText("No jobs yet. Import one to get started.")).not.toBeInTheDocument();
+    expect(screen.queryByText("No jobs yet")).not.toBeInTheDocument();
 
     shouldFail = false;
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -171,7 +185,7 @@ describe("JobsPageClient", () => {
     expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
   });
 
-  it("renders score states, NEW badges, and the default sort label", async () => {
+  it("renders score states without marking recently seeded jobs as NEW", async () => {
     const recentlyCreatedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const olderCreatedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -220,10 +234,79 @@ describe("JobsPageClient", () => {
     expect(
       screen.getByText("Default sort: NEW jobs first, then matched jobs by score."),
     ).toBeInTheDocument();
+    expect(screen.queryByText("NEW")).not.toBeInTheDocument();
 
     const titleCell = screen.getByText("Recently Imported").closest("td");
     expect(titleCell).not.toBeNull();
-    expect(within(titleCell as HTMLElement).getByText("NEW")).toBeInTheDocument();
+    expect(within(titleCell as HTMLElement).queryByText("NEW")).not.toBeInTheDocument();
+  });
+
+  it("marks only the imported job as NEW and moves it to the top by default", async () => {
+    const seededRecentJob = {
+      ...rankedJob,
+      id: "job-recent-seeded",
+      title: "Seeded Recent Job",
+      createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      score: null,
+    };
+    const importedJob = {
+      ...rankedJob,
+      id: "job-new",
+      title: "Imported Job",
+      company: "Imported Co",
+      createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      score: null,
+    };
+    let rankedLoadCount = 0;
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        rankedLoadCount += 1;
+
+        return rankedLoadCount === 1
+          ? jsonResponse([seededRecentJob, rankedJob])
+          : jsonResponse([seededRecentJob, rankedJob, importedJob]);
+      }
+
+      if (url === "/api/jobs" && init?.method === "POST") {
+        return jsonResponse(
+          {
+            id: "job-new",
+            title: "Imported Job",
+          },
+          { status: 201 },
+        );
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Seeded Recent Job")).toBeInTheDocument();
+    expect(screen.queryByText("NEW")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Paste job URL"), {
+      target: {
+        value: "https://example.com/imported-job",
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+
+    expect(await screen.findByText("Job imported successfully.")).toBeInTheDocument();
+
+    const rows = screen.getAllByTestId("job-row");
+    expect(within(rows[0]).getByText("Imported Job")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("NEW")).toBeInTheDocument();
+    expect(screen.getAllByText("NEW")).toHaveLength(1);
+
+    const seededRecentRow = screen.getByText("Seeded Recent Job").closest("tr");
+    expect(seededRecentRow).not.toBeNull();
+    expect(within(seededRecentRow as HTMLElement).queryByText("NEW")).not.toBeInTheDocument();
   });
 
   it("renders readable created and updated dates instead of raw timestamps", async () => {
@@ -234,6 +317,17 @@ describe("JobsPageClient", () => {
     expect(screen.getByText("Apr 25, 2026")).toBeInTheDocument();
     expect(screen.queryByText("2026-04-26T12:00:00.000Z")).not.toBeInTheDocument();
     expect(screen.queryByText("2026-04-25T12:00:00.000Z")).not.toBeInTheDocument();
+  });
+
+  it("focuses the import URL input and does not render selection checkboxes", async () => {
+    render(<JobsPageClient />);
+
+    const importInput = screen.getByPlaceholderText("Paste job URL");
+
+    expect(importInput).toHaveFocus();
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Select all visible jobs")).not.toBeInTheDocument();
   });
 
   it("renders missing and invalid dates gracefully", async () => {
@@ -271,88 +365,79 @@ describe("JobsPageClient", () => {
     expect(screen.queryByText("also-not-a-date")).not.toBeInTheDocument();
   });
 
-  it("edits the company inline without expanding the job row", async () => {
+  it("renders company as plain table text without inline edit affordances", async () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Pattern")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Edit company for Product Engineer" }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
-
+      screen.queryByRole("button", { name: "Edit company for Product Engineer" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Company for Product Engineer")).not.toBeInTheDocument();
     expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+  });
 
-    const companyInput = screen.getByLabelText("Company for Product Engineer");
+  it("edits job details from the expanded action menu", async () => {
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit Details" }));
+
+    const companyInput = screen.getByLabelText("Company");
+    const titleInput = screen.getByLabelText("Title");
+
     fireEvent.change(companyInput, {
       target: {
         value: "Pattern Labs",
       },
     });
-    fireEvent.keyDown(companyInput, { key: "Enter" });
+    fireEvent.change(titleInput, {
+      target: {
+        value: "Principal Product Engineer",
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/jobs/job-1",
         expect.objectContaining({
           method: "PATCH",
-          body: JSON.stringify({ company: "Pattern Labs" }),
+          body: JSON.stringify({
+            company: "Pattern Labs",
+            title: "Principal Product Engineer",
+          }),
         }),
       );
     });
 
     expect(await screen.findByText("Pattern Labs")).toBeInTheDocument();
-    expect(screen.queryByText("Pattern")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
+    expect(screen.getByText("Principal Product Engineer")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Edit Details" })).not.toBeInTheDocument();
   });
 
-  it("saves company edits on blur and reverts on failure", async () => {
-    companyUpdateShouldFail = true;
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-
+  it("keeps core status chips visible and hides optional zero-count chips", async () => {
     render(<JobsPageClient />);
 
-    expect(await screen.findByText("Pattern")).toBeInTheDocument();
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
+    expect(getStatusFilterButtonNames()).toEqual([
+      "All (1)",
+      "Saved (1)",
+      "Applying (0)",
+      "Applied (0)",
+      "Interviewing (0)",
+    ]);
 
-    const companyInput = screen.getByLabelText("Company for Product Engineer");
-    fireEvent.change(companyInput, {
-      target: {
-        value: "Pattern Labs",
-      },
-    });
-    fireEvent.blur(companyInput);
-
-    expect(await screen.findByText("Unable to update company.")).toBeInTheDocument();
-    expect(screen.getByText("Pattern")).toBeInTheDocument();
-    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Researching (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Offer (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rejected (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Withdrawn (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archived (0)" })).not.toBeInTheDocument();
   });
 
-  it("cancels company edits on escape", async () => {
-    render(<JobsPageClient />);
-
-    expect(await screen.findByText("Pattern")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit company for Product Engineer" }));
-
-    const companyInput = screen.getByLabelText("Company for Product Engineer");
-    fireEvent.change(companyInput, {
-      target: {
-        value: "Pattern Labs",
-      },
-    });
-    fireEvent.keyDown(companyInput, { key: "Escape" });
-
-    expect(screen.getByText("Pattern")).toBeInTheDocument();
-    expect(screen.queryByText("Pattern Labs")).not.toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalledWith(
-      "/api/jobs/job-1",
-      expect.objectContaining({ method: "PATCH" }),
-    );
-  });
-
-  it("includes every current status in the default All status view", async () => {
+  it("shows optional status chips when they have jobs and preserves lifecycle order", async () => {
     const jobs = JOB_STATUSES.map((status, index) => ({
       ...rankedJob,
       id: `job-${status}`,
@@ -384,14 +469,18 @@ describe("JobsPageClient", () => {
     );
     expect(renderedRowCount).toBe(JOB_STATUSES.length);
 
-    const individualChipTotal = JOB_STATUSES.reduce((sum, status) => {
-      expect(
-        screen.getByRole("button", { name: `${getStatusLabel(status)} (1)` }),
-      ).toBeInTheDocument();
-      return sum + 1;
-    }, 0);
-
-    expect(individualChipTotal).toBe(renderedRowCount);
+    expect(getStatusFilterButtonNames()).toEqual([
+      `All (${JOB_STATUSES.length})`,
+      "Saved (1)",
+      "Researching (1)",
+      "Applying (1)",
+      "Applied (1)",
+      "Interviewing (1)",
+      "Offer (1)",
+      "Rejected (1)",
+      "Withdrawn (1)",
+      "Archived (1)",
+    ]);
 
     const archivedChip = screen.getByRole("button", { name: "Archived (1)" });
     expect(archivedChip).toHaveClass("border-gray-500", "bg-gray-100", "text-gray-700");
@@ -434,6 +523,52 @@ describe("JobsPageClient", () => {
 
     expect(screen.getByRole("button", { name: "Saved (0)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Applied (1)" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archived (0)" })).not.toBeInTheDocument();
+  });
+
+  it("resets to All when the only remaining visible filter becomes hidden", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            status: "archived",
+          },
+        ]);
+      }
+
+      if (/^\/api\/jobs\/[^/]+\/status$/.test(url) && init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+
+        return jsonResponse({
+          id: url.split("/")[3],
+          status: body.status,
+        });
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+
+    for (const chipName of ["Saved (0)", "Applying (0)", "Applied (0)", "Interviewing (0)"]) {
+      fireEvent.click(screen.getByRole("button", { name: chipName }));
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit job status" }));
+    fireEvent.click(screen.getByRole("button", { name: "Applied" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "All (1)" })).toHaveClass("border-blue-600");
+    });
+
+    expect(screen.queryByRole("button", { name: "Archived (0)" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Applied (1)" })).toBeInTheDocument();
+    expect(screen.getByText("Product Engineer")).toBeInTheDocument();
   });
 
   it("preserves row expand and collapse after interacting with table controls", async () => {
@@ -451,17 +586,29 @@ describe("JobsPageClient", () => {
     expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
   });
 
-  it("shows the delete action only inside the expanded job details card", async () => {
+  it("shows job actions only inside the expanded action menu", async () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Delete job" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Delete Job" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("job-row"));
 
+    const details = screen.getByTestId("job-details");
+    expect(within(details).getByRole("button", { name: "Actions" })).toBeInTheDocument();
+    expect(within(details).queryByRole("menuitem", { name: "Delete Job" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
+
     expect(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(details).getByRole("menuitem", { name: "Generate Tailored Resume" }),
     ).toBeInTheDocument();
+    expect(within(details).getByRole("menuitem", { name: "Edit Details" })).toBeInTheDocument();
+    expect(
+      within(details).getByRole("menuitem", { name: "Re-import from URL" }),
+    ).toBeInTheDocument();
+    expect(within(details).getByRole("menuitem", { name: "Delete Job" })).toBeInTheDocument();
   });
 
   it("renders structured and original posting details with expanded-card controls", async () => {
@@ -471,8 +618,7 @@ describe("JobsPageClient", () => {
 
     const details = screen.getByTestId("job-details");
 
-    expect(within(details).getByRole("button", { name: "Delete job" })).toBeInTheDocument();
-    expect(within(details).getByRole("button", { name: "Tailor Resume" })).toBeInTheDocument();
+    expect(within(details).getByRole("button", { name: "Actions" })).toBeInTheDocument();
     expect(within(details).getByText("Company")).toBeInTheDocument();
     expect(within(details).getByText("Pattern builds hiring tools.")).toBeInTheDocument();
     expect(within(details).getByText("Description")).toBeInTheDocument();
@@ -497,7 +643,10 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
     fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
     );
 
     expect(confirmSpy).toHaveBeenCalledWith("Delete this job? This cannot be undone.");
@@ -516,7 +665,10 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
     fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
     );
 
     await waitFor(() => {
@@ -531,7 +683,10 @@ describe("JobsPageClient", () => {
     });
 
     expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
-    expect(screen.getByText("No jobs yet. Import one to get started.")).toBeInTheDocument();
+    expect(screen.getByText("No jobs yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("Paste a job posting URL above to import your first opportunity."),
+    ).toBeInTheDocument();
   });
 
   it("shows a visible error when delete fails", async () => {
@@ -543,14 +698,17 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(await screen.findByTestId("job-row"));
     fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("button", { name: "Delete job" }),
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
     );
 
     expect(await screen.findByText("Unable to delete job.")).toBeInTheDocument();
     expect(screen.getByText("Product Engineer")).toBeInTheDocument();
   });
 
-  it("tailors a resume from the expanded job details panel", async () => {
+  it("tailors a resume from the expanded action menu modal", async () => {
     render(<JobsPageClient />);
 
     fireEvent.click(await screen.findByTestId("job-row"));
@@ -562,14 +720,19 @@ describe("JobsPageClient", () => {
     expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Maybe" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ignore" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Resume profile")).not.toBeInTheDocument();
 
-    fireEvent.click(within(tabRow).getByRole("button", { name: "Tailor Resume" }));
+    fireEvent.click(within(tabRow).getByRole("button", { name: "Actions" }));
+    fireEvent.click(within(tabRow).getByRole("menuitem", { name: "Generate Tailored Resume" }));
 
+    expect(
+      await screen.findByRole("dialog", { name: "Generate tailored resume" }),
+    ).toBeInTheDocument();
     const submitButton = await screen.findByRole("button", { name: "Generate Tailored Resume" });
-    expect(submitButton).toBeDisabled();
-
     await screen.findByRole("option", { name: "No Current Resume" });
     const select = screen.getByLabelText("Resume profile");
+    expect(select).toHaveValue("profile-current");
+    expect(submitButton).toBeEnabled();
 
     fireEvent.change(select, {
       target: {

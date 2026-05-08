@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,17 +10,19 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 
-import { getMatchScoreState, isRecentlyImported } from "@/lib/jobs-table-signals";
+import { getMatchScoreState } from "@/lib/jobs-table-signals";
 
 import { JobStatusSelect } from "./[jobId]/job-status-select";
+import { ReimportJobPanel } from "./[jobId]/reimport-job-panel";
 import {
   areAllJobStatusesVisible,
   countJobsByStatus,
   createVisibleJobStatuses,
   getActiveStatusChipClassName,
   getJobStatusLabel,
-  JOB_STATUS_OPTIONS,
+  getVisibleStatusFilterOptions,
   normalizeJobStatus,
+  pruneHiddenStatusFilters,
   type JobStatusOption,
 } from "./job-status-options";
 
@@ -87,7 +89,11 @@ export function JobsPageClient() {
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
 
-  const statusCounts = countJobsByStatus(jobs);
+  const statusCounts = useMemo(() => countJobsByStatus(jobs), [jobs]);
+  const statusFilterOptions = useMemo(
+    () => getVisibleStatusFilterOptions(statusCounts),
+    [statusCounts],
+  );
   const totalJobs = jobs.length;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +102,7 @@ export function JobsPageClient() {
   const [isImporting, setIsImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
+  const [lastImportedJobId, setLastImportedJobId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -146,6 +152,11 @@ export function JobsPageClient() {
         throw new Error("Import job failed.");
       }
 
+      const importedJob = await res.json().catch(() => null);
+      const importedJobId =
+        importedJob && typeof importedJob.id === "string" ? importedJob.id : null;
+
+      setLastImportedJobId(importedJobId);
       await load();
       setUrl("");
       setImportSuccess("Job imported successfully.");
@@ -177,11 +188,6 @@ export function JobsPageClient() {
       }
 
       setJobs((currentJobs) => currentJobs.filter((job) => job.id !== jobId));
-      setSelectedJobIds((currentIds) => {
-        const nextIds = new Set(currentIds);
-        nextIds.delete(jobId);
-        return nextIds;
-      });
       setExpandedId((currentId) => (currentId === jobId ? null : currentId));
     } catch (err) {
       console.error(err);
@@ -189,49 +195,53 @@ export function JobsPageClient() {
     }
   }
 
-  const handleUpdateCompany = useCallback(
-    async (jobId: string, company: string, previousCompany: string) => {
-      const nextCompany = company.trim();
+  const handleUpdateJobDetails = useCallback(
+    async (jobId: string, input: { company: string; title: string }) => {
+      const company = input.company.trim();
+      const title = input.title.trim();
 
-      if (!nextCompany) {
-        return;
+      if (!company || !title) {
+        throw new Error("INVALID_JOB_DETAILS");
       }
 
       setError(null);
+
+      const previousJobs = jobs;
+
       setJobs((currentJobs) =>
-        currentJobs.map((job) => (job.id === jobId ? { ...job, company: nextCompany } : job)),
+        currentJobs.map((job) => (job.id === jobId ? { ...job, company, title } : job)),
       );
 
       try {
         const res = await fetch(`/api/jobs/${jobId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ company: nextCompany }),
+          body: JSON.stringify({ company, title }),
         });
 
         if (!res.ok) {
-          throw new Error("Update company failed.");
+          throw new Error("Update job details failed.");
         }
 
         const body = await res.json().catch(() => null);
         const savedCompany =
-          body && typeof body.company === "string" && body.company.trim()
-            ? body.company
-            : nextCompany;
+          body && typeof body.company === "string" && body.company.trim() ? body.company : company;
+        const savedTitle =
+          body && typeof body.title === "string" && body.title.trim() ? body.title : title;
 
         setJobs((currentJobs) =>
-          currentJobs.map((job) => (job.id === jobId ? { ...job, company: savedCompany } : job)),
+          currentJobs.map((job) =>
+            job.id === jobId ? { ...job, company: savedCompany, title: savedTitle } : job,
+          ),
         );
       } catch (err) {
         console.error(err);
-        setJobs((currentJobs) =>
-          currentJobs.map((job) => (job.id === jobId ? { ...job, company: previousCompany } : job)),
-        );
-        setError("Unable to update company.");
+        setJobs(previousJobs);
+        setError("Unable to update job details.");
         throw err;
       }
     },
-    [],
+    [jobs],
   );
 
   const handleUpdateStatus = useCallback((jobId: string, status: JobStatusOption) => {
@@ -244,9 +254,17 @@ export function JobsPageClient() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setVisibleStatuses((currentStatuses) => {
+      const nextStatuses = pruneHiddenStatusFilters(currentStatuses, statusCounts);
+
+      return nextStatuses === currentStatuses ? currentStatuses : new Set(nextStatuses);
+    });
+  }, [statusCounts]);
+
   function StatusFilterChips() {
     return (
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div aria-label="Job status filters" className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setVisibleStatuses(createVisibleJobStatuses())}
@@ -259,7 +277,7 @@ export function JobsPageClient() {
           All ({totalJobs})
         </button>
 
-        {JOB_STATUS_OPTIONS.map((status) => {
+        {statusFilterOptions.map((status) => {
           const active = visibleStatuses.has(status);
           const count = statusCounts[status] ?? 0;
           const label = getJobStatusLabel(status);
@@ -291,54 +309,6 @@ export function JobsPageClient() {
   const columns = useMemo<ColumnDef<RankedJob>[]>(
     () => [
       {
-        id: "select",
-        header: ({ table }) => {
-          const visibleIds = table.getRowModel().rows.map((row) => row.original.id);
-          const allVisibleSelected =
-            visibleIds.length > 0 && visibleIds.every((id) => selectedJobIds.has(id));
-
-          return (
-            <input
-              aria-label="Select all visible jobs"
-              type="checkbox"
-              checked={allVisibleSelected}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedJobIds(new Set([...selectedJobIds, ...visibleIds]));
-                } else {
-                  setSelectedJobIds(
-                    new Set([...selectedJobIds].filter((id) => !visibleIds.includes(id))),
-                  );
-                }
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
-          );
-        },
-        cell: ({ row }) => {
-          const id = row.original.id;
-          const checked = selectedJobIds.has(id);
-
-          return (
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={(e) => {
-                const next = new Set(selectedJobIds);
-                if (e.target.checked) next.add(id);
-                else next.delete(id);
-                setSelectedJobIds(next);
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            />
-          );
-        },
-      },
-      {
         accessorKey: "score",
         header: "Match",
         sortingFn: (first, second) => {
@@ -357,7 +327,7 @@ export function JobsPageClient() {
         cell: ({ row }) => (
           <div className="flex min-w-0 items-center gap-2">
             <span className="font-medium text-gray-900">{row.original.title}</span>
-            {isRecentlyImported(row.original.createdAt) ? (
+            {lastImportedJobId === row.original.id ? (
               <span className="rounded border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-700">
                 NEW
               </span>
@@ -368,7 +338,7 @@ export function JobsPageClient() {
       {
         accessorKey: "company",
         header: "Company",
-        cell: ({ row }) => <CompanyCell job={row.original} onUpdateCompany={handleUpdateCompany} />,
+        cell: ({ row }) => <CompanyCell job={row.original} />,
       },
       {
         accessorKey: "status",
@@ -404,16 +374,26 @@ export function JobsPageClient() {
         },
       },
     ],
-    [handleUpdateCompany, handleUpdateStatus, selectedJobIds],
+    [handleUpdateStatus, lastImportedJobId],
   );
 
   const filteredJobs = React.useMemo(() => {
-    return jobs.filter((job) => {
+    const visibleJobs = jobs.filter((job) => {
       const status = normalizeJobStatus(job.status);
 
       return status ? visibleStatuses.has(status) : false;
     });
-  }, [jobs, visibleStatuses]);
+
+    if (!lastImportedJobId || sorting.length > 0) {
+      return visibleJobs;
+    }
+
+    return [...visibleJobs].sort((first, second) => {
+      if (first.id === lastImportedJobId) return -1;
+      if (second.id === lastImportedJobId) return 1;
+      return 0;
+    });
+  }, [jobs, lastImportedJobId, sorting.length, visibleStatuses]);
 
   const activeSortLabel = React.useMemo(() => {
     const activeSort = sorting[0];
@@ -450,7 +430,12 @@ export function JobsPageClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Ranked Jobs</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Jobs</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Import, review, and manage each opportunity from one workspace.
+          </p>
+        </div>
       </div>
 
       {error ? (
@@ -475,6 +460,7 @@ export function JobsPageClient() {
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex gap-2">
           <input
+            autoFocus
             value={url}
             disabled={isImporting}
             onChange={(e) => setUrl(e.target.value)}
@@ -501,65 +487,13 @@ export function JobsPageClient() {
         <JobsTableSkeleton />
       ) : jobs.length === 0 && !error ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">No jobs yet. Import one to get started.</p>
+          <p className="font-medium text-gray-900">No jobs yet</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Paste a job posting URL above to import your first opportunity.
+          </p>
         </div>
       ) : jobs.length > 0 ? (
         <>
-          {selectedJobIds.size > 0 && (
-            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
-              <span>{selectedJobIds.size} selected</span>
-
-              <div className="flex items-center gap-2">
-                <select
-                  aria-label="Bulk status update"
-                  onChange={async (e) => {
-                    const value = e.target.value;
-                    if (!value) return;
-
-                    const ids = Array.from(selectedJobIds);
-
-                    const prevJobs = jobs;
-
-                    // optimistic update
-                    const updatedJobs = jobs.map((job) =>
-                      ids.includes(job.id) ? { ...job, status: value } : job,
-                    );
-
-                    setJobs(updatedJobs);
-
-                    try {
-                      await fetch("/api/jobs/bulk-update", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ids, status: value }),
-                      });
-                    } catch (err) {
-                      console.error("Bulk update failed", err);
-                      setJobs(prevJobs); // rollback
-                    }
-
-                    setSelectedJobIds(new Set());
-                  }}
-                  className="border border-gray-300 rounded px-2 py-1"
-                >
-                  <option value="">Set status...</option>
-                  {JOB_STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {getJobStatusLabel(status)}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={() => setSelectedJobIds(new Set())}
-                  className="text-blue-600 underline"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
-
           <StatusFilterChips />
 
           <p className="mb-3 text-xs text-gray-500">{activeSortLabel}</p>
@@ -608,7 +542,11 @@ export function JobsPageClient() {
                           colSpan={row.getVisibleCells().length}
                           className="bg-gray-50 px-4 py-3 text-sm"
                         >
-                          <JobDetailsPanel job={row.original} onDeleteJob={handleDeleteJob} />
+                          <JobDetailsPanel
+                            job={row.original}
+                            onDeleteJob={handleDeleteJob}
+                            onUpdateJobDetails={handleUpdateJobDetails}
+                          />
                         </td>
                       </tr>
                     )}
@@ -687,119 +625,8 @@ function DateCell({ value }: { value: string | null | undefined }) {
   return <span>{formattedDate}</span>;
 }
 
-function CompanyCell({
-  job,
-  onUpdateCompany,
-}: {
-  job: RankedJob;
-  onUpdateCompany: (jobId: string, company: string, previousCompany: string) => Promise<void>;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(job.company);
-  const [isSaving, setIsSaving] = useState(false);
-  const skipBlurSaveRef = useRef(false);
-
-  async function saveCompany() {
-    if (isSaving) {
-      return;
-    }
-
-    const nextCompany = draft.trim();
-
-    if (!nextCompany || nextCompany === job.company) {
-      setDraft(job.company);
-      setIsEditing(false);
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      await onUpdateCompany(job.id, nextCompany, job.company);
-      setDraft(nextCompany);
-      setIsEditing(false);
-    } catch {
-      setDraft(job.company);
-      setIsEditing(false);
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function cancelEdit() {
-    skipBlurSaveRef.current = true;
-    setDraft(job.company);
-    setIsEditing(false);
-  }
-
-  if (isEditing) {
-    return (
-      <input
-        aria-label={`Company for ${job.title}`}
-        autoFocus
-        disabled={isSaving}
-        value={draft}
-        onBlur={() => {
-          if (skipBlurSaveRef.current) {
-            skipBlurSaveRef.current = false;
-            return;
-          }
-
-          void saveCompany();
-        }}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          event.stopPropagation();
-
-          if (event.key === "Enter") {
-            event.preventDefault();
-            void saveCompany();
-          }
-
-          if (event.key === "Escape") {
-            event.preventDefault();
-            cancelEdit();
-          }
-        }}
-        onClick={(event) => event.stopPropagation()}
-        onMouseDown={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        className="w-44 rounded-md border border-blue-300 px-2 py-1 text-sm"
-      />
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span>{job.company}</span>
-      <button
-        type="button"
-        aria-label={`Edit company for ${job.title}`}
-        onClick={(event) => {
-          event.stopPropagation();
-          setDraft(job.company);
-          setIsEditing(true);
-        }}
-        onMouseDown={(event) => event.stopPropagation()}
-        onPointerDown={(event) => event.stopPropagation()}
-        className="rounded p-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
-      >
-        <svg
-          aria-hidden="true"
-          className="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          viewBox="0 0 24 24"
-        >
-          <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
-          <path d="m19.5 7.125-2.625-2.625" />
-        </svg>
-      </button>
-    </div>
-  );
+function CompanyCell({ job }: { job: RankedJob }) {
+  return <span>{job.company}</span>;
 }
 
 function JobsTableSkeleton() {
@@ -812,7 +639,7 @@ function JobsTableSkeleton() {
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {["", "Match", "Title", "Company", "Status", "Updated", "Created", "Source"].map(
+            {["Match", "Title", "Company", "Status", "Updated", "Created", "Source"].map(
               (header) => (
                 <th key={header} className="px-4 py-2 text-left font-medium text-gray-700">
                   {header}
@@ -824,7 +651,7 @@ function JobsTableSkeleton() {
         <tbody>
           {[0, 1, 2].map((row) => (
             <tr key={row} className="border-t">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((cell) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
                 <td key={cell} className="px-4 py-3">
                   <div className="h-3 w-full max-w-28 rounded bg-gray-200" />
                 </td>
@@ -840,12 +667,16 @@ function JobsTableSkeleton() {
 function JobDetailsPanel({
   job,
   onDeleteJob,
+  onUpdateJobDetails,
 }: {
   job: RankedJob;
   onDeleteJob: (jobId: string) => void | Promise<void>;
+  onUpdateJobDetails: (jobId: string, input: { company: string; title: string }) => Promise<void>;
 }) {
   const [mode, setMode] = useState<"structured" | "raw">("structured");
-  const [showResumeTailor, setShowResumeTailor] = useState(false);
+  const [resumeTailorOpen, setResumeTailorOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const structuredPanelId = `job-${job.id}-structured-view`;
   const rawPanelId = `job-${job.id}-original-posting`;
   const safeText = job.sourceText || "No job description available.";
@@ -888,29 +719,73 @@ function JobDetailsPanel({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="relative">
           <button
             type="button"
-            onClick={() => {
-              void onDeleteJob(job.id);
-            }}
-            className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50"
+            aria-expanded={actionsOpen}
+            aria-haspopup="menu"
+            onClick={() => setActionsOpen((value) => !value)}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
-            Delete job
+            Actions
           </button>
-          <button
-            type="button"
-            aria-expanded={showResumeTailor}
-            aria-controls={`resume-tailor-panel-${job.id}`}
-            onClick={() => setShowResumeTailor((value) => !value)}
-            className="btn-primary text-sm"
-          >
-            Tailor Resume
-          </button>
+
+          {actionsOpen ? (
+            <div
+              role="menu"
+              className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setResumeTailorOpen(true);
+                  setActionsOpen(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Generate Tailored Resume
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setEditDetailsOpen(true);
+                  setActionsOpen(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Edit Details
+              </button>
+              <div>
+                <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} variant="menu-item" />
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setActionsOpen(false);
+                  void onDeleteJob(job.id);
+                }}
+                className="w-full border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50"
+              >
+                Delete Job
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      {showResumeTailor && <ResumeTailor jobId={job.id} />}
+      {resumeTailorOpen ? (
+        <ResumeTailorDialog jobId={job.id} onClose={() => setResumeTailorOpen(false)} />
+      ) : null}
+      {editDetailsOpen ? (
+        <EditJobDetailsDialog
+          job={job}
+          onClose={() => setEditDetailsOpen(false)}
+          onSave={onUpdateJobDetails}
+        />
+      ) : null}
 
       <div className="mt-4 max-h-96 overflow-y-auto text-sm">
         {mode === "raw" ? (
@@ -938,8 +813,163 @@ function JobDetailsPanel({
   );
 }
 
+function EditJobDetailsDialog({
+  job,
+  onClose,
+  onSave,
+}: {
+  job: RankedJob;
+  onClose: () => void;
+  onSave: (jobId: string, input: { company: string; title: string }) => Promise<void>;
+}) {
+  const [company, setCompany] = useState(job.company);
+  const [title, setTitle] = useState(job.title);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function saveDetails() {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await onSave(job.id, { company, title });
+      onClose();
+    } catch {
+      setError("Unable to save job details.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close edit details modal"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/30"
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`edit-job-details-title-${job.id}`}
+        className="relative w-full max-w-lg rounded-lg bg-white shadow-2xl"
+      >
+        <header className="border-b border-gray-200 px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <h2 id={`edit-job-details-title-${job.id}`} className="text-lg font-semibold">
+              Edit Details
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </header>
+
+        <div className="space-y-4 px-5 py-4">
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+          <label className="block text-sm font-medium text-gray-700">
+            Company
+            <input
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+            />
+          </label>
+
+          <label className="block text-sm font-medium text-gray-700">
+            Title
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+            />
+          </label>
+        </div>
+
+        <footer className="flex justify-end gap-3 border-t border-gray-200 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={saveDetails}
+            disabled={saving || !company.trim() || !title.trim()}
+            className="btn-primary disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function formatStructuredSummaryValue(value: unknown): string | null {
+  if (value == null) return null;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => formatStructuredSummaryValue(item))
+      .filter((item): item is string => Boolean(item));
+
+    return parts.length > 0 ? parts.join(", ") : null;
+  }
+
+  if (typeof value === "object") {
+    const parts = Object.entries(value as Record<string, unknown>)
+      .map(([key, nestedValue]) => {
+        const formattedNestedValue = formatStructuredSummaryValue(nestedValue);
+        return formattedNestedValue ? `${key}: ${formattedNestedValue}` : key;
+      })
+      .filter((item) => item.trim().length > 0);
+
+    return parts.length > 0 ? parts.join("; ") : null;
+  }
+
+  return null;
+}
+
+function getStructuredSummaryList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    const formattedValue = formatStructuredSummaryValue(value);
+    return formattedValue ? [formattedValue] : [];
+  }
+
+  return value
+    .map((item) => formatStructuredSummaryValue(item))
+    .filter((item): item is string => Boolean(item));
+}
+
 function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   const summary = structuredSummary;
+
+  const location = formatStructuredSummaryValue(summary?.location);
+  const salaryRange =
+    formatStructuredSummaryValue(summary?.salaryRange) ?? "Salary range not listed";
+  const companyInfo = getStructuredSummaryList(summary?.companyInfo);
+  const jobDescription = getStructuredSummaryList(summary?.jobDescription);
+  const requirements = getStructuredSummaryList(summary?.requirements);
+  const benefits = getStructuredSummaryList(summary?.benefits);
 
   if (!summary) {
     return (
@@ -952,48 +982,48 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
-        {summary.location && <div>📍 {summary.location}</div>}
-        <div>💰 {summary.salaryRange ?? "Salary range not listed"}</div>
+        {location && <div>📍 {location}</div>}
+        <div>💰 {salaryRange}</div>
       </div>
 
-      {summary.companyInfo?.length > 0 && (
+      {companyInfo.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Company</h4>
           <ul className="ml-5 list-disc">
-            {summary.companyInfo.map((item: string, i: number) => (
+            {companyInfo.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {summary.jobDescription?.length > 0 && (
+      {jobDescription.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Description</h4>
           <ul className="ml-5 list-disc">
-            {summary.jobDescription.map((item: string, i: number) => (
+            {jobDescription.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {summary.requirements?.length > 0 && (
+      {requirements.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Requirements</h4>
           <ul className="ml-5 list-disc">
-            {summary.requirements.map((item: string, i: number) => (
+            {requirements.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
         </div>
       )}
 
-      {summary.benefits?.length > 0 && (
+      {benefits.length > 0 && (
         <div>
           <h4 className="mb-1 font-semibold">Benefits</h4>
           <ul className="ml-5 list-disc">
-            {summary.benefits.map((item: string, i: number) => (
+            {benefits.map((item, i) => (
               <li key={i}>{item}</li>
             ))}
           </ul>
@@ -1002,7 +1032,7 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
     </div>
   );
 }
-function ResumeTailor({ jobId }: { jobId: string }) {
+function ResumeTailorDialog({ jobId, onClose }: { jobId: string; onClose: () => void }) {
   const [resumes, setResumes] = useState<ResumeProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ResumeProfile | null>(null);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -1028,12 +1058,17 @@ function ResumeTailor({ jobId }: { jobId: string }) {
       .then((data) => {
         if (!isCurrent) return;
 
-        setResumes(
-          data.map((r: any) => ({
-            id: r.id,
-            name: r.name || "Untitled Resume",
-            currentVersionId: r.currentVersionId || r.current_version_id || "",
-          })),
+        const profiles = data.map((r: any) => ({
+          id: r.id,
+          name: r.name || "Untitled Resume",
+          currentVersionId: r.currentVersionId || r.current_version_id || "",
+        }));
+
+        setResumes(profiles);
+        setSelectedProfile(
+          profiles.find((profile: ResumeProfile) => profile.currentVersionId) ??
+            profiles[0] ??
+            null,
         );
       })
       .catch(() => {
@@ -1099,66 +1134,103 @@ function ResumeTailor({ jobId }: { jobId: string }) {
   }
 
   return (
-    <div
-      id={`resume-tailor-panel-${jobId}`}
-      className="mt-3 space-y-3 rounded-md border border-gray-200 bg-white p-3 shadow-sm"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="flex-1 text-sm font-medium text-gray-700">
-          Resume profile
-          <select
-            aria-label="Resume profile"
-            value={selectedProfile?.id ?? ""}
-            onChange={(e) => {
-              const profile = resumes.find((resume) => resume.id === e.target.value);
-              setSelectedProfile(profile ?? null);
-            }}
-            disabled={loadingProfiles || resumes.length === 0}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
-          >
-            <option value="">{loadingProfiles ? "Loading resumes..." : "Select resume..."}</option>
-            {resumes.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close tailored resume modal"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/30"
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`generate-tailored-resume-title-${jobId}`}
+        className="relative w-full max-w-lg rounded-lg bg-white shadow-2xl"
+      >
+        <header className="border-b border-gray-200 px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <h2 id={`generate-tailored-resume-title-${jobId}`} className="text-lg font-semibold">
+              Generate tailored resume
+            </h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            >
+              Close
+            </button>
+          </div>
+        </header>
+
+        <div className="space-y-4 px-5 py-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Resume profile
+            <select
+              aria-label="Resume profile"
+              value={selectedProfile?.id ?? ""}
+              onChange={(e) => {
+                const profile = resumes.find((resume) => resume.id === e.target.value);
+                setSelectedProfile(profile ?? null);
+              }}
+              disabled={loadingProfiles || resumes.length === 0}
+              className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500"
+            >
+              <option value="">
+                {loadingProfiles ? "Loading resumes..." : "Select resume..."}
               </option>
-            ))}
-          </select>
-        </label>
+              {resumes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={!canTailor || loading}
-          className="btn-primary text-sm disabled:opacity-50"
-        >
-          {loading ? "Generating..." : "Generate Tailored Resume"}
-        </button>
-      </div>
+          {!loadingProfiles && resumes.length === 0 && (
+            <p className="text-sm text-gray-600">Import a resume to enable tailoring.</p>
+          )}
 
-      {!loadingProfiles && resumes.length === 0 && (
-        <p className="text-sm text-gray-600">Import a resume to enable tailoring.</p>
-      )}
+          {selectedProfile && !selectedProfile.currentVersionId && (
+            <p className="text-sm text-gray-600">
+              Selected resume has no current version. Import a resume version before tailoring.
+            </p>
+          )}
 
-      {selectedProfile && !selectedProfile.currentVersionId && (
-        <p className="text-sm text-gray-600">
-          Selected resume has no current version. Import a resume version before tailoring.
-        </p>
-      )}
+          {tailorError && (
+            <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {tailorError}
+            </div>
+          )}
 
-      {tailorError && (
-        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {tailorError}
+          {createdTailoredResume && (
+            <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+              Tailored resume created.{" "}
+              <a href="/resumes" className="font-medium underline">
+                View resumes
+              </a>
+            </div>
+          )}
         </div>
-      )}
 
-      {createdTailoredResume && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-          Tailored resume created.{" "}
-          <a href="/resumes" className="font-medium underline">
-            View resumes
-          </a>
-        </div>
-      )}
+        <footer className="flex justify-end gap-3 border-t border-gray-200 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={!canTailor || loading}
+            className="btn-primary text-sm disabled:opacity-50"
+          >
+            {loading ? "Generating..." : "Generate Tailored Resume"}
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }

@@ -7,11 +7,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-gray-200 bg-white px-4 py-3 sm:px-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-900">Job Coach</h1>
+          <Link href="/jobs" className="text-xl font-bold text-gray-900">
+            Job Coach
+          </Link>
           <nav className="flex flex-1 gap-6">
-            <Link href="/" className="text-sm font-medium text-gray-600 hover:text-gray-900">
-              Home
-            </Link>
             <Link href="/jobs" className="text-sm font-medium text-gray-600 hover:text-gray-900">
               Jobs
             </Link>

@@ -30,27 +30,42 @@ export async function PATCH(req: Request, context: { params: Promise<{ jobId: st
   const body = await req.json();
   const { jobId } = await context.params;
 
-  if (typeof body.company === "string") {
-    const company = body.company.trim();
+  if (typeof body.company === "string" || typeof body.title === "string") {
+    const update: { company?: string; title?: string; updated_at: string } = {
+      updated_at: new Date().toISOString(),
+    };
 
-    if (!company) {
-      return Response.json({ error: "INVALID_COMPANY" }, { status: 400 });
+    if (typeof body.company === "string") {
+      const company = body.company.trim();
+
+      if (!company) {
+        return Response.json({ error: "INVALID_COMPANY" }, { status: 400 });
+      }
+
+      update.company = company;
+    }
+
+    if (typeof body.title === "string") {
+      const title = body.title.trim();
+
+      if (!title) {
+        return Response.json({ error: "INVALID_TITLE" }, { status: 400 });
+      }
+
+      update.title = title;
     }
 
     const db = createServerClient();
     const { data, error } = await db
       .from("jobs")
-      .update({
-        company,
-        updated_at: new Date().toISOString(),
-      })
+      .update(update)
       .eq("id", jobId)
-      .select("id, company")
+      .select("id, company, title")
       .single();
 
     if (error) {
       console.error(error);
-      return Response.json({ error: "UPDATE_COMPANY_FAILED" }, { status: 500 });
+      return Response.json({ error: "UPDATE_JOB_DETAILS_FAILED" }, { status: 500 });
     }
 
     return Response.json(data);
