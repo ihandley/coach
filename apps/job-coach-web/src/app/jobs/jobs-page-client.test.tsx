@@ -619,6 +619,12 @@ describe("JobsPageClient", () => {
     const details = screen.getByTestId("job-details");
 
     expect(within(details).getByRole("button", { name: "Actions" })).toBeInTheDocument();
+    expect(within(details).getByRole("tab", { name: "Structured View" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(within(details).getByRole("tab", { name: "Original Posting" })).toBeInTheDocument();
+    expect(within(details).getByRole("tab", { name: "Match Details" })).toBeInTheDocument();
     expect(within(details).getByText("Company")).toBeInTheDocument();
     expect(within(details).getByText("Pattern builds hiring tools.")).toBeInTheDocument();
     expect(within(details).getByText("Description")).toBeInTheDocument();
@@ -632,8 +638,45 @@ describe("JobsPageClient", () => {
 
     expect(within(details).getByText("Build thoughtful product workflows.")).toBeInTheDocument();
     expect(
-      within(details).queryByText("No structured summary available yet.", { exact: false }),
+      within(details).queryByText("Structured data not available", { exact: false }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
+
+    expect(within(details).getByText("Strengths")).toBeInTheDocument();
+    expect(within(details).getByText("Gaps")).toBeInTheDocument();
+    expect(
+      within(details).queryByText("Build thoughtful product workflows."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows fallback copy when structured data or match analysis is missing", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            score: null,
+            structuredSummary: null,
+          },
+        ]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+
+    const details = screen.getByTestId("job-details");
+    expect(within(details).getByText("Structured data not available")).toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
+
+    expect(within(details).getByText("No match analysis available")).toBeInTheDocument();
   });
 
   it("does not delete the job when confirmation is canceled", async () => {
@@ -716,6 +759,7 @@ describe("JobsPageClient", () => {
     const tabRow = screen.getByTestId("job-details-tab-row");
     expect(within(tabRow).getByRole("tab", { name: "Structured View" })).toBeInTheDocument();
     expect(within(tabRow).getByRole("tab", { name: "Original Posting" })).toBeInTheDocument();
+    expect(within(tabRow).getByRole("tab", { name: "Match Details" })).toBeInTheDocument();
 
     expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Maybe" })).not.toBeInTheDocument();

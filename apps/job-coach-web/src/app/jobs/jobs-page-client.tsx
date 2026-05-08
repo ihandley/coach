@@ -49,6 +49,8 @@ type RankedJob = {
   structuredSummary?: any;
 };
 
+type JobDetailMode = "structured" | "raw" | "match";
+
 type ResumeProfile = {
   id: string;
   name: string;
@@ -673,12 +675,13 @@ function JobDetailsPanel({
   onDeleteJob: (jobId: string) => void | Promise<void>;
   onUpdateJobDetails: (jobId: string, input: { company: string; title: string }) => Promise<void>;
 }) {
-  const [mode, setMode] = useState<"structured" | "raw">("structured");
+  const [mode, setMode] = useState<JobDetailMode>("structured");
   const [resumeTailorOpen, setResumeTailorOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
   const structuredPanelId = `job-${job.id}-structured-view`;
   const rawPanelId = `job-${job.id}-original-posting`;
+  const matchPanelId = `job-${job.id}-match-details`;
   const safeText = job.sourceText || "No job description available.";
 
   const tabClassName = (active: boolean) =>
@@ -716,6 +719,17 @@ function JobDetailsPanel({
             className={tabClassName(mode === "raw")}
           >
             Original Posting
+          </button>
+          <button
+            id={`${matchPanelId}-tab`}
+            type="button"
+            role="tab"
+            aria-selected={mode === "match"}
+            aria-controls={matchPanelId}
+            onClick={() => setMode("match")}
+            className={tabClassName(mode === "match")}
+          >
+            Match Details
           </button>
         </div>
 
@@ -792,6 +806,10 @@ function JobDetailsPanel({
           <div id={rawPanelId} role="tabpanel" aria-labelledby={`${rawPanelId}-tab`}>
             {formatRawText(safeText)}
           </div>
+        ) : mode === "match" ? (
+          <div id={matchPanelId} role="tabpanel" aria-labelledby={`${matchPanelId}-tab`}>
+            <JobMatchDetails score={job.score} />
+          </div>
         ) : (
           <div id={structuredPanelId} role="tabpanel" aria-labelledby={`${structuredPanelId}-tab`}>
             <JobDescription structuredSummary={job.structuredSummary} />
@@ -809,6 +827,26 @@ function JobDetailsPanel({
           View Job Posting
         </a>
       )}
+    </div>
+  );
+}
+
+function JobMatchDetails({ score }: { score: number | null }) {
+  if (score == null) {
+    return <div className="text-sm text-muted-foreground">No match analysis available</div>;
+  }
+
+  return (
+    <div className="flex max-w-3xl flex-col gap-4">
+      <div>
+        <h4 className="mb-1 font-semibold">Strengths</h4>
+        <p className="text-sm text-muted-foreground">Match strengths not available yet.</p>
+      </div>
+
+      <div>
+        <h4 className="mb-1 font-semibold">Gaps</h4>
+        <p className="text-sm text-muted-foreground">Match gaps not available yet.</p>
+      </div>
     </div>
   );
 }
@@ -972,11 +1010,7 @@ function JobDescription({ structuredSummary }: { structuredSummary?: any }) {
   const benefits = getStructuredSummaryList(summary?.benefits);
 
   if (!summary) {
-    return (
-      <div className="text-sm text-muted-foreground">
-        No structured summary available yet. Use Original Posting view for the original posting.
-      </div>
-    );
+    return <div className="text-sm text-muted-foreground">Structured data not available</div>;
   }
 
   return (
