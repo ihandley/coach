@@ -49,6 +49,13 @@ describe("JobsPageClient", () => {
       requirements: ["TypeScript"],
       benefits: ["Remote work"],
     },
+    matchDetails: {
+      strengths: ["Strong TypeScript alignment"],
+      gaps: ["No explicit Postgres signal"],
+      reasons: ["Good keyword overlap"],
+      summary: "Strong fit for product workflow work.",
+      recommendation: "apply",
+    },
   };
 
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -643,8 +650,14 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
 
+    expect(within(details).getByText("Match score: 82%")).toBeInTheDocument();
+    expect(within(details).getByText("Strong fit for product workflow work.")).toBeInTheDocument();
     expect(within(details).getByText("Strengths")).toBeInTheDocument();
+    expect(within(details).getByText("Strong TypeScript alignment")).toBeInTheDocument();
     expect(within(details).getByText("Gaps")).toBeInTheDocument();
+    expect(within(details).getByText("No explicit Postgres signal")).toBeInTheDocument();
+    expect(within(details).getByText("Match Reasoning")).toBeInTheDocument();
+    expect(within(details).getByText("Good keyword overlap")).toBeInTheDocument();
     expect(
       within(details).queryByText("Build thoughtful product workflows."),
     ).not.toBeInTheDocument();
@@ -659,6 +672,7 @@ describe("JobsPageClient", () => {
           {
             ...rankedJob,
             score: null,
+            matchDetails: null,
             structuredSummary: null,
           },
         ]);

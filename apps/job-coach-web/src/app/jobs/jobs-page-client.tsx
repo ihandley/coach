@@ -47,6 +47,13 @@ type RankedJob = {
   updatedAt: string;
   score: number | null;
   structuredSummary?: any;
+  matchDetails?: {
+    strengths?: unknown;
+    gaps?: unknown;
+    reasons?: unknown;
+    summary?: unknown;
+    recommendation?: unknown;
+  } | null;
 };
 
 type JobDetailMode = "structured" | "raw" | "match";
@@ -808,7 +815,7 @@ function JobDetailsPanel({
           </div>
         ) : mode === "match" ? (
           <div id={matchPanelId} role="tabpanel" aria-labelledby={`${matchPanelId}-tab`}>
-            <JobMatchDetails score={job.score} />
+            <JobMatchDetails score={job.score} matchDetails={job.matchDetails} />
           </div>
         ) : (
           <div id={structuredPanelId} role="tabpanel" aria-labelledby={`${structuredPanelId}-tab`}>
@@ -831,22 +838,93 @@ function JobDetailsPanel({
   );
 }
 
-function JobMatchDetails({ score }: { score: number | null }) {
+function getMatchDetailItems(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function getMatchDetailText(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function MatchDetailList({ items }: { items: string[] }) {
+  return (
+    <ul className="ml-5 list-disc">
+      {items.map((item, index) => (
+        <li key={index}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+
+function JobMatchDetails({
+  score,
+  matchDetails,
+}: {
+  score: number | null;
+  matchDetails?: RankedJob["matchDetails"];
+}) {
+  const strengths = getMatchDetailItems(matchDetails?.strengths);
+  const gaps = getMatchDetailItems(matchDetails?.gaps);
+  const reasons = getMatchDetailItems(matchDetails?.reasons);
+  const summary = getMatchDetailText(matchDetails?.summary);
+  const recommendation = getMatchDetailText(matchDetails?.recommendation);
+  const hasMatchDetails =
+    summary || recommendation || strengths.length > 0 || gaps.length > 0 || reasons.length > 0;
+
   if (score == null) {
     return <div className="text-sm text-muted-foreground">No match analysis available</div>;
   }
 
   return (
     <div className="flex max-w-3xl flex-col gap-4">
-      <div>
-        <h4 className="mb-1 font-semibold">Strengths</h4>
-        <p className="text-sm text-muted-foreground">Match strengths not available yet.</p>
+      <div className="flex gap-4 border-b pb-2 text-sm text-muted-foreground">
+        <div>Match score: {Math.round(score * 100)}%</div>
       </div>
 
-      <div>
-        <h4 className="mb-1 font-semibold">Gaps</h4>
-        <p className="text-sm text-muted-foreground">Match gaps not available yet.</p>
-      </div>
+      {summary && (
+        <div>
+          <h4 className="mb-1 font-semibold">Summary</h4>
+          <p>{summary}</p>
+        </div>
+      )}
+
+      {strengths.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Strengths</h4>
+          <MatchDetailList items={strengths} />
+        </div>
+      )}
+
+      {gaps.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Gaps</h4>
+          <MatchDetailList items={gaps} />
+        </div>
+      )}
+
+      {reasons.length > 0 && (
+        <div>
+          <h4 className="mb-1 font-semibold">Match Reasoning</h4>
+          <MatchDetailList items={reasons} />
+        </div>
+      )}
+
+      {recommendation && (
+        <div>
+          <h4 className="mb-1 font-semibold">Recommendation</h4>
+          <p>{recommendation}</p>
+        </div>
+      )}
+
+      {!hasMatchDetails && (
+        <p className="text-sm text-muted-foreground">
+          Detailed match analysis has not been saved for this job yet.
+        </p>
+      )}
     </div>
   );
 }

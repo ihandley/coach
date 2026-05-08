@@ -3,7 +3,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { normalizeRankedScore } from "./route";
+import { createRankedMatchDetails, normalizeRankedScore } from "./route";
 
 const listJobs = vi.fn();
 const selectJobMatches = vi.fn();
@@ -54,6 +54,21 @@ describe("normalizeRankedScore", () => {
     expect(normalizeRankedScore(0)).toBe(0);
     expect(normalizeRankedScore(1700)).toBe(1);
     expect(normalizeRankedScore(-25)).toBe(0);
+  });
+});
+
+describe("createRankedMatchDetails", () => {
+  it("mirrors current matcher reasoning for persisted match scores", () => {
+    expect(createRankedMatchDetails(82)).toEqual({
+      strengths: ["Good keyword overlap"],
+      gaps: [],
+      reasons: ["Good keyword overlap"],
+    });
+    expect(createRankedMatchDetails(17)).toEqual({
+      strengths: [],
+      gaps: ["Low keyword overlap"],
+      reasons: ["Low keyword overlap"],
+    });
   });
 });
 
@@ -154,23 +169,40 @@ describe("GET /api/jobs/ranked", () => {
       expect.objectContaining({
         id: "job-new",
         score: null,
+        matchDetails: null,
       }),
       expect.objectContaining({
         id: "job-high",
         score: 0.82,
+        matchDetails: {
+          strengths: ["Good keyword overlap"],
+          gaps: [],
+          reasons: ["Good keyword overlap"],
+        },
         structuredSummary,
       }),
       expect.objectContaining({
         id: "job-low",
         score: 0.17,
+        matchDetails: {
+          strengths: [],
+          gaps: ["Low keyword overlap"],
+          reasons: ["Low keyword overlap"],
+        },
       }),
       expect.objectContaining({
         id: "job-zero",
         score: 0,
+        matchDetails: {
+          strengths: [],
+          gaps: ["Low keyword overlap"],
+          reasons: ["Low keyword overlap"],
+        },
       }),
       expect.objectContaining({
         id: "job-unmatched",
         score: null,
+        matchDetails: null,
       }),
     ]);
   });
