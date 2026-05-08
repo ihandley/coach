@@ -24,6 +24,12 @@ function getStatusLabel(status: string) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function getStatusFilterButtonNames() {
+  return within(screen.getByLabelText("Job status filters"))
+    .getAllByRole("button")
+    .map((button) => button.textContent);
+}
+
 describe("JobsPageClient", () => {
   const rankedJob = {
     id: "job-1",
@@ -117,11 +123,11 @@ describe("JobsPageClient", () => {
             });
       }
 
-      if (url === "/api/jobs/job-1/status" && init?.method === "POST") {
+      if (/^\/api\/jobs\/[^/]+\/status$/.test(url) && init?.method === "POST") {
         const body = JSON.parse(String(init.body));
 
         return jsonResponse({
-          id: "job-1",
+          id: url.split("/")[3],
           status: body.status,
         });
       }
@@ -411,7 +417,27 @@ describe("JobsPageClient", () => {
     expect(screen.queryByRole("dialog", { name: "Edit Details" })).not.toBeInTheDocument();
   });
 
-  it("includes every current status in the default All status view", async () => {
+  it("keeps core status chips visible and hides optional zero-count chips", async () => {
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+
+    expect(getStatusFilterButtonNames()).toEqual([
+      "All (1)",
+      "Saved (1)",
+      "Applying (0)",
+      "Applied (0)",
+      "Interviewing (0)",
+    ]);
+
+    expect(screen.queryByRole("button", { name: "Researching (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Offer (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rejected (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Withdrawn (0)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archived (0)" })).not.toBeInTheDocument();
+  });
+
+  it("shows optional status chips when they have jobs and preserves lifecycle order", async () => {
     const jobs = JOB_STATUSES.map((status, index) => ({
       ...rankedJob,
       id: `job-${status}`,
@@ -443,14 +469,18 @@ describe("JobsPageClient", () => {
     );
     expect(renderedRowCount).toBe(JOB_STATUSES.length);
 
-    const individualChipTotal = JOB_STATUSES.reduce((sum, status) => {
-      expect(
-        screen.getByRole("button", { name: `${getStatusLabel(status)} (1)` }),
-      ).toBeInTheDocument();
-      return sum + 1;
-    }, 0);
-
-    expect(individualChipTotal).toBe(renderedRowCount);
+    expect(getStatusFilterButtonNames()).toEqual([
+      `All (${JOB_STATUSES.length})`,
+      "Saved (1)",
+      "Researching (1)",
+      "Applying (1)",
+      "Applied (1)",
+      "Interviewing (1)",
+      "Offer (1)",
+      "Rejected (1)",
+      "Withdrawn (1)",
+      "Archived (1)",
+    ]);
 
     const archivedChip = screen.getByRole("button", { name: "Archived (1)" });
     expect(archivedChip).toHaveClass("border-gray-500", "bg-gray-100", "text-gray-700");
@@ -493,6 +523,52 @@ describe("JobsPageClient", () => {
 
     expect(screen.getByRole("button", { name: "Saved (0)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Applied (1)" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archived (0)" })).not.toBeInTheDocument();
+  });
+
+  it("resets to All when the only remaining visible filter becomes hidden", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            status: "archived",
+          },
+        ]);
+      }
+
+      if (/^\/api\/jobs\/[^/]+\/status$/.test(url) && init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+
+        return jsonResponse({
+          id: url.split("/")[3],
+          status: body.status,
+        });
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
+
+    for (const chipName of ["Saved (0)", "Applying (0)", "Applied (0)", "Interviewing (0)"]) {
+      fireEvent.click(screen.getByRole("button", { name: chipName }));
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit job status" }));
+    fireEvent.click(screen.getByRole("button", { name: "Applied" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "All (1)" })).toHaveClass("border-blue-600");
+    });
+
+    expect(screen.queryByRole("button", { name: "Archived (0)" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Applied (1)" })).toBeInTheDocument();
+    expect(screen.getByText("Product Engineer")).toBeInTheDocument();
   });
 
   it("preserves row expand and collapse after interacting with table controls", async () => {

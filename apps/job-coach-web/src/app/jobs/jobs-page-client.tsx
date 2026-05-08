@@ -20,8 +20,9 @@ import {
   createVisibleJobStatuses,
   getActiveStatusChipClassName,
   getJobStatusLabel,
-  JOB_STATUS_OPTIONS,
+  getVisibleStatusFilterOptions,
   normalizeJobStatus,
+  pruneHiddenStatusFilters,
   type JobStatusOption,
 } from "./job-status-options";
 
@@ -88,7 +89,11 @@ export function JobsPageClient() {
 
   const [jobs, setJobs] = useState<RankedJob[]>([]);
 
-  const statusCounts = countJobsByStatus(jobs);
+  const statusCounts = useMemo(() => countJobsByStatus(jobs), [jobs]);
+  const statusFilterOptions = useMemo(
+    () => getVisibleStatusFilterOptions(statusCounts),
+    [statusCounts],
+  );
   const totalJobs = jobs.length;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -249,9 +254,17 @@ export function JobsPageClient() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setVisibleStatuses((currentStatuses) => {
+      const nextStatuses = pruneHiddenStatusFilters(currentStatuses, statusCounts);
+
+      return nextStatuses === currentStatuses ? currentStatuses : new Set(nextStatuses);
+    });
+  }, [statusCounts]);
+
   function StatusFilterChips() {
     return (
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div aria-label="Job status filters" className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setVisibleStatuses(createVisibleJobStatuses())}
@@ -264,7 +277,7 @@ export function JobsPageClient() {
           All ({totalJobs})
         </button>
 
-        {JOB_STATUS_OPTIONS.map((status) => {
+        {statusFilterOptions.map((status) => {
           const active = visibleStatuses.has(status);
           const count = statusCounts[status] ?? 0;
           const label = getJobStatusLabel(status);
