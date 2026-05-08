@@ -63,6 +63,7 @@ export async function backfillJobMatches(db: SupabaseClient) {
       job_id: job.id,
       resume_profile_id: resumeProfileId,
       score: result.score,
+      match_details: result.matchDetails,
       created_at: new Date().toISOString(),
     };
   });

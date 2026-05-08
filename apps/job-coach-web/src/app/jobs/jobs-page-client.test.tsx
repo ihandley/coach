@@ -52,9 +52,10 @@ describe("JobsPageClient", () => {
     matchDetails: {
       strengths: ["Strong TypeScript alignment"],
       gaps: ["No explicit Postgres signal"],
-      reasons: ["Good keyword overlap"],
+      reasons: ["Resume evidence overlaps with Product Engineer: TypeScript, product workflows."],
       summary: "Strong fit for product workflow work.",
-      recommendation: "apply",
+      recommendation:
+        "Strong fit for Product Engineer. Prioritize this role and tailor the resume around TypeScript and product workflows.",
     },
   };
 
@@ -672,7 +673,7 @@ describe("JobsPageClient", () => {
     expect(within(details).getByText("Recommendation")).toBeInTheDocument();
     expect(
       within(details).getByText(
-        "Strong fit. Prioritize this role and tailor the resume around the strongest matches.",
+        "Strong fit for Product Engineer. Prioritize this role and tailor the resume around TypeScript and product workflows.",
       ),
     ).toBeInTheDocument();
     expect(

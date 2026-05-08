@@ -906,9 +906,10 @@ function JobMatchDetails({
   const gaps = getMatchDetailItems(matchDetails?.gaps);
   const reasons = getMatchDetailItems(matchDetails?.reasons);
   const summary = getMatchDetailText(matchDetails?.summary);
+  const savedRecommendation = getMatchDetailText(matchDetails?.recommendation);
   const fallbackStrengths = strengths.length === 0 && gaps.length === 0 ? reasons : [];
   const fitLabel = getFitLabel(score);
-  const fitRecommendation = getFitRecommendation(score);
+  const fitRecommendation = savedRecommendation ?? getFitRecommendation(score);
 
   return (
     <div className="flex max-w-4xl flex-col gap-4">
