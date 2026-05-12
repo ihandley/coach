@@ -689,13 +689,18 @@ describe("JobsPageClient", () => {
     render(<JobsPageClient />);
 
     fireEvent.click(await screen.findByTestId("job-row"));
-    fireEvent.click(within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }));
+    fireEvent.click(
+      within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("job-actions-menu")).toHaveAttribute("data-side", "up");
     });
 
-    Object.defineProperty(window, "innerHeight", { configurable: true, value: originalInnerHeight });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: originalInnerHeight,
+    });
     Object.defineProperty(window, "innerWidth", { configurable: true, value: originalInnerWidth });
   });
 
@@ -722,9 +727,7 @@ describe("JobsPageClient", () => {
                   strengths: [
                     "Resume shows relevant evidence around TypeScript for Product Engineer.",
                   ],
-                  gaps: [
-                    "The application would be stronger with clearer evidence of Postgres.",
-                  ],
+                  gaps: ["The application would be stronger with clearer evidence of Postgres."],
                   reasons: [
                     "Resume shows relevant evidence around TypeScript for Product Engineer.",
                   ],

@@ -128,12 +128,7 @@ function getFallbackTerms(job: RankedJobSource) {
   const sourceTerms = (job.sourceText ?? "")
     .toLowerCase()
     .split(/[^a-z0-9+#.]+/i)
-    .filter(
-      (term) =>
-        term.length > 2 &&
-        !blockedTerms.has(term) &&
-        !/^\d+$/.test(term),
-    );
+    .filter((term) => term.length > 2 && !blockedTerms.has(term) && !/^\d+$/.test(term));
 
   return Array.from(new Set([...requirements, ...sourceTerms]))
     .filter((term) => !blockedTerms.has(term.toLowerCase()))
@@ -159,11 +154,7 @@ export function createRankedMatchDetails(score: number, job: RankedJobSource): R
   return {
     strengths: score >= 26 ? [`Resume shows some relevant evidence for ${title}.`] : [],
     gaps:
-      score < 51
-        ? [
-            `The application would be stronger with clearer evidence of ${termText}.`,
-          ]
-        : [],
+      score < 51 ? [`The application would be stronger with clearer evidence of ${termText}.`] : [],
     reasons: [legacyReason],
     recommendation,
   };
