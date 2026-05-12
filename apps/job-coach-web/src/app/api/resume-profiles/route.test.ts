@@ -191,7 +191,11 @@ describe("POST /api/resume-profiles", () => {
     };
     const { db, operations } = createPostDbMock();
     createServerClientMock.mockReturnValue(db);
-    backfillJobMatchesMock.mockResolvedValue({ updated: 3, resumeProfileId: "profile-123" });
+    backfillJobMatchesMock.mockResolvedValue({
+      updated: 3,
+      resumeProfileId: "profile-123",
+      resumeVersionId: "version-123",
+    });
     const { POST } = await import("./route");
 
     const response = await POST(
@@ -239,7 +243,10 @@ describe("POST /api/resume-profiles", () => {
         },
       },
     ]);
-    expect(backfillJobMatchesMock).toHaveBeenCalledWith(db);
+    expect(backfillJobMatchesMock).toHaveBeenCalledWith(db, {
+      resumeProfileId: "profile-123",
+      resumeVersionId: "version-123",
+    });
     expect(await response.json()).toEqual({
       profile: {
         id: "profile-123",
@@ -254,6 +261,7 @@ describe("POST /api/resume-profiles", () => {
       matchRefresh: {
         updated: 3,
         resumeProfileId: "profile-123",
+        resumeVersionId: "version-123",
       },
     });
   });

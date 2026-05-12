@@ -28,7 +28,10 @@ export async function POST(
       jobId: body.jobId,
       sourceResumeVersionId: body.sourceResumeVersionId,
     });
-    const matchRefresh = await backfillJobMatches(createServerClient());
+    const matchRefresh = await backfillJobMatches(createServerClient(), {
+      resumeProfileId,
+      resumeVersionId: result.version.id,
+    });
 
     return Response.json({ ...result, matchRefresh });
   } catch (error) {

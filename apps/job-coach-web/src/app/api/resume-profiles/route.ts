@@ -138,7 +138,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  const matchRefresh = await backfillJobMatches(db);
+  const matchRefresh = await backfillJobMatches(db, {
+    resumeProfileId: profile.id,
+    resumeVersionId: version.id,
+  });
 
   return NextResponse.json({ profile: updatedProfile, version, matchRefresh }, { status: 201 });
 }

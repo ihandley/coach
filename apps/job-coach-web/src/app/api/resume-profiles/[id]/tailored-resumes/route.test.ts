@@ -35,7 +35,11 @@ describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
   it("creates a tailored resume version", async () => {
     const db = {};
     createServerClientMock.mockReturnValue(db);
-    backfillJobMatchesMock.mockResolvedValue({ updated: 2, resumeProfileId: "profile-2" });
+    backfillJobMatchesMock.mockResolvedValue({
+      updated: 2,
+      resumeProfileId: "profile-1",
+      resumeVersionId: "version-2",
+    });
     createTailoredResume.mockResolvedValue({
       version: {
         id: "version-2",
@@ -133,12 +137,16 @@ describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
         suggestions: expect.any(Array),
         matchRefresh: {
           updated: 2,
-          resumeProfileId: "profile-2",
+          resumeProfileId: "profile-1",
+          resumeVersionId: "version-2",
         },
       }),
     );
     expect(createServerClientMock).toHaveBeenCalledTimes(1);
-    expect(backfillJobMatchesMock).toHaveBeenCalledWith(db);
+    expect(backfillJobMatchesMock).toHaveBeenCalledWith(db, {
+      resumeProfileId: "profile-1",
+      resumeVersionId: "version-2",
+    });
   });
 
   it("returns 400 for invalid input", async () => {
