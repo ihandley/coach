@@ -18,6 +18,9 @@ describe("calculateFit", () => {
     expect(result.score).toBeGreaterThan(0);
     expect(result.matchDetails.strengths.join(" ")).toContain("Staff Product Engineer");
     expect(result.matchDetails.recommendation).toContain("TypeScript");
+    expect(result.matchDetails.strengths.join(" ")).not.toContain(
+      "Resume shows relevant evidence around",
+    );
     expect(result.matchDetails.reasons.join(" ")).not.toContain("Good keyword overlap");
   });
 
@@ -42,9 +45,35 @@ describe("calculateFit", () => {
     expect(details).toContain("data");
     expect(details).toContain("APIs");
     expect(details).toContain("platform");
-    expect(details).not.toMatch(/\b(obsessed|partner|job|predict)\b/i);
+    expect(details).not.toMatch(/\b(assume|obsessed|partner|job|predict)\b/i);
     expect(details).not.toContain("Good keyword overlap");
+    expect(details).not.toContain("keyword overlap");
     expect(details).not.toContain("Resume evidence is thin for requested areas");
+  });
+
+  it("frames missing AI and MCP signals as an actionable gap", () => {
+    const result = calculateFit(
+      {
+        title: "Staff Software Engineer - AI & MCP",
+        company: "RevSpring",
+        sourceText:
+          "Assume ownership of AI systems, MCP integrations, agent tooling, APIs, and platform reliability.",
+      },
+      {
+        rawText:
+          "Staff software engineer with APIs, platform reliability, TypeScript, React, and healthcare experience.",
+      },
+    );
+    const details = [
+      ...result.matchDetails.strengths,
+      ...result.matchDetails.gaps,
+      result.matchDetails.recommendation,
+    ].join(" ");
+
+    expect(details).toContain("AI/MCP");
+    expect(details).toContain("agent tooling");
+    expect(details).not.toMatch(/\bAssume\b/);
+    expect(details).not.toContain("clearer evidence of");
   });
 
   it("treats mid-thirties scores as moderate coaching opportunities", () => {
@@ -62,7 +91,7 @@ describe("calculateFit", () => {
 
     expect(result.score).toBeGreaterThanOrEqual(26);
     expect(result.score).toBeLessThanOrEqual(50);
-    expect(result.matchDetails.recommendation).toContain("Moderate overlap detected");
+    expect(result.matchDetails.recommendation).toContain("Moderate fit");
     expect(result.matchDetails.recommendation).not.toContain("Apply only if");
   });
 

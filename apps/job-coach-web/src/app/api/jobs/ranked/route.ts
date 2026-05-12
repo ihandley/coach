@@ -96,24 +96,36 @@ function getFallbackTerms(job: RankedJobSource) {
       .toLowerCase()
       .split(/[^a-z0-9+#.]+/i)
       .filter(Boolean),
+    "ability",
     "and",
+    "assume",
     "build",
+    "collaborate",
+    "communication",
     "company",
     "culture",
     "dynamic",
     "engineer",
     "engineering",
+    "excellent",
     "fast",
     "for",
     "job",
+    "join",
     "mission",
     "obsessed",
     "opportunity",
     "partner",
     "passionate",
+    "responsible",
+    "responsibilities",
+    "strong",
     "team",
+    "teams",
     "the",
     "use",
+    "work",
+    "working",
     "with",
     "world",
     "you",
@@ -144,17 +156,24 @@ export function createRankedMatchDetails(score: number, job: RankedJobSource): R
   const legacyReason = `Legacy ${title} match: ${score}% fit using saved score data.`;
   const recommendation =
     score >= 76
-      ? `Strong overlap detected. Prioritize ${title} and tailor the resume toward ${termText}.`
+      ? `Strong saved fit. Prioritize ${title}; refresh the match details and emphasize ${termText} before applying or interviewing.`
       : score >= 51
-        ? `Good overlap detected. Tailor the resume toward ${termText} before applying.`
+        ? `Good saved fit. Refresh the match details, then tailor the resume toward ${termText} before applying.`
         : score >= 26
-          ? `Moderate overlap detected. Tailoring the resume toward ${termText} would strengthen the application.`
-          : `Weak overlap detected. Build clearer resume evidence around ${termText} before prioritizing this role.`;
+          ? `Moderate saved fit. Re-assess this job and decide whether the resume can credibly show ${termText}.`
+          : `Lower-priority saved fit. Re-assess before pursuing unless you can add credible evidence for ${termText}.`;
 
   return {
-    strengths: score >= 26 ? [`Resume shows some relevant evidence for ${title}.`] : [],
+    strengths:
+      score >= 26
+        ? [`The saved score suggests ${title} may be worth reviewing with refreshed match details.`]
+        : [],
     gaps:
-      score < 51 ? [`The application would be stronger with clearer evidence of ${termText}.`] : [],
+      score < 51
+        ? [
+            `The saved score is not enough to explain the fit; refresh the analysis and look for proof of ${termText}.`,
+          ]
+        : [],
     reasons: [legacyReason],
     recommendation,
   };

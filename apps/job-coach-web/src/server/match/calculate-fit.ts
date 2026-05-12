@@ -44,14 +44,19 @@ function clampScore(score: number) {
 
 const STOP_WORDS = new Set([
   "about",
+  "ability",
   "and",
   "are",
+  "assume",
   "build",
+  "collaborate",
+  "communication",
   "company",
   "culture",
   "dynamic",
   "engineer",
   "engineering",
+  "excellent",
   "fast",
   "for",
   "from",
@@ -64,6 +69,9 @@ const STOP_WORDS = new Set([
   "our",
   "partner",
   "passionate",
+  "responsible",
+  "responsibilities",
+  "role",
   "that",
   "the",
   "this",
@@ -71,6 +79,7 @@ const STOP_WORDS = new Set([
   "teams",
   "use",
   "work",
+  "working",
   "with",
   "world",
   "you",
@@ -78,8 +87,18 @@ const STOP_WORDS = new Set([
 ]);
 
 const SIGNAL_PHRASES = [
+  "agent tooling",
+  "architecture decisions",
   "distributed systems",
+  "elasticsearch",
+  "gcp",
   "machine learning",
+  "mcp",
+  "mentoring",
+  "payments",
+  "physical-world systems",
+  "platform reliability",
+  "postgres",
   "predictive analytics",
   "product engineering",
   "typeScript",
@@ -97,14 +116,44 @@ const SIGNAL_PHRASES = [
 const TERM_LABELS: Record<string, string> = {
   ai: "AI",
   apis: "APIs",
+  architecture: "architecture",
   data: "data",
+  distributed: "distributed systems",
+  elasticsearch: "Elasticsearch",
   fintech: "fintech",
+  gcp: "GCP",
   healthcare: "healthcare",
+  leadership: "technical leadership",
+  mcp: "MCP",
+  mentoring: "mentoring",
   ml: "ML",
+  payments: "payments",
   platform: "platform",
+  postgres: "Postgres",
   react: "React",
+  reliability: "platform reliability",
+  security: "security",
   typescript: "TypeScript",
 };
+
+const ROLE_SIGNAL_TOKENS = new Set([
+  ...Object.keys(TERM_LABELS),
+  "agent",
+  "agents",
+  "architecture",
+  "backend",
+  "cloud",
+  "frontend",
+  "implementation",
+  "mentor",
+  "mentored",
+  "principal",
+  "senior",
+  "staff",
+  "systems",
+  "technical",
+  "tooling",
+]);
 
 const ROLE_FAMILIES = [
   {
@@ -156,7 +205,7 @@ const ROLE_FAMILIES = [
 ];
 
 const LEADERSHIP_PATTERN =
-  /\b(lead|led|leader|leadership|mentor|mentored|manager|managed|staff|principal)\b/i;
+  /\b(lead|led|leader|leadership|mentor|mentored|mentoring|manager|managed|staff|principal)\b/i;
 
 function uniqueMeaningfulTokens(tokens: string[], ignoredTokens: Set<string> = new Set()) {
   return Array.from(
@@ -212,7 +261,9 @@ function getRoleSignals(job: Job) {
   const ignoredTokens = getIgnoredTokens(job);
   const phraseSignals = getSignalPhrases(jobText);
   const tokenSignals = uniqueMeaningfulTokens(tokenize(jobText), ignoredTokens).filter(
-    (token) => !phraseSignals.some((phrase) => phrase.split(/\s+/).includes(token)),
+    (token) =>
+      ROLE_SIGNAL_TOKENS.has(token) &&
+      !phraseSignals.some((phrase) => phrase.split(/\s+/).includes(token)),
   );
 
   return Array.from(new Set([...phraseSignals, ...tokenSignals])).slice(0, 8);
@@ -314,9 +365,8 @@ function createMatchDetails(job: Job, resumeText: string, score: number) {
   const roleSignals = getRoleSignals(job);
   const resumeSignalText = resumeText.toLowerCase();
   const resumeTokens = new Set(uniqueMeaningfulTokens(tokenize(resumeText)));
-  const matchedTerms = roleSignals.filter(
-    (term) =>
-      resumeSignalText.includes(term) || term.split(/\s+/).some((token) => resumeTokens.has(token)),
+  const matchedTerms = roleSignals.filter((term) =>
+    matchesSignal(term, resumeSignalText, resumeTokens),
   );
   const missingTerms = roleSignals.filter((term) => !matchedTerms.includes(term));
   const strengths: string[] = [];
@@ -324,32 +374,47 @@ function createMatchDetails(job: Job, resumeText: string, score: number) {
 
   if (matchedTerms.length > 0) {
     strengths.push(
-      `Resume shows relevant evidence around ${formatTerms(matchedTerms, "the role")} for ${title}.`,
+      `Your background lines up with ${title}'s core needs: ${formatTerms(
+        matchedTerms,
+        "the role",
+      )}. This gives the application a concrete hiring story instead of a generic fit claim.`,
     );
   }
 
   const seniority = getSenioritySignal([job.title, job.sourceText].filter(Boolean).join(" "));
   if (seniority && getSenioritySignal(resumeText) === seniority) {
-    strengths.push(`Seniority signal appears aligned for a ${seniority}-level role.`);
+    strengths.push(
+      `The seniority signal is credible because the resume shows ${seniority}-level ownership rather than only task execution.`,
+    );
   } else if (seniority) {
-    gaps.push(`Seniority alignment is unclear for a ${seniority}-level role.`);
+    gaps.push(
+      `Seniority may be a hiring risk; add scope markers such as architecture decisions, mentoring, ownership area, or cross-team impact for this ${seniority}-level role.`,
+    );
   }
 
   if (missingTerms.length > 0) {
+    const missingText = formatTerms(missingTerms, "the core role requirements");
+    const missingAiMcp = missingTerms.some((term) =>
+      ["ai", "ml", "mcp", "agent tooling"].includes(term),
+    );
+
     gaps.push(
-      `The application would be stronger with clearer evidence of ${formatTerms(
-        missingTerms,
-        "the core role requirements",
-      )}.`,
+      missingAiMcp
+        ? `The role emphasizes AI/MCP work; make AI systems, model/tool integrations, agent tooling, or MCP ownership explicit if that experience is real.`
+        : `The main application risk is missing proof of ${missingText}. Add specific resume bullets that show scope, outcomes, and the environment where that work happened.`,
     );
   }
 
   if (strengths.length === 0) {
-    strengths.push(`Resume evidence for ${title} is limited in the current resume text.`);
+    strengths.push(
+      `The current resume text has limited direct evidence for ${title}, so the fit story would need stronger role-specific examples.`,
+    );
   }
 
   if (gaps.length === 0 && score > 0) {
-    gaps.push("The main role signals are already represented clearly in the resume text.");
+    gaps.push(
+      "The main role signals are represented; refinement should focus on sharper examples, metrics, and interview-ready stories rather than filling a major gap.",
+    );
   }
 
   const reasons = [...strengths, ...gaps];
@@ -359,12 +424,12 @@ function createMatchDetails(job: Job, resumeText: string, score: number) {
   );
   const recommendation =
     score >= 76
-      ? `Strong overlap detected. Prioritize ${title} and tailor the resume toward ${recommendationFocus}.`
+      ? `Strong fit. Prioritize ${title}; before applying or interviewing, emphasize ${recommendationFocus} with concrete ownership, scale, and outcomes.`
       : score >= 51
-        ? `Good overlap detected. Tailor the resume toward ${recommendationFocus} before applying.`
+        ? `Good fit with some tailoring needed. Focus the resume on ${recommendationFocus} and make the strongest examples easy for a hiring team to spot.`
         : score >= 26
-          ? `Moderate overlap detected. Tailoring the resume toward ${recommendationFocus} would strengthen the application.`
-          : `Weak overlap detected. Build clearer resume evidence around ${recommendationFocus} before prioritizing this role.`;
+          ? `Moderate fit. Consider applying if the role is attractive, but first tailor the resume toward ${recommendationFocus} and close the most visible evidence gaps.`
+          : `Lower-priority fit. Pursue ${title} only if you can add credible evidence for ${recommendationFocus} or have context not captured in the resume.`;
 
   return { strengths, gaps, reasons, recommendation };
 }
