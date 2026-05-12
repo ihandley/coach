@@ -9,6 +9,7 @@ import {
   ColumnDef,
   SortingState,
 } from "@tanstack/react-table";
+import { createPortal } from "react-dom";
 
 import { getMatchScoreState } from "@/lib/jobs-table-signals";
 
@@ -69,6 +70,12 @@ type TailoredResumeResult = {
   name: string;
   profileId: string;
   versionId: string;
+};
+
+type ActionsMenuPosition = {
+  direction: "down" | "up";
+  left: number;
+  top: number;
 };
 
 const jobDateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -203,6 +210,23 @@ export function JobsPageClient() {
       setError("Unable to delete job.");
     }
   }
+
+  const handleReassessFit = useCallback(
+    async (jobId: string) => {
+      const res = await fetch("/api/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, resumeProfileId: "default" }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Re-assess fit failed.");
+      }
+
+      await load();
+    },
+    [load],
+  );
 
   const handleUpdateJobDetails = useCallback(
     async (jobId: string, input: { company: string; title: string }) => {
@@ -536,6 +560,7 @@ export function JobsPageClient() {
                           <JobDetailsPanel
                             job={row.original}
                             onDeleteJob={handleDeleteJob}
+                            onReassessFit={handleReassessFit}
                             onUpdateJobDetails={handleUpdateJobDetails}
                           />
                         </td>
@@ -656,16 +681,24 @@ function JobsTableSkeleton() {
 function JobDetailsPanel({
   job,
   onDeleteJob,
+  onReassessFit,
   onUpdateJobDetails,
 }: {
   job: RankedJob;
   onDeleteJob: (jobId: string) => void | Promise<void>;
+  onReassessFit: (jobId: string) => Promise<void>;
   onUpdateJobDetails: (jobId: string, input: { company: string; title: string }) => Promise<void>;
 }) {
   const [mode, setMode] = useState<JobDetailMode>("structured");
   const [resumeTailorOpen, setResumeTailorOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
+  const [reassessState, setReassessState] = useState<"idle" | "loading" | "success" | "error">(
+    "idle",
+  );
+  const actionsButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  const actionsMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const [actionsMenuPosition, setActionsMenuPosition] = useState<ActionsMenuPosition | null>(null);
   const structuredPanelId = `job-${job.id}-structured-view`;
   const rawPanelId = `job-${job.id}-original-posting`;
   const matchPanelId = `job-${job.id}-match-details`;
@@ -678,12 +711,159 @@ function JobDetailsPanel({
         : "border-transparent font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
     }`;
 
+  async function handleReassessClick() {
+    setActionsOpen(false);
+    setReassessState("loading");
+
+    try {
+      await onReassessFit(job.id);
+      setReassessState("success");
+    } catch (error) {
+      console.error(error);
+      setReassessState("error");
+    }
+  }
+
+  const updateActionsMenuPosition = useCallback(() => {
+    const button = actionsButtonRef.current;
+    const menu = actionsMenuRef.current;
+
+    if (!button || !menu) {
+      return;
+    }
+
+    const viewportMargin = 8;
+    const menuGap = 8;
+    const menuWidth = 192;
+    const buttonRect = button.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const menuHeight = menuRect.height;
+    const spaceBelow = window.innerHeight - buttonRect.bottom;
+    const spaceAbove = buttonRect.top;
+    const direction =
+      spaceBelow < menuHeight + menuGap && spaceAbove > spaceBelow ? "up" : "down";
+    const preferredTop =
+      direction === "up" ? buttonRect.top - menuHeight - menuGap : buttonRect.bottom + menuGap;
+    const maxTop = Math.max(viewportMargin, window.innerHeight - menuHeight - viewportMargin);
+    const maxLeft = Math.max(viewportMargin, window.innerWidth - menuWidth - viewportMargin);
+
+    setActionsMenuPosition({
+      direction,
+      left: Math.min(Math.max(viewportMargin, buttonRect.right - menuWidth), maxLeft),
+      top: Math.min(Math.max(viewportMargin, preferredTop), maxTop),
+    });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    if (!actionsOpen) {
+      setActionsMenuPosition(null);
+      return;
+    }
+
+    updateActionsMenuPosition();
+
+    window.addEventListener("resize", updateActionsMenuPosition);
+    window.addEventListener("scroll", updateActionsMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateActionsMenuPosition);
+      window.removeEventListener("scroll", updateActionsMenuPosition, true);
+    };
+  }, [actionsOpen, updateActionsMenuPosition]);
+
+  const actionsMenu = actionsOpen
+    ? createPortal(
+        <div
+          ref={actionsMenuRef}
+          role="menu"
+          data-testid="job-actions-menu"
+          data-side={actionsMenuPosition?.direction ?? "down"}
+          className="fixed z-50 w-48 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+          style={{
+            left: actionsMenuPosition?.left ?? 0,
+            top: actionsMenuPosition?.top ?? 0,
+            visibility: actionsMenuPosition ? "visible" : "hidden",
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setResumeTailorOpen(true);
+              setActionsOpen(false);
+            }}
+            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Generate Tailored Resume
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={reassessState === "loading"}
+            onClick={() => {
+              void handleReassessClick();
+            }}
+            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {reassessState === "loading" ? "Re-assessing Fit..." : "Re-assess Fit"}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setEditDetailsOpen(true);
+              setActionsOpen(false);
+            }}
+            className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Edit Details
+          </button>
+          <div>
+            <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} variant="menu-item" />
+          </div>
+          {job.sourceUrl ? (
+            <a
+              href={job.sourceUrl}
+              target="_blank"
+              role="menuitem"
+              onClick={() => setActionsOpen(false)}
+              className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+            >
+              View Job Posting
+            </a>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setActionsOpen(false);
+              void onDeleteJob(job.id);
+            }}
+            className="w-full border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50"
+          >
+            Delete Job
+          </button>
+        </div>,
+        document.body,
+      )
+    : null;
+
   return (
-    <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+    <div className="mt-4 rounded-lg border border-gray-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3">
-        <h3 className="text-sm font-semibold text-gray-900">Job Details</h3>
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Job Details</h3>
+          {reassessState === "loading" ? (
+            <p className="mt-1 text-xs text-gray-600">Re-assessing fit...</p>
+          ) : reassessState === "success" ? (
+            <p className="mt-1 text-xs text-green-700">Fit re-assessed.</p>
+          ) : reassessState === "error" ? (
+            <p className="mt-1 text-xs text-red-700">Unable to re-assess fit.</p>
+          ) : null}
+        </div>
         <div className="relative">
           <button
+            ref={actionsButtonRef}
             type="button"
             aria-expanded={actionsOpen}
             aria-haspopup="menu"
@@ -693,60 +873,7 @@ function JobDetailsPanel({
             Actions
           </button>
 
-          {actionsOpen ? (
-            <div
-              role="menu"
-              className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setResumeTailorOpen(true);
-                  setActionsOpen(false);
-                }}
-                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Generate Tailored Resume
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setEditDetailsOpen(true);
-                  setActionsOpen(false);
-                }}
-                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Edit Details
-              </button>
-              <div>
-                <ReimportJobPanel jobId={job.id} sourceUrl={job.sourceUrl} variant="menu-item" />
-              </div>
-              {job.sourceUrl ? (
-                <a
-                  href={job.sourceUrl}
-                  target="_blank"
-                  role="menuitem"
-                  onClick={() => setActionsOpen(false)}
-                  className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  View Job Posting
-                </a>
-              ) : null}
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setActionsOpen(false);
-                  void onDeleteJob(job.id);
-                }}
-                className="w-full border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50"
-              >
-                Delete Job
-              </button>
-            </div>
-          ) : null}
+          {actionsMenu}
         </div>
       </div>
 
@@ -835,9 +962,9 @@ function getFitLabel(score: number | null) {
 
   const percentage = Math.round(score * 100);
 
-  if (percentage >= 80) return "Strong Match";
-  if (percentage >= 60) return "Good Match";
-  if (percentage >= 40) return "Moderate Match";
+  if (percentage >= 76) return "Strong Match";
+  if (percentage >= 51) return "Good Match";
+  if (percentage >= 26) return "Moderate Match";
   return "Weak Match";
 }
 
@@ -846,19 +973,19 @@ function getFitRecommendation(score: number | null) {
 
   const percentage = Math.round(score * 100);
 
-  if (percentage >= 80) {
-    return "Strong fit. Prioritize this role and tailor the resume around the strongest matches.";
+  if (percentage >= 76) {
+    return "Strong overlap detected. Prioritize this role and tailor the resume toward the strongest evidence.";
   }
 
-  if (percentage >= 60) {
-    return "Good fit. Worth applying with a tailored resume.";
+  if (percentage >= 51) {
+    return "Good overlap detected. Tailor the resume toward the strongest role signals before applying.";
   }
 
-  if (percentage >= 40) {
-    return "Moderate fit. Consider applying if the role is interesting, but tailor carefully around gaps.";
+  if (percentage >= 26) {
+    return "Moderate overlap detected. Tailoring the resume toward the role requirements would strengthen the application.";
   }
 
-  return "Weak fit. Apply only if there is strong interest or missing resume context.";
+  return "Weak overlap detected. Build clearer resume evidence before prioritizing this role.";
 }
 
 function MatchDetailList({ items, fallback }: { items: string[]; fallback: string }) {
@@ -906,9 +1033,10 @@ function JobMatchDetails({
   const gaps = getMatchDetailItems(matchDetails?.gaps);
   const reasons = getMatchDetailItems(matchDetails?.reasons);
   const summary = getMatchDetailText(matchDetails?.summary);
+  const savedRecommendation = getMatchDetailText(matchDetails?.recommendation);
   const fallbackStrengths = strengths.length === 0 && gaps.length === 0 ? reasons : [];
   const fitLabel = getFitLabel(score);
-  const fitRecommendation = getFitRecommendation(score);
+  const fitRecommendation = savedRecommendation ?? getFitRecommendation(score);
 
   return (
     <div className="flex max-w-4xl flex-col gap-4">

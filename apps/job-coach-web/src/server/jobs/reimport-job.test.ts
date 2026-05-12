@@ -212,6 +212,12 @@ describe("applyJobReimport", () => {
         job_id: "job-123",
         resume_profile_id: "profile-1",
         score: expect.any(Number),
+        match_details: {
+          strengths: expect.any(Array),
+          gaps: expect.any(Array),
+          reasons: expect.any(Array),
+          recommendation: expect.any(String),
+        },
       }),
     );
     expect(result.job).toMatchObject({

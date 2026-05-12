@@ -77,6 +77,7 @@ export async function POST(request: Request) {
     job_id: body.jobId,
     resume_profile_id: profile?.id ?? null,
     score: result.score,
+    match_details: result.matchDetails,
     created_at: new Date().toISOString(),
   });
 

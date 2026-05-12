@@ -221,6 +221,7 @@ async function upsertJobMatch(
     job_id: job.id,
     resume_profile_id: resolvedResumeProfileId,
     score: result.score,
+    match_details: result.matchDetails,
     created_at: new Date().toISOString(),
   });
 

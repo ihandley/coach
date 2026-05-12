@@ -58,16 +58,44 @@ describe("normalizeRankedScore", () => {
 });
 
 describe("createRankedMatchDetails", () => {
-  it("mirrors current matcher reasoning for persisted match scores", () => {
-    expect(createRankedMatchDetails(82)).toEqual({
-      strengths: ["Good keyword overlap"],
+  it("creates role-specific fallback details for legacy match rows", () => {
+    expect(
+      createRankedMatchDetails(82, {
+        title: "Product Engineer",
+        sourceText: "TypeScript React product workflows",
+      }),
+    ).toEqual({
+      strengths: [
+        "Resume shows some relevant evidence for Product Engineer.",
+      ],
       gaps: [],
-      reasons: ["Good keyword overlap"],
+      reasons: ["Legacy Product Engineer match: 82% fit using saved score data."],
+      recommendation:
+        "Strong overlap detected. Prioritize Product Engineer and tailor the resume toward TypeScript, React and Workflows.",
     });
-    expect(createRankedMatchDetails(17)).toEqual({
+    expect(createRankedMatchDetails(17, { title: "Support Engineer" })).toEqual({
       strengths: [],
-      gaps: ["Low keyword overlap"],
-      reasons: ["Low keyword overlap"],
+      gaps: [
+        "The application would be stronger with clearer evidence of the core role requirements.",
+      ],
+      reasons: ["Legacy Support Engineer match: 17% fit using saved score data."],
+      recommendation:
+        "Weak overlap detected. Build clearer resume evidence around the core role requirements before prioritizing this role.",
+    });
+    expect(
+      createRankedMatchDetails(36, {
+        title: "Analytics Engineer",
+        sourceText:
+          "predictive analytics job obsessed partner team platform data product engineering",
+      }),
+    ).toEqual({
+      strengths: ["Resume shows some relevant evidence for Analytics Engineer."],
+      gaps: [
+        "The application would be stronger with clearer evidence of Predictive, platform, data and Product.",
+      ],
+      reasons: ["Legacy Analytics Engineer match: 36% fit using saved score data."],
+      recommendation:
+        "Moderate overlap detected. Tailoring the resume toward Predictive, platform, data and Product would strengthen the application.",
     });
   });
 });
@@ -148,6 +176,13 @@ describe("GET /api/jobs/ranked", () => {
         {
           job_id: "job-high",
           score: 82,
+          match_details: {
+            strengths: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
+            gaps: ["Seniority alignment is unclear for a staff-level role."],
+            reasons: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
+            recommendation:
+              "Strong fit for Product Engineer. Prioritize this role and tailor the resume around TypeScript and React.",
+          },
         },
         {
           job_id: "job-low",
@@ -165,7 +200,10 @@ describe("GET /api/jobs/ranked", () => {
     const response = await GET();
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual([
+    const body = await response.json();
+
+    expect(selectJobMatches).toHaveBeenCalledWith("job_id, score, match_details");
+    expect(body).toEqual([
       expect.objectContaining({
         id: "job-new",
         score: null,
@@ -175,29 +213,33 @@ describe("GET /api/jobs/ranked", () => {
         id: "job-high",
         score: 0.82,
         matchDetails: {
-          strengths: ["Good keyword overlap"],
-          gaps: [],
-          reasons: ["Good keyword overlap"],
+          strengths: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
+          gaps: ["Seniority alignment is unclear for a staff-level role."],
+          reasons: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
+          recommendation:
+            "Strong fit for Product Engineer. Prioritize this role and tailor the resume around TypeScript and React.",
         },
         structuredSummary,
       }),
       expect.objectContaining({
         id: "job-low",
         score: 0.17,
-        matchDetails: {
+        matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: ["Low keyword overlap"],
-          reasons: ["Low keyword overlap"],
-        },
+          gaps: [
+            "The application would be stronger with clearer evidence of Interfaces.",
+          ],
+        }),
       }),
       expect.objectContaining({
         id: "job-zero",
         score: 0,
-        matchDetails: {
+        matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: ["Low keyword overlap"],
-          reasons: ["Low keyword overlap"],
-        },
+          gaps: [
+            "The application would be stronger with clearer evidence of Customers.",
+          ],
+        }),
       }),
       expect.objectContaining({
         id: "job-unmatched",
@@ -205,5 +247,9 @@ describe("GET /api/jobs/ranked", () => {
         matchDetails: null,
       }),
     ]);
+    expect(JSON.stringify(body)).not.toContain("Good keyword overlap");
+    expect(JSON.stringify(body)).not.toContain("Saved fit score suggests relevant overlap");
+    expect(JSON.stringify(body)).not.toContain("Fit analysis is based on the saved match score");
+    expect(JSON.stringify(body)).not.toContain("posting signals such as");
   });
 });

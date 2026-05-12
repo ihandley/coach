@@ -71,6 +71,12 @@ describe("backfillJobMatches", () => {
     expect(rows[0]).toMatchObject({
       job_id: "job-1",
       resume_profile_id: "profile-1",
+      match_details: {
+        strengths: expect.any(Array),
+        gaps: expect.any(Array),
+        reasons: expect.any(Array),
+        recommendation: expect.any(String),
+      },
     });
     expect(typeof rows[0].score).toBe("number");
     expect(typeof rows[1].score).toBe("number");
