@@ -58,12 +58,67 @@ type RankedJobSource = {
 };
 
 function formatFallbackTerm(value: string) {
-  return value
-    .replace(/^[^a-z0-9+#]+|[^a-z0-9+#]+$/gi, "")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const cleaned = value.replace(/^[^a-z0-9+#]+|[^a-z0-9+#]+$/gi, "").toLowerCase();
+  const labels: Record<string, string> = {
+    ai: "AI",
+    apis: "APIs",
+    data: "data",
+    fintech: "fintech",
+    healthcare: "healthcare",
+    ml: "ML",
+    platform: "platform",
+    react: "React",
+    typescript: "TypeScript",
+  };
+
+  return labels[cleaned] ?? cleaned.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatFallbackTerms(terms: string[], fallback: string) {
+  if (terms.length === 0) {
+    return fallback;
+  }
+
+  if (terms.length === 1) {
+    return terms[0];
+  }
+
+  return `${terms.slice(0, -1).join(", ")} and ${terms[terms.length - 1]}`;
 }
 
 function getFallbackTerms(job: RankedJobSource) {
+  const blockedTerms = new Set([
+    ...String(job.title ?? "")
+      .toLowerCase()
+      .split(/[^a-z0-9+#.]+/i)
+      .filter(Boolean),
+    ...String(job.company ?? "")
+      .toLowerCase()
+      .split(/[^a-z0-9+#.]+/i)
+      .filter(Boolean),
+    "and",
+    "build",
+    "company",
+    "culture",
+    "dynamic",
+    "engineer",
+    "engineering",
+    "fast",
+    "for",
+    "job",
+    "mission",
+    "obsessed",
+    "opportunity",
+    "partner",
+    "passionate",
+    "team",
+    "the",
+    "use",
+    "with",
+    "world",
+    "you",
+    "your",
+  ]);
   const summary = job.structuredSummary as Record<string, unknown> | null | undefined;
   const requirements = Array.isArray(summary?.requirements)
     ? summary.requirements
@@ -76,11 +131,12 @@ function getFallbackTerms(job: RankedJobSource) {
     .filter(
       (term) =>
         term.length > 2 &&
-        !["and", "build", "for", "the", "with", "you", "your"].includes(term) &&
+        !blockedTerms.has(term) &&
         !/^\d+$/.test(term),
     );
 
   return Array.from(new Set([...requirements, ...sourceTerms]))
+    .filter((term) => !blockedTerms.has(term.toLowerCase()))
     .filter(Boolean)
     .slice(0, 5)
     .map(formatFallbackTerm);
@@ -89,24 +145,23 @@ function getFallbackTerms(job: RankedJobSource) {
 export function createRankedMatchDetails(score: number, job: RankedJobSource): RankedMatchDetails {
   const title = job.title?.trim() || "this role";
   const terms = getFallbackTerms(job);
-  const termText = terms.length > 0 ? terms.join(", ") : "the core role requirements";
-  const legacyReason = `Legacy ${title} match: ${score}% fit with posting signals such as ${termText}.`;
+  const termText = formatFallbackTerms(terms, "the core role requirements");
+  const legacyReason = `Legacy ${title} match: ${score}% fit using saved score data.`;
   const recommendation =
-    score >= 80
-      ? `Strong fit for ${title}. Prioritize this role and tailor the resume around ${termText}.`
-      : score >= 60
-        ? `Good fit for ${title}. Worth applying with a tailored resume that reinforces ${termText}.`
-        : score >= 40
-          ? `Moderate fit for ${title}. Consider applying if the role is interesting, but tailor carefully around ${termText}.`
-          : `Weak fit for ${title}. Apply only if there is strong interest or missing resume context.`;
+    score >= 76
+      ? `Strong overlap detected. Prioritize ${title} and tailor the resume toward ${termText}.`
+      : score >= 51
+        ? `Good overlap detected. Tailor the resume toward ${termText} before applying.`
+        : score >= 26
+          ? `Moderate overlap detected. Tailoring the resume toward ${termText} would strengthen the application.`
+          : `Weak overlap detected. Build clearer resume evidence around ${termText} before prioritizing this role.`;
 
   return {
-    strengths:
-      score >= 40 ? [`${title} shows ${score}% fit with posting signals such as ${termText}.`] : [],
+    strengths: score >= 26 ? [`Resume shows some relevant evidence for ${title}.`] : [],
     gaps:
-      score < 60
+      score < 51
         ? [
-            `Before applying to ${title}, verify resume evidence for ${termText}; this legacy match is below the strong-fit range.`,
+            `The application would be stronger with clearer evidence of ${termText}.`,
           ]
         : [],
     reasons: [legacyReason],

@@ -42,31 +42,123 @@ const STOP_WORDS = new Set([
   "about",
   "and",
   "are",
+  "company",
+  "culture",
+  "dynamic",
+  "engineer",
+  "engineering",
+  "fast",
   "for",
   "from",
   "have",
+  "job",
+  "mission",
+  "obsessed",
+  "opportunity",
   "our",
+  "partner",
+  "passionate",
   "that",
   "the",
   "this",
+  "team",
+  "use",
   "with",
+  "world",
   "you",
   "your",
 ]);
 
-function uniqueMeaningfulTokens(tokens: string[]) {
+const SIGNAL_PHRASES = [
+  "distributed systems",
+  "machine learning",
+  "predictive analytics",
+  "product engineering",
+  "typeScript",
+  "healthcare",
+  "analytics",
+  "fintech",
+  "platform",
+  "react",
+  "apis",
+  "data",
+  "ml",
+  "ai",
+];
+
+const TERM_LABELS: Record<string, string> = {
+  ai: "AI",
+  apis: "APIs",
+  data: "data",
+  fintech: "fintech",
+  healthcare: "healthcare",
+  ml: "ML",
+  platform: "platform",
+  react: "React",
+  typescript: "TypeScript",
+};
+
+function uniqueMeaningfulTokens(tokens: string[], ignoredTokens: Set<string> = new Set()) {
   return Array.from(
     new Set(
-      tokens.filter((token) => token.length > 2 && !STOP_WORDS.has(token) && !/^\d+$/.test(token)),
+      tokens.filter(
+        (token) =>
+          token.length > 2 &&
+          !STOP_WORDS.has(token) &&
+          !ignoredTokens.has(token) &&
+          !/^\d+$/.test(token),
+      ),
     ),
   );
 }
 
-function formatTerms(terms: string[]) {
-  return terms
+function formatTerm(term: string) {
+  return TERM_LABELS[term] ?? term.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatTerms(terms: string[], fallback: string) {
+  const formatted = terms
     .slice(0, 5)
-    .map((term) => term.replace(/\b\w/g, (letter) => letter.toUpperCase()))
-    .join(", ");
+    .map(formatTerm)
+    .filter(Boolean);
+
+  if (formatted.length === 0) {
+    return fallback;
+  }
+
+  if (formatted.length === 1) {
+    return formatted[0];
+  }
+
+  return `${formatted.slice(0, -1).join(", ")} and ${formatted[formatted.length - 1]}`;
+}
+
+function getSignalPhrases(text: string) {
+  const lower = text.toLowerCase();
+
+  return SIGNAL_PHRASES.filter((phrase) => {
+    const normalizedPhrase = phrase.toLowerCase();
+    const pattern = normalizedPhrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+
+    return new RegExp(`\\b${pattern}\\b`, "i").test(lower);
+  }).map((phrase) => phrase.toLowerCase());
+}
+
+function getIgnoredTokens(job: Job) {
+  return new Set(tokenize([job.title, job.company].filter(Boolean).join(" ")));
+}
+
+function getRoleSignals(job: Job) {
+  const jobText = [job.sourceText, JSON.stringify(job.structuredSummary ?? "")]
+    .filter(Boolean)
+    .join(" ");
+  const ignoredTokens = getIgnoredTokens(job);
+  const phraseSignals = getSignalPhrases(jobText);
+  const tokenSignals = uniqueMeaningfulTokens(tokenize(jobText), ignoredTokens).filter(
+    (token) => !phraseSignals.some((phrase) => phrase.split(/\s+/).includes(token)),
+  );
+
+  return Array.from(new Set([...phraseSignals, ...tokenSignals])).slice(0, 8);
 }
 
 function getSenioritySignal(text: string) {
@@ -80,21 +172,20 @@ function getSenioritySignal(text: string) {
 
 function createMatchDetails(job: Job, resumeText: string, score: number) {
   const title = job.title?.trim() || "this role";
-  const jobTokens = uniqueMeaningfulTokens(
-    tokenize(
-      [job.title, job.company, job.sourceText, JSON.stringify(job.structuredSummary ?? "")]
-        .filter(Boolean)
-        .join(" "),
-    ),
-  );
+  const roleSignals = getRoleSignals(job);
+  const resumeSignalText = resumeText.toLowerCase();
   const resumeTokens = new Set(uniqueMeaningfulTokens(tokenize(resumeText)));
-  const matchedTerms = jobTokens.filter((token) => resumeTokens.has(token));
-  const missingTerms = jobTokens.filter((token) => !resumeTokens.has(token));
+  const matchedTerms = roleSignals.filter(
+    (term) => resumeSignalText.includes(term) || term.split(/\s+/).some((token) => resumeTokens.has(token)),
+  );
+  const missingTerms = roleSignals.filter((term) => !matchedTerms.includes(term));
   const strengths: string[] = [];
   const gaps: string[] = [];
 
   if (matchedTerms.length > 0) {
-    strengths.push(`Resume evidence overlaps with ${title}: ${formatTerms(matchedTerms)}.`);
+    strengths.push(
+      `Resume shows relevant evidence around ${formatTerms(matchedTerms, "the role")} for ${title}.`,
+    );
   }
 
   const seniority = getSenioritySignal([job.title, job.sourceText].filter(Boolean).join(" "));
@@ -105,26 +196,35 @@ function createMatchDetails(job: Job, resumeText: string, score: number) {
   }
 
   if (missingTerms.length > 0) {
-    gaps.push(`Resume evidence is thin for requested areas: ${formatTerms(missingTerms)}.`);
+    gaps.push(
+      `The application would be stronger with clearer evidence of ${formatTerms(
+        missingTerms,
+        "the core role requirements",
+      )}.`,
+    );
   }
 
   if (strengths.length === 0) {
-    strengths.push(`No strong resume overlap was found for ${title} in the current resume text.`);
+    strengths.push(`Resume evidence for ${title} is limited in the current resume text.`);
   }
 
   if (gaps.length === 0 && score > 0) {
-    gaps.push("No major keyword gaps were found in the current resume text.");
+    gaps.push("The main role signals are already represented clearly in the resume text.");
   }
 
   const reasons = [...strengths, ...gaps];
+  const recommendationFocus = formatTerms(
+    [...matchedTerms, ...missingTerms],
+    "the strongest role signals",
+  );
   const recommendation =
-    score >= 80
-      ? `Strong fit for ${title}. Prioritize this role and tailor the resume around the strongest matches.`
-      : score >= 60
-        ? `Good fit for ${title}. Worth applying with a tailored resume that reinforces the strongest overlaps.`
-        : score >= 40
-          ? `Moderate fit for ${title}. Consider applying if the role is interesting, but tailor carefully around the gaps.`
-          : `Weak fit for ${title}. Apply only if there is strong interest or missing resume context.`;
+    score >= 76
+      ? `Strong overlap detected. Prioritize ${title} and tailor the resume toward ${recommendationFocus}.`
+      : score >= 51
+        ? `Good overlap detected. Tailor the resume toward ${recommendationFocus} before applying.`
+        : score >= 26
+          ? `Moderate overlap detected. Tailoring the resume toward ${recommendationFocus} would strengthen the application.`
+          : `Weak overlap detected. Build clearer resume evidence around ${recommendationFocus} before prioritizing this role.`;
 
   return { strengths, gaps, reasons, recommendation };
 }

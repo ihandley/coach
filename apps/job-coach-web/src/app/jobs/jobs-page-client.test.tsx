@@ -660,11 +660,17 @@ describe("JobsPageClient", () => {
                 ...rankedJob,
                 score: 0.74,
                 matchDetails: {
-                  strengths: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-                  gaps: ["Resume evidence is thin for requested areas: Postgres."],
-                  reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+                  strengths: [
+                    "Resume shows relevant evidence around TypeScript for Product Engineer.",
+                  ],
+                  gaps: [
+                    "The application would be stronger with clearer evidence of Postgres.",
+                  ],
+                  reasons: [
+                    "Resume shows relevant evidence around TypeScript for Product Engineer.",
+                  ],
                   recommendation:
-                    "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
+                    "Good overlap detected. Tailor the resume toward TypeScript before applying.",
                 },
               },
         ]);
@@ -673,13 +679,13 @@ describe("JobsPageClient", () => {
       if (url === "/api/match" && init?.method === "POST") {
         return jsonResponse({
           score: 74,
-          reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+          reasons: ["Resume shows relevant evidence around TypeScript for Product Engineer."],
           matchDetails: {
-            strengths: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-            gaps: ["Resume evidence is thin for requested areas: Postgres."],
-            reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+            strengths: ["Resume shows relevant evidence around TypeScript for Product Engineer."],
+            gaps: ["The application would be stronger with clearer evidence of Postgres."],
+            reasons: ["Resume shows relevant evidence around TypeScript for Product Engineer."],
             recommendation:
-              "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
+              "Good overlap detected. Tailor the resume toward TypeScript before applying.",
           },
         });
       }
@@ -714,14 +720,18 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
     expect(
-      await within(details).findByText("Resume evidence overlaps with Product Engineer: TypeScript."),
-    ).toBeInTheDocument();
-    expect(
-      within(details).getByText("Resume evidence is thin for requested areas: Postgres."),
+      await within(details).findByText(
+        "Resume shows relevant evidence around TypeScript for Product Engineer.",
+      ),
     ).toBeInTheDocument();
     expect(
       within(details).getByText(
-        "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
+        "The application would be stronger with clearer evidence of Postgres.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(details).getByText(
+        "Good overlap detected. Tailor the resume toward TypeScript before applying.",
       ),
     ).toBeInTheDocument();
     expect(rankedLoadCount).toBe(2);
@@ -836,6 +846,40 @@ describe("JobsPageClient", () => {
     expect(
       within(details).getByText("Not enough information to generate a recommendation."),
     ).toBeInTheDocument();
+  });
+
+  it("labels a 36 percent fit as a moderate match", async () => {
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([
+          {
+            ...rankedJob,
+            score: 0.36,
+            matchDetails: null,
+          },
+        ]);
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    const details = screen.getByTestId("job-details");
+
+    fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
+
+    expect(within(details).getByText("Fit: 36%")).toBeInTheDocument();
+    expect(within(details).getByText("Moderate Match")).toBeInTheDocument();
+    expect(
+      within(details).getByText(
+        "Moderate overlap detected. Tailoring the resume toward the role requirements would strengthen the application.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(details).queryByText(/apply only if/i)).not.toBeInTheDocument();
   });
 
   it("does not delete the job when confirmation is canceled", async () => {

@@ -66,25 +66,36 @@ describe("createRankedMatchDetails", () => {
       }),
     ).toEqual({
       strengths: [
-        "Product Engineer shows 82% fit with posting signals such as Typescript, React, Product, Workflows.",
+        "Resume shows some relevant evidence for Product Engineer.",
       ],
       gaps: [],
-      reasons: [
-        "Legacy Product Engineer match: 82% fit with posting signals such as Typescript, React, Product, Workflows.",
-      ],
+      reasons: ["Legacy Product Engineer match: 82% fit using saved score data."],
       recommendation:
-        "Strong fit for Product Engineer. Prioritize this role and tailor the resume around Typescript, React, Product, Workflows.",
+        "Strong overlap detected. Prioritize Product Engineer and tailor the resume toward TypeScript, React and Workflows.",
     });
     expect(createRankedMatchDetails(17, { title: "Support Engineer" })).toEqual({
       strengths: [],
       gaps: [
-        "Before applying to Support Engineer, verify resume evidence for the core role requirements; this legacy match is below the strong-fit range.",
+        "The application would be stronger with clearer evidence of the core role requirements.",
       ],
-      reasons: [
-        "Legacy Support Engineer match: 17% fit with posting signals such as the core role requirements.",
-      ],
+      reasons: ["Legacy Support Engineer match: 17% fit using saved score data."],
       recommendation:
-        "Weak fit for Support Engineer. Apply only if there is strong interest or missing resume context.",
+        "Weak overlap detected. Build clearer resume evidence around the core role requirements before prioritizing this role.",
+    });
+    expect(
+      createRankedMatchDetails(36, {
+        title: "Analytics Engineer",
+        sourceText:
+          "predictive analytics job obsessed partner team platform data product engineering",
+      }),
+    ).toEqual({
+      strengths: ["Resume shows some relevant evidence for Analytics Engineer."],
+      gaps: [
+        "The application would be stronger with clearer evidence of Predictive, platform, data and Product.",
+      ],
+      reasons: ["Legacy Analytics Engineer match: 36% fit using saved score data."],
+      recommendation:
+        "Moderate overlap detected. Tailoring the resume toward Predictive, platform, data and Product would strengthen the application.",
     });
   });
 });
@@ -216,7 +227,7 @@ describe("GET /api/jobs/ranked", () => {
         matchDetails: expect.objectContaining({
           strengths: [],
           gaps: [
-            "Before applying to Frontend Engineer, verify resume evidence for Interfaces; this legacy match is below the strong-fit range.",
+            "The application would be stronger with clearer evidence of Interfaces.",
           ],
         }),
       }),
@@ -226,7 +237,7 @@ describe("GET /api/jobs/ranked", () => {
         matchDetails: expect.objectContaining({
           strengths: [],
           gaps: [
-            "Before applying to Support Engineer, verify resume evidence for Support, Customers; this legacy match is below the strong-fit range.",
+            "The application would be stronger with clearer evidence of Customers.",
           ],
         }),
       }),
@@ -239,5 +250,6 @@ describe("GET /api/jobs/ranked", () => {
     expect(JSON.stringify(body)).not.toContain("Good keyword overlap");
     expect(JSON.stringify(body)).not.toContain("Saved fit score suggests relevant overlap");
     expect(JSON.stringify(body)).not.toContain("Fit analysis is based on the saved match score");
+    expect(JSON.stringify(body)).not.toContain("posting signals such as");
   });
 });

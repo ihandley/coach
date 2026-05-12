@@ -891,9 +891,9 @@ function getFitLabel(score: number | null) {
 
   const percentage = Math.round(score * 100);
 
-  if (percentage >= 80) return "Strong Match";
-  if (percentage >= 60) return "Good Match";
-  if (percentage >= 40) return "Moderate Match";
+  if (percentage >= 76) return "Strong Match";
+  if (percentage >= 51) return "Good Match";
+  if (percentage >= 26) return "Moderate Match";
   return "Weak Match";
 }
 
@@ -902,19 +902,19 @@ function getFitRecommendation(score: number | null) {
 
   const percentage = Math.round(score * 100);
 
-  if (percentage >= 80) {
-    return "Strong fit. Prioritize this role and tailor the resume around the strongest matches.";
+  if (percentage >= 76) {
+    return "Strong overlap detected. Prioritize this role and tailor the resume toward the strongest evidence.";
   }
 
-  if (percentage >= 60) {
-    return "Good fit. Worth applying with a tailored resume.";
+  if (percentage >= 51) {
+    return "Good overlap detected. Tailor the resume toward the strongest role signals before applying.";
   }
 
-  if (percentage >= 40) {
-    return "Moderate fit. Consider applying if the role is interesting, but tailor carefully around gaps.";
+  if (percentage >= 26) {
+    return "Moderate overlap detected. Tailoring the resume toward the role requirements would strengthen the application.";
   }
 
-  return "Weak fit. Apply only if there is strong interest or missing resume context.";
+  return "Weak overlap detected. Build clearer resume evidence before prioritizing this role.";
 }
 
 function MatchDetailList({ items, fallback }: { items: string[]; fallback: string }) {
