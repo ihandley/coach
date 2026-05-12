@@ -65,4 +65,48 @@ describe("calculateFit", () => {
     expect(result.matchDetails.recommendation).toContain("Moderate overlap detected");
     expect(result.matchDetails.recommendation).not.toContain("Apply only if");
   });
+
+  it("scores strong technical and role-family matches above generic overlap", () => {
+    const job = {
+      title: "Staff Product Engineer",
+      company: "Pattern",
+      sourceText:
+        "Lead TypeScript React product workflows, APIs, platform reliability, and distributed systems.",
+    };
+    const strong = calculateFit(job, {
+      rawText:
+        "Staff product engineer who led TypeScript React APIs, platform reliability, and distributed systems.",
+    });
+    const generic = calculateFit(job, {
+      rawText:
+        "Experienced professional who works with product teams, company partners, culture, and workflows.",
+    });
+
+    expect(strong.score).toBeGreaterThan(generic.score + 25);
+    expect(strong.matchDetails).toMatchObject({
+      strengths: expect.any(Array),
+      gaps: expect.any(Array),
+      reasons: expect.any(Array),
+      recommendation: expect.any(String),
+    });
+  });
+
+  it("penalizes obvious role-family and seniority mismatches", () => {
+    const seniorEngineeringRole = {
+      title: "Principal Backend Engineer",
+      company: "Pattern",
+      sourceText: "Lead TypeScript APIs, distributed systems, data platform, and mentoring.",
+    };
+    const aligned = calculateFit(seniorEngineeringRole, {
+      rawText:
+        "Principal backend engineer who led TypeScript APIs, distributed systems, data platforms, and mentoring.",
+    });
+    const mismatch = calculateFit(seniorEngineeringRole, {
+      rawText:
+        "Junior designer focused on Figma, brand illustration, campaigns, and visual systems.",
+    });
+
+    expect(aligned.score).toBeGreaterThan(mismatch.score + 40);
+    expect(mismatch.score).toBeLessThan(25);
+  });
 });
