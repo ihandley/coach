@@ -66,22 +66,16 @@ describe("createRankedMatchDetails", () => {
         sourceText: "TypeScript React product workflows",
       }),
     ).toEqual({
-      strengths: [
-        "The saved score suggests Product Engineer may be worth reviewing with refreshed match details.",
-      ],
+      strengths: ["Strong: saved score 82%"],
       gaps: [],
       reasons: ["Legacy Product Engineer match: 82% fit using saved score data."],
-      recommendation:
-        "Strong saved fit. Prioritize Product Engineer; refresh the match details and emphasize TypeScript, React and Workflows before applying or interviewing.",
+      recommendation: "Strong saved fit; refresh match details for evidence.",
     });
     expect(createRankedMatchDetails(17, { title: "Support Engineer" })).toEqual({
       strengths: [],
-      gaps: [
-        "The saved score is not enough to explain the fit; refresh the analysis and look for proof of the core role requirements.",
-      ],
+      gaps: ["Major: the core role requirements evidence unavailable"],
       reasons: ["Legacy Support Engineer match: 17% fit using saved score data."],
-      recommendation:
-        "Lower-priority saved fit. Re-assess before pursuing unless you can add credible evidence for the core role requirements.",
+      recommendation: "Weak saved fit with missing evidence: the core role requirements.",
     });
     expect(
       createRankedMatchDetails(36, {
@@ -90,15 +84,11 @@ describe("createRankedMatchDetails", () => {
           "predictive analytics job obsessed partner team platform data product engineering",
       }),
     ).toEqual({
-      strengths: [
-        "The saved score suggests Analytics Engineer may be worth reviewing with refreshed match details.",
-      ],
-      gaps: [
-        "The saved score is not enough to explain the fit; refresh the analysis and look for proof of Predictive, platform, data and Product.",
-      ],
+      strengths: ["Moderate: saved score 36%"],
+      gaps: ["Major: Predictive, platform, data and Product evidence unavailable"],
       reasons: ["Legacy Analytics Engineer match: 36% fit using saved score data."],
       recommendation:
-        "Moderate saved fit. Re-assess this job and decide whether the resume can credibly show Predictive, platform, data and Product.",
+        "Moderate saved fit with missing evidence: Predictive, platform, data and Product.",
     });
   });
 });
@@ -227,9 +217,7 @@ describe("GET /api/jobs/ranked", () => {
         score: 0.17,
         matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: [
-            "The saved score is not enough to explain the fit; refresh the analysis and look for proof of Interfaces.",
-          ],
+          gaps: ["Major: Interfaces evidence unavailable"],
         }),
       }),
       expect.objectContaining({
@@ -237,9 +225,7 @@ describe("GET /api/jobs/ranked", () => {
         score: 0,
         matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: [
-            "The saved score is not enough to explain the fit; refresh the analysis and look for proof of Customers.",
-          ],
+          gaps: ["Major: Customers evidence unavailable"],
         }),
       }),
       expect.objectContaining({

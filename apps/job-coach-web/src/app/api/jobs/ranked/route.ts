@@ -101,6 +101,7 @@ function getFallbackTerms(job: RankedJobSource) {
     "assume",
     "build",
     "collaborate",
+    "collaborative",
     "communication",
     "company",
     "culture",
@@ -156,24 +157,21 @@ export function createRankedMatchDetails(score: number, job: RankedJobSource): R
   const legacyReason = `Legacy ${title} match: ${score}% fit using saved score data.`;
   const recommendation =
     score >= 76
-      ? `Strong saved fit. Prioritize ${title}; refresh the match details and emphasize ${termText} before applying or interviewing.`
+      ? `Strong saved fit; refresh match details for evidence.`
       : score >= 51
-        ? `Good saved fit. Refresh the match details, then tailor the resume toward ${termText} before applying.`
+        ? `Moderate saved fit; refresh match details for evidence.`
         : score >= 26
-          ? `Moderate saved fit. Re-assess this job and decide whether the resume can credibly show ${termText}.`
-          : `Lower-priority saved fit. Re-assess before pursuing unless you can add credible evidence for ${termText}.`;
+          ? `Moderate saved fit with missing evidence: ${termText}.`
+          : `Weak saved fit with missing evidence: ${termText}.`;
 
   return {
     strengths:
-      score >= 26
-        ? [`The saved score suggests ${title} may be worth reviewing with refreshed match details.`]
-        : [],
-    gaps:
-      score < 51
-        ? [
-            `The saved score is not enough to explain the fit; refresh the analysis and look for proof of ${termText}.`,
-          ]
-        : [],
+      score >= 76
+        ? [`Strong: saved score ${score}%`]
+        : score >= 26
+          ? [`Moderate: saved score ${score}%`]
+          : [],
+    gaps: score < 51 ? [`Major: ${termText} evidence unavailable`] : [],
     reasons: [legacyReason],
     recommendation,
   };

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calculateFit } from "./calculate-fit";
 
 describe("calculateFit", () => {
-  it("returns role-specific match details without generic overlap wording", () => {
+  it("returns concise weighted strengths without generic prose", () => {
     const result = calculateFit(
       {
         title: "Staff Product Engineer",
@@ -16,12 +16,14 @@ describe("calculateFit", () => {
     );
 
     expect(result.score).toBeGreaterThan(0);
-    expect(result.matchDetails.strengths.join(" ")).toContain("Staff Product Engineer");
-    expect(result.matchDetails.recommendation).toContain("TypeScript");
-    expect(result.matchDetails.strengths.join(" ")).not.toContain(
-      "Resume shows relevant evidence around",
+    expect(result.matchDetails.strengths).toEqual(
+      expect.arrayContaining(["Strong: TypeScript", "Strong: React", "Strong: platform"]),
     );
-    expect(result.matchDetails.reasons.join(" ")).not.toContain("Good keyword overlap");
+    expect(result.matchDetails.strengths.every((strength) => strength.length < 40)).toBe(true);
+    expect(result.matchDetails.recommendation).toMatch(/^Strong|^Moderate|^Weak/);
+    expect(result.matchDetails.reasons.join(" ")).not.toMatch(
+      /Resume shows relevant evidence around|keyword overlap|hiring story|tailor your resume|concrete ownership/i,
+    );
   });
 
   it("filters noisy business terms and prefers useful coaching signals", () => {
@@ -45,13 +47,13 @@ describe("calculateFit", () => {
     expect(details).toContain("data");
     expect(details).toContain("APIs");
     expect(details).toContain("platform");
-    expect(details).not.toMatch(/\b(assume|obsessed|partner|job|predict)\b/i);
-    expect(details).not.toContain("Good keyword overlap");
-    expect(details).not.toContain("keyword overlap");
-    expect(details).not.toContain("Resume evidence is thin for requested areas");
+    expect(details).not.toMatch(
+      /\b(assume|obsessed|partner|job|dynamic|communication|passionate|collaborative|excellent|responsibilities)\b/i,
+    );
+    expect(details).not.toMatch(/Good keyword overlap|keyword overlap|Resume evidence is thin/i);
   });
 
-  it("frames missing AI and MCP signals as an actionable gap", () => {
+  it("frames missing AI and MCP signals as prioritized gaps", () => {
     const result = calculateFit(
       {
         title: "Staff Software Engineer - AI & MCP",
@@ -70,10 +72,68 @@ describe("calculateFit", () => {
       result.matchDetails.recommendation,
     ].join(" ");
 
-    expect(details).toContain("AI/MCP");
-    expect(details).toContain("agent tooling");
+    expect(result.matchDetails.gaps).toEqual(
+      expect.arrayContaining([
+        "Major: AI systems experience not found",
+        "Major: MCP experience not found",
+        "Major: agent tooling experience not found",
+      ]),
+    );
+    expect(result.matchDetails.recommendation).toContain("Moderate fit due to missing");
     expect(details).not.toMatch(/\bAssume\b/);
     expect(details).not.toContain("clearer evidence of");
+  });
+
+  it("classifies required, preferred, and nice-to-have gaps by severity", () => {
+    const result = calculateFit(
+      {
+        title: "Senior Backend Engineer",
+        company: "Pattern",
+        sourceText:
+          "Must know Rust. Experience with AI systems preferred. Nice to have Next.js familiarity. Required experience with distributed systems.",
+      },
+      {
+        rawText: "Senior backend engineer with distributed systems and TypeScript experience.",
+      },
+    );
+
+    expect(result.matchDetails.strengths).toEqual(
+      expect.arrayContaining(["Strong: distributed systems"]),
+    );
+    expect(result.matchDetails.strengths).not.toContain("Strong: Rust");
+    expect(result.matchDetails.gaps).toEqual(
+      expect.arrayContaining([
+        "Critical: Rust experience not found",
+        "Major: AI systems experience not found",
+        "Minor: Next.js experience not found",
+      ]),
+    );
+    expect(result.matchDetails.gaps[0]).toBe("Critical: Rust experience not found");
+    expect(result.matchDetails.recommendation).toContain("critical gap");
+  });
+
+  it("does not create strengths without resume evidence", () => {
+    const result = calculateFit(
+      {
+        title: "Backend Engineer",
+        company: "Pattern",
+        sourceText: "Must know Rust. Required experience with Postgres.",
+      },
+      {
+        rawText: "Backend engineer with TypeScript APIs.",
+      },
+    );
+
+    expect(result.matchDetails.strengths).toEqual([]);
+    expect(result.matchDetails.gaps).toEqual(
+      expect.arrayContaining([
+        "Critical: Rust experience not found",
+        "Critical: Postgres experience not found",
+      ]),
+    );
+    expect(result.matchDetails.recommendation).toBe(
+      "Weak fit because several required technical signals are missing.",
+    );
   });
 
   it("treats mid-thirties scores as moderate coaching opportunities", () => {
