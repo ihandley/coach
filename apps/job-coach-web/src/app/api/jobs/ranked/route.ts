@@ -96,24 +96,37 @@ function getFallbackTerms(job: RankedJobSource) {
       .toLowerCase()
       .split(/[^a-z0-9+#.]+/i)
       .filter(Boolean),
+    "ability",
     "and",
+    "assume",
     "build",
+    "collaborate",
+    "collaborative",
+    "communication",
     "company",
     "culture",
     "dynamic",
     "engineer",
     "engineering",
+    "excellent",
     "fast",
     "for",
     "job",
+    "join",
     "mission",
     "obsessed",
     "opportunity",
     "partner",
     "passionate",
+    "responsible",
+    "responsibilities",
+    "strong",
     "team",
+    "teams",
     "the",
     "use",
+    "work",
+    "working",
     "with",
     "world",
     "you",
@@ -144,17 +157,21 @@ export function createRankedMatchDetails(score: number, job: RankedJobSource): R
   const legacyReason = `Legacy ${title} match: ${score}% fit using saved score data.`;
   const recommendation =
     score >= 76
-      ? `Strong overlap detected. Prioritize ${title} and tailor the resume toward ${termText}.`
+      ? `Strong saved fit; refresh match details for evidence.`
       : score >= 51
-        ? `Good overlap detected. Tailor the resume toward ${termText} before applying.`
+        ? `Moderate saved fit; refresh match details for evidence.`
         : score >= 26
-          ? `Moderate overlap detected. Tailoring the resume toward ${termText} would strengthen the application.`
-          : `Weak overlap detected. Build clearer resume evidence around ${termText} before prioritizing this role.`;
+          ? `Moderate saved fit with missing evidence: ${termText}.`
+          : `Weak saved fit with missing evidence: ${termText}.`;
 
   return {
-    strengths: score >= 26 ? [`Resume shows some relevant evidence for ${title}.`] : [],
-    gaps:
-      score < 51 ? [`The application would be stronger with clearer evidence of ${termText}.`] : [],
+    strengths:
+      score >= 76
+        ? [`Strong: saved score ${score}%`]
+        : score >= 26
+          ? [`Moderate: saved score ${score}%`]
+          : [],
+    gaps: score < 51 ? [`Major: ${termText} evidence unavailable`] : [],
     reasons: [legacyReason],
     recommendation,
   };

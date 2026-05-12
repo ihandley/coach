@@ -66,20 +66,16 @@ describe("createRankedMatchDetails", () => {
         sourceText: "TypeScript React product workflows",
       }),
     ).toEqual({
-      strengths: ["Resume shows some relevant evidence for Product Engineer."],
+      strengths: ["Strong: saved score 82%"],
       gaps: [],
       reasons: ["Legacy Product Engineer match: 82% fit using saved score data."],
-      recommendation:
-        "Strong overlap detected. Prioritize Product Engineer and tailor the resume toward TypeScript, React and Workflows.",
+      recommendation: "Strong saved fit; refresh match details for evidence.",
     });
     expect(createRankedMatchDetails(17, { title: "Support Engineer" })).toEqual({
       strengths: [],
-      gaps: [
-        "The application would be stronger with clearer evidence of the core role requirements.",
-      ],
+      gaps: ["Major: the core role requirements evidence unavailable"],
       reasons: ["Legacy Support Engineer match: 17% fit using saved score data."],
-      recommendation:
-        "Weak overlap detected. Build clearer resume evidence around the core role requirements before prioritizing this role.",
+      recommendation: "Weak saved fit with missing evidence: the core role requirements.",
     });
     expect(
       createRankedMatchDetails(36, {
@@ -88,13 +84,11 @@ describe("createRankedMatchDetails", () => {
           "predictive analytics job obsessed partner team platform data product engineering",
       }),
     ).toEqual({
-      strengths: ["Resume shows some relevant evidence for Analytics Engineer."],
-      gaps: [
-        "The application would be stronger with clearer evidence of Predictive, platform, data and Product.",
-      ],
+      strengths: ["Moderate: saved score 36%"],
+      gaps: ["Major: Predictive, platform, data and Product evidence unavailable"],
       reasons: ["Legacy Analytics Engineer match: 36% fit using saved score data."],
       recommendation:
-        "Moderate overlap detected. Tailoring the resume toward Predictive, platform, data and Product would strengthen the application.",
+        "Moderate saved fit with missing evidence: Predictive, platform, data and Product.",
     });
   });
 });
@@ -223,7 +217,7 @@ describe("GET /api/jobs/ranked", () => {
         score: 0.17,
         matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: ["The application would be stronger with clearer evidence of Interfaces."],
+          gaps: ["Major: Interfaces evidence unavailable"],
         }),
       }),
       expect.objectContaining({
@@ -231,7 +225,7 @@ describe("GET /api/jobs/ranked", () => {
         score: 0,
         matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: ["The application would be stronger with clearer evidence of Customers."],
+          gaps: ["Major: Customers evidence unavailable"],
         }),
       }),
       expect.objectContaining({

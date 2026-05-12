@@ -20,6 +20,25 @@ type Resume = {
   rawText?: string;
 };
 
+type SignalCategory =
+  | "languages/frameworks"
+  | "infrastructure/platform"
+  | "AI/ML"
+  | "databases"
+  | "cloud/platform"
+  | "domain experience"
+  | "leadership/seniority"
+  | "architecture/ownership";
+
+type GapSeverity = "critical" | "major" | "minor";
+
+type RoleSignal = {
+  term: string;
+  label: string;
+  category: SignalCategory;
+  severity: GapSeverity;
+};
+
 function tokenize(text: string): string[] {
   return (text ?? "")
     .toLowerCase()
@@ -44,14 +63,20 @@ function clampScore(score: number) {
 
 const STOP_WORDS = new Set([
   "about",
+  "ability",
   "and",
   "are",
+  "assume",
   "build",
+  "collaborate",
+  "collaborative",
+  "communication",
   "company",
   "culture",
   "dynamic",
   "engineer",
   "engineering",
+  "excellent",
   "fast",
   "for",
   "from",
@@ -64,6 +89,9 @@ const STOP_WORDS = new Set([
   "our",
   "partner",
   "passionate",
+  "responsible",
+  "responsibilities",
+  "role",
   "that",
   "the",
   "this",
@@ -71,6 +99,7 @@ const STOP_WORDS = new Set([
   "teams",
   "use",
   "work",
+  "working",
   "with",
   "world",
   "you",
@@ -78,11 +107,23 @@ const STOP_WORDS = new Set([
 ]);
 
 const SIGNAL_PHRASES = [
+  "agent tooling",
+  "architecture decisions",
+  "ai systems",
   "distributed systems",
+  "elasticsearch",
+  "gcp",
   "machine learning",
+  "mcp",
+  "mentoring",
+  "payments",
+  "physical-world systems",
+  "platform reliability",
+  "postgres",
   "predictive analytics",
   "product engineering",
   "typeScript",
+  "next.js",
   "healthcare",
   "analytics",
   "fintech",
@@ -96,15 +137,87 @@ const SIGNAL_PHRASES = [
 
 const TERM_LABELS: Record<string, string> = {
   ai: "AI",
+  "ai systems": "AI systems",
+  "agent tooling": "agent tooling",
   apis: "APIs",
+  architecture: "architecture",
+  "architecture decisions": "architecture decisions",
   data: "data",
+  distributed: "distributed systems",
+  "distributed systems": "distributed systems",
+  elasticsearch: "Elasticsearch",
   fintech: "fintech",
+  gcp: "GCP",
   healthcare: "healthcare",
+  leadership: "technical leadership",
+  mcp: "MCP",
+  mentoring: "mentoring",
   ml: "ML",
+  "next.js": "Next.js",
+  payments: "payments",
   platform: "platform",
+  "platform reliability": "platform reliability",
+  postgres: "Postgres",
+  "predictive analytics": "predictive analytics",
+  "product engineering": "product engineering",
   react: "React",
+  reliability: "platform reliability",
+  rust: "Rust",
+  security: "security",
   typescript: "TypeScript",
 };
+
+const SIGNAL_CATEGORIES: Record<string, SignalCategory> = {
+  ai: "AI/ML",
+  "ai systems": "AI/ML",
+  "agent tooling": "AI/ML",
+  apis: "architecture/ownership",
+  architecture: "architecture/ownership",
+  "architecture decisions": "architecture/ownership",
+  data: "databases",
+  distributed: "infrastructure/platform",
+  "distributed systems": "infrastructure/platform",
+  elasticsearch: "databases",
+  fintech: "domain experience",
+  gcp: "cloud/platform",
+  healthcare: "domain experience",
+  leadership: "leadership/seniority",
+  mcp: "AI/ML",
+  mentoring: "leadership/seniority",
+  ml: "AI/ML",
+  "next.js": "languages/frameworks",
+  payments: "domain experience",
+  platform: "infrastructure/platform",
+  "platform reliability": "infrastructure/platform",
+  postgres: "databases",
+  "predictive analytics": "AI/ML",
+  "product engineering": "architecture/ownership",
+  react: "languages/frameworks",
+  reliability: "infrastructure/platform",
+  rust: "languages/frameworks",
+  security: "domain experience",
+  typescript: "languages/frameworks",
+};
+
+const ROLE_SIGNAL_TOKENS = new Set([
+  ...Object.keys(TERM_LABELS),
+  "agent",
+  "agents",
+  "architecture",
+  "backend",
+  "cloud",
+  "frontend",
+  "implementation",
+  "mentor",
+  "mentored",
+  "rust",
+  "principal",
+  "senior",
+  "staff",
+  "systems",
+  "technical",
+  "tooling",
+]);
 
 const ROLE_FAMILIES = [
   {
@@ -156,7 +269,7 @@ const ROLE_FAMILIES = [
 ];
 
 const LEADERSHIP_PATTERN =
-  /\b(lead|led|leader|leadership|mentor|mentored|manager|managed|staff|principal)\b/i;
+  /\b(lead|led|leader|leadership|mentor|mentored|mentoring|manager|managed|staff|principal)\b/i;
 
 function uniqueMeaningfulTokens(tokens: string[], ignoredTokens: Set<string> = new Set()) {
   return Array.from(
@@ -176,46 +289,94 @@ function formatTerm(term: string) {
   return TERM_LABELS[term] ?? term.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatTerms(terms: string[], fallback: string) {
-  const formatted = terms.slice(0, 5).map(formatTerm).filter(Boolean);
-
-  if (formatted.length === 0) {
-    return fallback;
-  }
-
-  if (formatted.length === 1) {
-    return formatted[0];
-  }
-
-  return `${formatted.slice(0, -1).join(", ")} and ${formatted[formatted.length - 1]}`;
-}
-
 function getSignalPhrases(text: string) {
   const lower = text.toLowerCase();
 
-  return SIGNAL_PHRASES.filter((phrase) => {
+  const matchedPhrases = SIGNAL_PHRASES.filter((phrase) => {
     const normalizedPhrase = phrase.toLowerCase();
-    const pattern = normalizedPhrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+    const pattern = escapeRegex(normalizedPhrase).replace(/\s+/g, "\\s+");
 
     return new RegExp(`\\b${pattern}\\b`, "i").test(lower);
   }).map((phrase) => phrase.toLowerCase());
+
+  return matchedPhrases.filter(
+    (phrase) =>
+      !matchedPhrases.some((other) => other !== phrase && other.split(/\s+/).includes(phrase)),
+  );
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function getIgnoredTokens(job: Job) {
   return new Set(tokenize([job.title, job.company].filter(Boolean).join(" ")));
 }
 
-function getRoleSignals(job: Job) {
+function getRequirementChunks(job: Job) {
+  const summary = job.structuredSummary as Record<string, unknown> | null | undefined;
+  const requirements = Array.isArray(summary?.requirements)
+    ? summary.requirements.filter(
+        (item): item is string => typeof item === "string" && item.trim().length > 0,
+      )
+    : [];
+  const sourceChunks = (job.sourceText ?? "")
+    .split(/\n|;|•|\.(?=\s+[A-Z])/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+
+  return [...requirements, ...sourceChunks];
+}
+
+function chunkHasSignal(chunk: string, term: string) {
+  const normalizedTerm = term.toLowerCase();
+  const pattern = escapeRegex(normalizedTerm).replace(/\s+/g, "\\s+");
+
+  return new RegExp(`\\b${pattern}\\b`, "i").test(chunk);
+}
+
+function getSignalSeverity(job: Job, term: string): GapSeverity {
+  const chunks = getRequirementChunks(job).filter((chunk) => chunkHasSignal(chunk, term));
+
+  if (
+    chunks.some((chunk) =>
+      /\b(required|required experience|must|minimum qualifications?|essential)\b/i.test(chunk),
+    )
+  ) {
+    return "critical";
+  }
+
+  if (
+    chunks.some((chunk) =>
+      /\b(nice\s+to\s+have|nice-to-have|bonus|familiarity with)\b/i.test(chunk),
+    )
+  ) {
+    return "minor";
+  }
+
+  return "major";
+}
+
+function getRoleSignals(job: Job): RoleSignal[] {
   const jobText = [job.sourceText, JSON.stringify(job.structuredSummary ?? "")]
     .filter(Boolean)
     .join(" ");
   const ignoredTokens = getIgnoredTokens(job);
   const phraseSignals = getSignalPhrases(jobText);
   const tokenSignals = uniqueMeaningfulTokens(tokenize(jobText), ignoredTokens).filter(
-    (token) => !phraseSignals.some((phrase) => phrase.split(/\s+/).includes(token)),
+    (token) =>
+      ROLE_SIGNAL_TOKENS.has(token) &&
+      !phraseSignals.some((phrase) => phrase.split(/\s+/).includes(token)),
   );
 
-  return Array.from(new Set([...phraseSignals, ...tokenSignals])).slice(0, 8);
+  return Array.from(new Set([...phraseSignals, ...tokenSignals]))
+    .slice(0, 8)
+    .map((term) => ({
+      term,
+      label: formatTerm(term),
+      category: SIGNAL_CATEGORIES[term] ?? "architecture/ownership",
+      severity: getSignalSeverity(job, term),
+    }));
 }
 
 function getSenioritySignal(text: string) {
@@ -229,7 +390,7 @@ function getSenioritySignal(text: string) {
 
 function matchesSignal(term: string, resumeText: string, resumeTokens: Set<string>) {
   if (term.includes(" ")) {
-    const pattern = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+    const pattern = escapeRegex(term).replace(/\s+/g, "\\s+");
 
     return new RegExp(`\\b${pattern}\\b`, "i").test(resumeText);
   }
@@ -273,9 +434,9 @@ function calculateNumericScore(job: Job, resumeText: string) {
   const roleSignals = getRoleSignals(job);
   const resumeSignalText = resumeText.toLowerCase();
   const resumeTokens = new Set(uniqueMeaningfulTokens(tokenize(resumeText)));
-  const signalWeights = roleSignals.map((term) => ({
-    matched: matchesSignal(term, resumeSignalText, resumeTokens),
-    weight: getSignalWeight(term),
+  const signalWeights = roleSignals.map((signal) => ({
+    matched: matchesSignal(signal.term, resumeSignalText, resumeTokens),
+    weight: getSignalWeight(signal.term),
   }));
   const totalSignalWeight = signalWeights.reduce((sum, signal) => sum + signal.weight, 0);
   const matchedSignalWeight = signalWeights
@@ -314,57 +475,51 @@ function createMatchDetails(job: Job, resumeText: string, score: number) {
   const roleSignals = getRoleSignals(job);
   const resumeSignalText = resumeText.toLowerCase();
   const resumeTokens = new Set(uniqueMeaningfulTokens(tokenize(resumeText)));
-  const matchedTerms = roleSignals.filter(
-    (term) =>
-      resumeSignalText.includes(term) || term.split(/\s+/).some((token) => resumeTokens.has(token)),
+  const gapRank = (gap: string) =>
+    gap.startsWith("Critical:") ? 0 : gap.startsWith("Major:") ? 1 : 2;
+  const matchedSignals = roleSignals.filter((signal) =>
+    matchesSignal(signal.term, resumeSignalText, resumeTokens),
   );
-  const missingTerms = roleSignals.filter((term) => !matchedTerms.includes(term));
-  const strengths: string[] = [];
-  const gaps: string[] = [];
-
-  if (matchedTerms.length > 0) {
-    strengths.push(
-      `Resume shows relevant evidence around ${formatTerms(matchedTerms, "the role")} for ${title}.`,
-    );
-  }
+  const missingSignals = roleSignals.filter((signal) => !matchedSignals.includes(signal));
+  const severityRank: Record<GapSeverity, number> = { critical: 0, major: 1, minor: 2 };
+  const strengths = matchedSignals
+    .map((signal) => `${signal.severity === "minor" ? "Moderate" : "Strong"}: ${signal.label}`)
+    .slice(0, 6);
+  const gaps: string[] = missingSignals
+    .sort((a, b) => severityRank[a.severity] - severityRank[b.severity])
+    .map(
+      (signal) =>
+        `${signal.severity[0].toUpperCase()}${signal.severity.slice(1)}: ${
+          signal.label
+        } experience not found`,
+    )
+    .slice(0, 6);
 
   const seniority = getSenioritySignal([job.title, job.sourceText].filter(Boolean).join(" "));
   if (seniority && getSenioritySignal(resumeText) === seniority) {
-    strengths.push(`Seniority signal appears aligned for a ${seniority}-level role.`);
+    strengths.push(`Strong: ${seniority}-level signal`);
   } else if (seniority) {
-    gaps.push(`Seniority alignment is unclear for a ${seniority}-level role.`);
+    gaps.push(`Critical: ${seniority}-level signal not found`);
   }
 
-  if (missingTerms.length > 0) {
-    gaps.push(
-      `The application would be stronger with clearer evidence of ${formatTerms(
-        missingTerms,
-        "the core role requirements",
-      )}.`,
-    );
-  }
-
-  if (strengths.length === 0) {
-    strengths.push(`Resume evidence for ${title} is limited in the current resume text.`);
-  }
-
-  if (gaps.length === 0 && score > 0) {
-    gaps.push("The main role signals are already represented clearly in the resume text.");
-  }
+  gaps.sort((a, b) => gapRank(a) - gapRank(b));
 
   const reasons = [...strengths, ...gaps];
-  const recommendationFocus = formatTerms(
-    [...matchedTerms, ...missingTerms],
-    "the strongest role signals",
-  );
-  const recommendation =
-    score >= 76
-      ? `Strong overlap detected. Prioritize ${title} and tailor the resume toward ${recommendationFocus}.`
-      : score >= 51
-        ? `Good overlap detected. Tailor the resume toward ${recommendationFocus} before applying.`
-        : score >= 26
-          ? `Moderate overlap detected. Tailoring the resume toward ${recommendationFocus} would strengthen the application.`
-          : `Weak overlap detected. Build clearer resume evidence around ${recommendationFocus} before prioritizing this role.`;
+  const criticalGaps = gaps.filter((gap) => gap.startsWith("Critical:")).length;
+  const majorGaps = gaps.filter((gap) => gap.startsWith("Major:")).length;
+  const recommendationGap = criticalGaps
+    ? gaps.find((gap) => gap.startsWith("Critical:"))
+    : gaps[0];
+  const firstGap = recommendationGap
+    ?.replace(/^(Critical|Major|Minor): /, "")
+    .replace(" not found", "");
+  const recommendation = criticalGaps
+    ? criticalGaps > 1
+      ? "Weak fit because several required technical signals are missing."
+      : `${score >= 51 ? "Strong" : "Moderate"} fit with one critical gap: ${firstGap}.`
+    : majorGaps
+      ? `Moderate fit due to missing ${firstGap}.`
+      : `Strong fit for ${title}.`;
 
   return { strengths, gaps, reasons, recommendation };
 }
