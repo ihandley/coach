@@ -136,6 +136,24 @@ describe("calculateFit", () => {
     );
   });
 
+  it("sorts seniority gaps with other critical gaps before deriving the recommendation", () => {
+    const result = calculateFit(
+      {
+        title: "Senior Software Engineer",
+        company: "Pattern",
+        sourceText: "Experience with AI systems. Nice to have Next.js familiarity.",
+      },
+      {
+        rawText: "Software engineer with React experience.",
+      },
+    );
+
+    expect(result.matchDetails.gaps[0]).toBe("Critical: senior-level signal not found");
+    expect(result.matchDetails.recommendation).toBe(
+      "Moderate fit with one critical gap: senior-level signal.",
+    );
+  });
+
   it("treats mid-thirties scores as moderate coaching opportunities", () => {
     const result = calculateFit(
       {

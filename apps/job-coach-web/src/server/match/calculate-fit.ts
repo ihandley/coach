@@ -475,6 +475,8 @@ function createMatchDetails(job: Job, resumeText: string, score: number) {
   const roleSignals = getRoleSignals(job);
   const resumeSignalText = resumeText.toLowerCase();
   const resumeTokens = new Set(uniqueMeaningfulTokens(tokenize(resumeText)));
+  const gapRank = (gap: string) =>
+    gap.startsWith("Critical:") ? 0 : gap.startsWith("Major:") ? 1 : 2;
   const matchedSignals = roleSignals.filter((signal) =>
     matchesSignal(signal.term, resumeSignalText, resumeTokens),
   );
@@ -500,10 +502,17 @@ function createMatchDetails(job: Job, resumeText: string, score: number) {
     gaps.push(`Critical: ${seniority}-level signal not found`);
   }
 
+  gaps.sort((a, b) => gapRank(a) - gapRank(b));
+
   const reasons = [...strengths, ...gaps];
   const criticalGaps = gaps.filter((gap) => gap.startsWith("Critical:")).length;
   const majorGaps = gaps.filter((gap) => gap.startsWith("Major:")).length;
-  const firstGap = gaps[0]?.replace(/^(Critical|Major|Minor): /, "").replace(" not found", "");
+  const recommendationGap = criticalGaps
+    ? gaps.find((gap) => gap.startsWith("Critical:"))
+    : gaps[0];
+  const firstGap = recommendationGap
+    ?.replace(/^(Critical|Major|Minor): /, "")
+    .replace(" not found", "");
   const recommendation = criticalGaps
     ? criticalGaps > 1
       ? "Weak fit because several required technical signals are missing."
