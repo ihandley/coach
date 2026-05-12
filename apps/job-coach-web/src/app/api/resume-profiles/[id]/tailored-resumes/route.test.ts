@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createTailoredResume = vi.fn();
+const { createServerClientMock, backfillJobMatchesMock } = vi.hoisted(() => ({
+  createServerClientMock: vi.fn(),
+  backfillJobMatchesMock: vi.fn(),
+}));
 
 vi.mock("@/server/resume-tailoring/create-tailored-resume-service", () => {
   return {
@@ -8,12 +12,34 @@ vi.mock("@/server/resume-tailoring/create-tailored-resume-service", () => {
   };
 });
 
+vi.mock("@coach/db", async () => {
+  const actual = await vi.importActual<typeof import("@coach/db")>("@coach/db");
+
+  return {
+    ...actual,
+    createServerClient: createServerClientMock,
+  };
+});
+
+vi.mock("@/server/match/backfill-job-matches", () => ({
+  backfillJobMatches: backfillJobMatchesMock,
+}));
+
 describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
   beforeEach(() => {
     createTailoredResume.mockReset();
+    createServerClientMock.mockReset();
+    backfillJobMatchesMock.mockReset();
   });
 
   it("creates a tailored resume version", async () => {
+    const db = {};
+    createServerClientMock.mockReturnValue(db);
+    backfillJobMatchesMock.mockResolvedValue({
+      updated: 2,
+      resumeProfileId: "profile-1",
+      resumeVersionId: "version-2",
+    });
     createTailoredResume.mockResolvedValue({
       version: {
         id: "version-2",
@@ -109,8 +135,18 @@ describe("POST /api/resume-profiles/[id]/tailored-resumes", () => {
           versionId: "version-2",
         },
         suggestions: expect.any(Array),
+        matchRefresh: {
+          updated: 2,
+          resumeProfileId: "profile-1",
+          resumeVersionId: "version-2",
+        },
       }),
     );
+    expect(createServerClientMock).toHaveBeenCalledTimes(1);
+    expect(backfillJobMatchesMock).toHaveBeenCalledWith(db, {
+      resumeProfileId: "profile-1",
+      resumeVersionId: "version-2",
+    });
   });
 
   it("returns 400 for invalid input", async () => {

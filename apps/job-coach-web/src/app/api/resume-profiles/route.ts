@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@coach/db";
+import { backfillJobMatches } from "@/server/match/backfill-job-matches";
 
 export async function GET() {
   const db = createServerClient();
@@ -137,5 +138,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ profile: updatedProfile, version }, { status: 201 });
+  const matchRefresh = await backfillJobMatches(db, {
+    resumeProfileId: profile.id,
+    resumeVersionId: version.id,
+  });
+
+  return NextResponse.json({ profile: updatedProfile, version, matchRefresh }, { status: 201 });
 }
