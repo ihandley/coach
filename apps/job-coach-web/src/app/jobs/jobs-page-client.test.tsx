@@ -610,7 +610,7 @@ describe("JobsPageClient", () => {
     expect(screen.queryByTestId("job-details")).not.toBeInTheDocument();
   });
 
-  it("shows job actions only inside the expanded action menu", async () => {
+  it("shows job actions only after opening the expanded action menu", async () => {
     render(<JobsPageClient />);
 
     expect(await screen.findByText("Product Engineer")).toBeInTheDocument();
@@ -625,19 +625,78 @@ describe("JobsPageClient", () => {
 
     fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
 
-    expect(
-      within(details).getByRole("menuitem", { name: "Generate Tailored Resume" }),
-    ).toBeInTheDocument();
-    expect(within(details).getByRole("menuitem", { name: "Re-assess Fit" })).toBeInTheDocument();
-    expect(within(details).getByRole("menuitem", { name: "Edit Details" })).toBeInTheDocument();
-    expect(
-      within(details).getByRole("menuitem", { name: "Re-import from URL" }),
-    ).toBeInTheDocument();
-    expect(within(details).getByRole("menuitem", { name: "View Job Posting" })).toHaveAttribute(
+    expect(screen.getByTestId("job-actions-menu")).toHaveAttribute("data-side", "down");
+    expect(screen.getByRole("menuitem", { name: "Generate Tailored Resume" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Re-assess Fit" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Edit Details" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Re-import from URL" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "View Job Posting" })).toHaveAttribute(
       "href",
       "https://example.com/job",
     );
-    expect(within(details).getByRole("menuitem", { name: "Delete Job" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Delete Job" })).toBeInTheDocument();
+  });
+
+  it("positions the action menu upward when there is not enough viewport space below", async () => {
+    const originalInnerHeight = window.innerHeight;
+    const originalInnerWidth = window.innerWidth;
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 640 });
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1024 });
+    rectSpy.mockImplementation(function getMockRect(this: HTMLElement) {
+      if (this.textContent === "Actions") {
+        return {
+          bottom: 620,
+          height: 32,
+          left: 832,
+          right: 912,
+          top: 588,
+          width: 80,
+          x: 832,
+          y: 588,
+          toJSON: () => undefined,
+        };
+      }
+
+      if (this.getAttribute("data-testid") === "job-actions-menu") {
+        return {
+          bottom: 240,
+          height: 240,
+          left: 0,
+          right: 192,
+          top: 0,
+          width: 192,
+          x: 0,
+          y: 0,
+          toJSON: () => undefined,
+        };
+      }
+
+      return {
+        bottom: 0,
+        height: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        width: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => undefined,
+      };
+    });
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    fireEvent.click(within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("job-actions-menu")).toHaveAttribute("data-side", "up");
+    });
+
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: originalInnerHeight });
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: originalInnerWidth });
   });
 
   it("re-assesses fit from the expanded action menu and refreshes ranked jobs", async () => {
@@ -701,7 +760,7 @@ describe("JobsPageClient", () => {
     const details = screen.getByTestId("job-details");
 
     fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
-    fireEvent.click(within(details).getByRole("menuitem", { name: "Re-assess Fit" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Re-assess Fit" }));
 
     expect(await within(details).findByText("Re-assessing fit...")).toBeInTheDocument();
 
@@ -760,7 +819,7 @@ describe("JobsPageClient", () => {
     const details = screen.getByTestId("job-details");
 
     fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
-    fireEvent.click(within(details).getByRole("menuitem", { name: "Re-assess Fit" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Re-assess Fit" }));
 
     expect(await within(details).findByText("Unable to re-assess fit.")).toBeInTheDocument();
   });
@@ -891,9 +950,7 @@ describe("JobsPageClient", () => {
     fireEvent.click(
       within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
     );
-    fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
-    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete Job" }));
 
     expect(confirmSpy).toHaveBeenCalledWith("Delete this job? This cannot be undone.");
     expect(fetchMock).not.toHaveBeenCalledWith(
@@ -913,9 +970,7 @@ describe("JobsPageClient", () => {
     fireEvent.click(
       within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
     );
-    fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
-    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete Job" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -946,9 +1001,7 @@ describe("JobsPageClient", () => {
     fireEvent.click(
       within(screen.getByTestId("job-details")).getByRole("button", { name: "Actions" }),
     );
-    fireEvent.click(
-      within(screen.getByTestId("job-details")).getByRole("menuitem", { name: "Delete Job" }),
-    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete Job" }));
 
     expect(await screen.findByText("Unable to delete job.")).toBeInTheDocument();
     expect(screen.getByText("Product Engineer")).toBeInTheDocument();
@@ -971,7 +1024,7 @@ describe("JobsPageClient", () => {
     expect(screen.queryByLabelText("Resume profile")).not.toBeInTheDocument();
 
     fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
-    fireEvent.click(within(details).getByRole("menuitem", { name: "Generate Tailored Resume" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Generate Tailored Resume" }));
 
     expect(
       await screen.findByRole("dialog", { name: "Generate tailored resume" }),
