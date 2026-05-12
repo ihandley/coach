@@ -132,4 +132,42 @@ describe("backfillJobMatches", () => {
     expect(result).toEqual({ updated: 2, resumeProfileId: "profile-2" });
     expect(upsert).toHaveBeenCalledTimes(1);
   });
+
+  it("calculates matches with empty resume text when no resume profile exists", async () => {
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+
+    const db = {
+      from: vi.fn((table: string) => {
+        if (table === "resume_profiles") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: null,
+              error: null,
+            }),
+          };
+        }
+
+        if (table === "job_matches") {
+          return { upsert };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    } as any;
+
+    const result = await backfillJobMatches(db);
+
+    expect(result).toEqual({ updated: 2, resumeProfileId: null });
+    expect(upsert.mock.calls[0][0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          job_id: "job-1",
+          resume_profile_id: null,
+        }),
+      ]),
+    );
+  });
 });

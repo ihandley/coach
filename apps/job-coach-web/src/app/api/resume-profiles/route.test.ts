@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { createServerClientMock } = vi.hoisted(() => ({
   createServerClientMock: vi.fn(),
 }));
+const { backfillJobMatchesMock } = vi.hoisted(() => ({
+  backfillJobMatchesMock: vi.fn(),
+}));
 
 vi.mock("@coach/db", async () => {
   const actual = await vi.importActual<typeof import("@coach/db")>("@coach/db");
@@ -12,6 +15,10 @@ vi.mock("@coach/db", async () => {
     createServerClient: createServerClientMock,
   };
 });
+
+vi.mock("@/server/match/backfill-job-matches", () => ({
+  backfillJobMatches: backfillJobMatchesMock,
+}));
 
 function createPostDbMock() {
   const operations: Array<{ table: string; op: string; payload?: unknown }> = [];
@@ -168,6 +175,7 @@ describe("GET /api/resume-profiles", () => {
 describe("POST /api/resume-profiles", () => {
   beforeEach(() => {
     createServerClientMock.mockReset();
+    backfillJobMatchesMock.mockReset();
   });
 
   it("creates a resume profile and linked version", async () => {
@@ -183,6 +191,7 @@ describe("POST /api/resume-profiles", () => {
     };
     const { db, operations } = createPostDbMock();
     createServerClientMock.mockReturnValue(db);
+    backfillJobMatchesMock.mockResolvedValue({ updated: 3, resumeProfileId: "profile-123" });
     const { POST } = await import("./route");
 
     const response = await POST(
@@ -230,6 +239,7 @@ describe("POST /api/resume-profiles", () => {
         },
       },
     ]);
+    expect(backfillJobMatchesMock).toHaveBeenCalledWith(db);
     expect(await response.json()).toEqual({
       profile: {
         id: "profile-123",
@@ -240,6 +250,10 @@ describe("POST /api/resume-profiles", () => {
         id: "version-123",
         resume_profile_id: "profile-123",
         normalized_resume: { rawText: "Ian Handley" },
+      },
+      matchRefresh: {
+        updated: 3,
+        resumeProfileId: "profile-123",
       },
     });
   });

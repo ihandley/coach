@@ -63,6 +63,10 @@ Typical responsibilities:
 - reasoning
 - chronological history
 
+Persisted job match rows are refreshed after a resume profile is created or the
+current resume version changes, so `/api/jobs/ranked` reflects the latest active
+resume without requiring a manual backfill call.
+
 ### Exported artifacts
 
 Represents generated files such as:

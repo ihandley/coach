@@ -1,4 +1,6 @@
 import { createTailoredResumeService } from "@/server/resume-tailoring/create-tailored-resume-service";
+import { createServerClient } from "@coach/db";
+import { backfillJobMatches } from "@/server/match/backfill-job-matches";
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -26,8 +28,9 @@ export async function POST(
       jobId: body.jobId,
       sourceResumeVersionId: body.sourceResumeVersionId,
     });
+    const matchRefresh = await backfillJobMatches(createServerClient());
 
-    return Response.json(result);
+    return Response.json({ ...result, matchRefresh });
   } catch (error) {
     if (
       error instanceof Error &&
