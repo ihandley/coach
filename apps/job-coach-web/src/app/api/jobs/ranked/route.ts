@@ -66,14 +66,21 @@ function formatFallbackTerm(value: string) {
 function getFallbackTerms(job: RankedJobSource) {
   const summary = job.structuredSummary as Record<string, unknown> | null | undefined;
   const requirements = Array.isArray(summary?.requirements)
-    ? summary.requirements.filter((item): item is string => typeof item === "string")
+    ? summary.requirements
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => item.trim())
     : [];
   const sourceTerms = (job.sourceText ?? "")
     .toLowerCase()
     .split(/[^a-z0-9+#.]+/i)
-    .filter((term) => term.length > 2 && !["and", "for", "the", "with", "you"].includes(term));
+    .filter(
+      (term) =>
+        term.length > 2 &&
+        !["and", "build", "for", "the", "with", "you", "your"].includes(term) &&
+        !/^\d+$/.test(term),
+    );
 
-  return Array.from(new Set([...requirements.flatMap((item) => item.split(/\W+/)), ...sourceTerms]))
+  return Array.from(new Set([...requirements, ...sourceTerms]))
     .filter(Boolean)
     .slice(0, 5)
     .map(formatFallbackTerm);
@@ -82,7 +89,8 @@ function getFallbackTerms(job: RankedJobSource) {
 export function createRankedMatchDetails(score: number, job: RankedJobSource): RankedMatchDetails {
   const title = job.title?.trim() || "this role";
   const terms = getFallbackTerms(job);
-  const termText = terms.length > 0 ? terms.join(", ") : "the saved job requirements";
+  const termText = terms.length > 0 ? terms.join(", ") : "the core role requirements";
+  const legacyReason = `Legacy ${title} match: ${score}% fit with posting signals such as ${termText}.`;
   const recommendation =
     score >= 80
       ? `Strong fit for ${title}. Prioritize this role and tailor the resume around ${termText}.`
@@ -94,12 +102,14 @@ export function createRankedMatchDetails(score: number, job: RankedJobSource): R
 
   return {
     strengths:
-      score >= 40 ? [`Saved fit score suggests relevant overlap with ${title} requirements.`] : [],
+      score >= 40 ? [`${title} shows ${score}% fit with posting signals such as ${termText}.`] : [],
     gaps:
       score < 60
-        ? [`Review resume evidence for ${termText}; the saved fit score indicates possible gaps.`]
+        ? [
+            `Before applying to ${title}, verify resume evidence for ${termText}; this legacy match is below the strong-fit range.`,
+          ]
         : [],
-    reasons: [`Fit analysis is based on the saved match score and ${title} posting data.`],
+    reasons: [legacyReason],
     recommendation,
   };
 }

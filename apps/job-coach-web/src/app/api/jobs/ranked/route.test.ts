@@ -65,10 +65,12 @@ describe("createRankedMatchDetails", () => {
         sourceText: "TypeScript React product workflows",
       }),
     ).toEqual({
-      strengths: ["Saved fit score suggests relevant overlap with Product Engineer requirements."],
+      strengths: [
+        "Product Engineer shows 82% fit with posting signals such as Typescript, React, Product, Workflows.",
+      ],
       gaps: [],
       reasons: [
-        "Fit analysis is based on the saved match score and Product Engineer posting data.",
+        "Legacy Product Engineer match: 82% fit with posting signals such as Typescript, React, Product, Workflows.",
       ],
       recommendation:
         "Strong fit for Product Engineer. Prioritize this role and tailor the resume around Typescript, React, Product, Workflows.",
@@ -76,10 +78,10 @@ describe("createRankedMatchDetails", () => {
     expect(createRankedMatchDetails(17, { title: "Support Engineer" })).toEqual({
       strengths: [],
       gaps: [
-        "Review resume evidence for the saved job requirements; the saved fit score indicates possible gaps.",
+        "Before applying to Support Engineer, verify resume evidence for the core role requirements; this legacy match is below the strong-fit range.",
       ],
       reasons: [
-        "Fit analysis is based on the saved match score and Support Engineer posting data.",
+        "Legacy Support Engineer match: 17% fit with posting signals such as the core role requirements.",
       ],
       recommendation:
         "Weak fit for Support Engineer. Apply only if there is strong interest or missing resume context.",
@@ -187,7 +189,10 @@ describe("GET /api/jobs/ranked", () => {
     const response = await GET();
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual([
+    const body = await response.json();
+
+    expect(selectJobMatches).toHaveBeenCalledWith("job_id, score, match_details");
+    expect(body).toEqual([
       expect.objectContaining({
         id: "job-new",
         score: null,
@@ -211,7 +216,7 @@ describe("GET /api/jobs/ranked", () => {
         matchDetails: expect.objectContaining({
           strengths: [],
           gaps: [
-            "Review resume evidence for Build, Interfaces; the saved fit score indicates possible gaps.",
+            "Before applying to Frontend Engineer, verify resume evidence for Interfaces; this legacy match is below the strong-fit range.",
           ],
         }),
       }),
@@ -221,7 +226,7 @@ describe("GET /api/jobs/ranked", () => {
         matchDetails: expect.objectContaining({
           strengths: [],
           gaps: [
-            "Review resume evidence for Support, Customers; the saved fit score indicates possible gaps.",
+            "Before applying to Support Engineer, verify resume evidence for Support, Customers; this legacy match is below the strong-fit range.",
           ],
         }),
       }),
@@ -231,5 +236,8 @@ describe("GET /api/jobs/ranked", () => {
         matchDetails: null,
       }),
     ]);
+    expect(JSON.stringify(body)).not.toContain("Good keyword overlap");
+    expect(JSON.stringify(body)).not.toContain("Saved fit score suggests relevant overlap");
+    expect(JSON.stringify(body)).not.toContain("Fit analysis is based on the saved match score");
   });
 });
