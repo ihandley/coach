@@ -12,12 +12,14 @@ const jobs = [
     title: "Staff Software Engineer",
     company: "Acme",
     description: "TypeScript React leadership platform engineering",
+    sourceText: "TypeScript React leadership platform engineering",
   },
   {
     id: "job-2",
     title: "Junior Designer",
     company: "Beta",
     description: "Figma brand illustration",
+    sourceText: "Figma brand illustration",
   },
 ];
 
@@ -91,6 +93,7 @@ describe("backfillJobMatches", () => {
     });
     expect(typeof rows[0].score).toBe("number");
     expect(typeof rows[1].score).toBe("number");
+    expect(rows[0].score).toBeGreaterThan(rows[1].score + 25);
   });
 
   it("uses the profile current resume version before the baseline profile resume", async () => {

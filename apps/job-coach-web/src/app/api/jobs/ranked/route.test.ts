@@ -4,6 +4,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createRankedMatchDetails, normalizeRankedScore } from "./route";
+import { calculateFit } from "../../../../server/match/calculate-fit";
 
 const listJobs = vi.fn();
 const selectJobMatches = vi.fn();
@@ -65,9 +66,7 @@ describe("createRankedMatchDetails", () => {
         sourceText: "TypeScript React product workflows",
       }),
     ).toEqual({
-      strengths: [
-        "Resume shows some relevant evidence for Product Engineer.",
-      ],
+      strengths: ["Resume shows some relevant evidence for Product Engineer."],
       gaps: [],
       reasons: ["Legacy Product Engineer match: 82% fit using saved score data."],
       recommendation:
@@ -113,6 +112,16 @@ describe("GET /api/jobs/ranked", () => {
       requirements: ["TypeScript"],
       benefits: ["Remote work"],
     };
+    const sharedScoringResult = calculateFit(
+      {
+        title: "Product Engineer",
+        company: "Pattern",
+        sourceText: "Build TypeScript React product workflows, APIs, and platform reliability.",
+      },
+      {
+        rawText: "Staff product engineer with TypeScript React APIs and platform experience.",
+      },
+    );
 
     listJobs.mockResolvedValue([
       {
@@ -175,14 +184,8 @@ describe("GET /api/jobs/ranked", () => {
       data: [
         {
           job_id: "job-high",
-          score: 82,
-          match_details: {
-            strengths: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
-            gaps: ["Seniority alignment is unclear for a staff-level role."],
-            reasons: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
-            recommendation:
-              "Strong fit for Product Engineer. Prioritize this role and tailor the resume around TypeScript and React.",
-          },
+          score: sharedScoringResult.score,
+          match_details: sharedScoringResult.matchDetails,
         },
         {
           job_id: "job-low",
@@ -211,14 +214,8 @@ describe("GET /api/jobs/ranked", () => {
       }),
       expect.objectContaining({
         id: "job-high",
-        score: 0.82,
-        matchDetails: {
-          strengths: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
-          gaps: ["Seniority alignment is unclear for a staff-level role."],
-          reasons: ["Resume evidence overlaps with Product Engineer: TypeScript, React."],
-          recommendation:
-            "Strong fit for Product Engineer. Prioritize this role and tailor the resume around TypeScript and React.",
-        },
+        score: sharedScoringResult.score / 100,
+        matchDetails: sharedScoringResult.matchDetails,
         structuredSummary,
       }),
       expect.objectContaining({
@@ -226,9 +223,7 @@ describe("GET /api/jobs/ranked", () => {
         score: 0.17,
         matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: [
-            "The application would be stronger with clearer evidence of Interfaces.",
-          ],
+          gaps: ["The application would be stronger with clearer evidence of Interfaces."],
         }),
       }),
       expect.objectContaining({
@@ -236,9 +231,7 @@ describe("GET /api/jobs/ranked", () => {
         score: 0,
         matchDetails: expect.objectContaining({
           strengths: [],
-          gaps: [
-            "The application would be stronger with clearer evidence of Customers.",
-          ],
+          gaps: ["The application would be stronger with clearer evidence of Customers."],
         }),
       }),
       expect.objectContaining({

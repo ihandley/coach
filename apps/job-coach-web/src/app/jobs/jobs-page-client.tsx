@@ -711,8 +711,13 @@ function JobDetailsPanel({
         : "border-transparent font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
     }`;
 
-  async function handleReassessClick() {
+  function closeActionsMenu() {
     setActionsOpen(false);
+    setActionsMenuPosition(null);
+  }
+
+  async function handleReassessClick() {
+    closeActionsMenu();
     setReassessState("loading");
 
     try {
@@ -740,8 +745,7 @@ function JobDetailsPanel({
     const menuHeight = menuRect.height;
     const spaceBelow = window.innerHeight - buttonRect.bottom;
     const spaceAbove = buttonRect.top;
-    const direction =
-      spaceBelow < menuHeight + menuGap && spaceAbove > spaceBelow ? "up" : "down";
+    const direction = spaceBelow < menuHeight + menuGap && spaceAbove > spaceBelow ? "up" : "down";
     const preferredTop =
       direction === "up" ? buttonRect.top - menuHeight - menuGap : buttonRect.bottom + menuGap;
     const maxTop = Math.max(viewportMargin, window.innerHeight - menuHeight - viewportMargin);
@@ -756,7 +760,6 @@ function JobDetailsPanel({
 
   React.useLayoutEffect(() => {
     if (!actionsOpen) {
-      setActionsMenuPosition(null);
       return;
     }
 
@@ -790,7 +793,7 @@ function JobDetailsPanel({
             role="menuitem"
             onClick={() => {
               setResumeTailorOpen(true);
-              setActionsOpen(false);
+              closeActionsMenu();
             }}
             className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
           >
@@ -812,7 +815,7 @@ function JobDetailsPanel({
             role="menuitem"
             onClick={() => {
               setEditDetailsOpen(true);
-              setActionsOpen(false);
+              closeActionsMenu();
             }}
             className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
           >
@@ -826,7 +829,7 @@ function JobDetailsPanel({
               href={job.sourceUrl}
               target="_blank"
               role="menuitem"
-              onClick={() => setActionsOpen(false)}
+              onClick={closeActionsMenu}
               className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
             >
               View Job Posting
@@ -836,7 +839,7 @@ function JobDetailsPanel({
             type="button"
             role="menuitem"
             onClick={() => {
-              setActionsOpen(false);
+              closeActionsMenu();
               void onDeleteJob(job.id);
             }}
             className="w-full border-t border-gray-100 px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50"
@@ -867,7 +870,13 @@ function JobDetailsPanel({
             type="button"
             aria-expanded={actionsOpen}
             aria-haspopup="menu"
-            onClick={() => setActionsOpen((value) => !value)}
+            onClick={() => {
+              if (actionsOpen) {
+                closeActionsMenu();
+              } else {
+                setActionsOpen(true);
+              }
+            }}
             className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
             Actions

@@ -54,6 +54,18 @@ function createProfileQuery() {
 
 describe("POST /api/match", () => {
   it("recalculates fit against the default current resume and upserts match details", async () => {
+    const { calculateFit: actualCalculateFit } = await vi.importActual<
+      typeof import("../../../server/match/calculate-fit")
+    >("../../../server/match/calculate-fit");
+    const job = {
+      id: "job-1",
+      company: "Pattern",
+      title: "Product Engineer",
+      sourceText: "Build TypeScript React product workflows, APIs, and platform reliability.",
+    };
+    const sharedResult = actualCalculateFit(job, {
+      rawText: "Staff product engineer with TypeScript React APIs and platform experience.",
+    });
     const profileQuery = createProfileQuery();
     const upsert = vi.fn().mockResolvedValue({ error: null });
 
@@ -70,24 +82,11 @@ describe("POST /api/match", () => {
 
       throw new Error(`Unexpected table: ${table}`);
     });
-    getJobById.mockResolvedValue({
-      id: "job-1",
-      company: "Pattern",
-      title: "Product Engineer",
-      sourceText: "Build product workflows.",
-    });
-    normalizedResumeToText.mockReturnValue("TypeScript product engineer resume");
-    calculateFit.mockReturnValue({
-      score: 74,
-      reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-      matchDetails: {
-        strengths: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-        gaps: ["Resume evidence is thin for requested areas: Postgres."],
-        reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-        recommendation:
-          "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
-      },
-    });
+    getJobById.mockResolvedValue(job);
+    normalizedResumeToText.mockReturnValue(
+      "Staff product engineer with TypeScript React APIs and platform experience.",
+    );
+    calculateFit.mockReturnValue(sharedResult);
 
     const { POST } = await import("./route");
 
@@ -107,26 +106,18 @@ describe("POST /api/match", () => {
         company: "Pattern",
         title: "Product Engineer",
       }),
-      { rawText: "TypeScript product engineer resume" },
+      { rawText: "Staff product engineer with TypeScript React APIs and platform experience." },
     );
     expect(upsert).toHaveBeenCalledWith({
       job_id: "job-1",
       resume_profile_id: "profile-current",
-      score: 74,
-      match_details: {
-        strengths: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-        gaps: ["Resume evidence is thin for requested areas: Postgres."],
-        reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-        recommendation:
-          "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
-      },
+      score: sharedResult.score,
+      match_details: sharedResult.matchDetails,
       created_at: expect.any(String),
     });
     await expect(response.json()).resolves.toMatchObject({
-      score: 74,
-      matchDetails: {
-        strengths: ["Resume evidence overlaps with Product Engineer: TypeScript."],
-      },
+      score: sharedResult.score,
+      matchDetails: sharedResult.matchDetails,
     });
   });
 });
