@@ -146,6 +146,14 @@ describe("JobsPageClient", () => {
           : new Response(null, { status: 204 });
       }
 
+      if (url === "/api/match" && init?.method === "POST") {
+        return jsonResponse({
+          score: 82,
+          reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+          matchDetails: rankedJob.matchDetails,
+        });
+      }
+
       return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
     });
 
@@ -620,6 +628,7 @@ describe("JobsPageClient", () => {
     expect(
       within(details).getByRole("menuitem", { name: "Generate Tailored Resume" }),
     ).toBeInTheDocument();
+    expect(within(details).getByRole("menuitem", { name: "Re-assess Fit" })).toBeInTheDocument();
     expect(within(details).getByRole("menuitem", { name: "Edit Details" })).toBeInTheDocument();
     expect(
       within(details).getByRole("menuitem", { name: "Re-import from URL" }),
@@ -629,6 +638,121 @@ describe("JobsPageClient", () => {
       "https://example.com/job",
     );
     expect(within(details).getByRole("menuitem", { name: "Delete Job" })).toBeInTheDocument();
+  });
+
+  it("re-assesses fit from the expanded action menu and refreshes ranked jobs", async () => {
+    let rankedLoadCount = 0;
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        rankedLoadCount += 1;
+
+        return jsonResponse([
+          rankedLoadCount === 1
+            ? {
+                ...rankedJob,
+                score: null,
+                matchDetails: null,
+              }
+            : {
+                ...rankedJob,
+                score: 0.74,
+                matchDetails: {
+                  strengths: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+                  gaps: ["Resume evidence is thin for requested areas: Postgres."],
+                  reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+                  recommendation:
+                    "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
+                },
+              },
+        ]);
+      }
+
+      if (url === "/api/match" && init?.method === "POST") {
+        return jsonResponse({
+          score: 74,
+          reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+          matchDetails: {
+            strengths: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+            gaps: ["Resume evidence is thin for requested areas: Postgres."],
+            reasons: ["Resume evidence overlaps with Product Engineer: TypeScript."],
+            recommendation:
+              "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
+          },
+        });
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    expect(await screen.findByText("Not matched")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("job-row"));
+    const details = screen.getByTestId("job-details");
+
+    fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
+    fireEvent.click(within(details).getByRole("menuitem", { name: "Re-assess Fit" }));
+
+    expect(await within(details).findByText("Re-assessing fit...")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/match",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ jobId: "job-1", resumeProfileId: "default" }),
+        }),
+      );
+    });
+
+    expect(await within(details).findByText("Fit re-assessed.")).toBeInTheDocument();
+    expect(await screen.findByText("74%")).toBeInTheDocument();
+
+    fireEvent.click(within(details).getByRole("tab", { name: "Match Details" }));
+    expect(
+      await within(details).findByText("Resume evidence overlaps with Product Engineer: TypeScript."),
+    ).toBeInTheDocument();
+    expect(
+      within(details).getByText("Resume evidence is thin for requested areas: Postgres."),
+    ).toBeInTheDocument();
+    expect(
+      within(details).getByText(
+        "Good fit for Product Engineer. Worth applying with a tailored resume that reinforces TypeScript.",
+      ),
+    ).toBeInTheDocument();
+    expect(rankedLoadCount).toBe(2);
+  });
+
+  it("shows an error when fit re-assessment fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+
+      if (url === "/api/jobs/ranked") {
+        return jsonResponse([rankedJob]);
+      }
+
+      if (url === "/api/match" && init?.method === "POST") {
+        return jsonResponse({ error: "Unable to re-assess fit." }, { status: 500 });
+      }
+
+      return jsonResponse({ error: `Unhandled request: ${url}` }, { status: 500 });
+    });
+
+    render(<JobsPageClient />);
+
+    fireEvent.click(await screen.findByTestId("job-row"));
+    const details = screen.getByTestId("job-details");
+
+    fireEvent.click(within(details).getByRole("button", { name: "Actions" }));
+    fireEvent.click(within(details).getByRole("menuitem", { name: "Re-assess Fit" }));
+
+    expect(await within(details).findByText("Unable to re-assess fit.")).toBeInTheDocument();
   });
 
   it("renders structured and original posting details with expanded-card controls", async () => {

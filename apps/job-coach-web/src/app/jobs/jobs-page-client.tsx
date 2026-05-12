@@ -204,6 +204,23 @@ export function JobsPageClient() {
     }
   }
 
+  const handleReassessFit = useCallback(
+    async (jobId: string) => {
+      const res = await fetch("/api/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, resumeProfileId: "default" }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Re-assess fit failed.");
+      }
+
+      await load();
+    },
+    [load],
+  );
+
   const handleUpdateJobDetails = useCallback(
     async (jobId: string, input: { company: string; title: string }) => {
       const company = input.company.trim();
@@ -536,6 +553,7 @@ export function JobsPageClient() {
                           <JobDetailsPanel
                             job={row.original}
                             onDeleteJob={handleDeleteJob}
+                            onReassessFit={handleReassessFit}
                             onUpdateJobDetails={handleUpdateJobDetails}
                           />
                         </td>
@@ -656,16 +674,21 @@ function JobsTableSkeleton() {
 function JobDetailsPanel({
   job,
   onDeleteJob,
+  onReassessFit,
   onUpdateJobDetails,
 }: {
   job: RankedJob;
   onDeleteJob: (jobId: string) => void | Promise<void>;
+  onReassessFit: (jobId: string) => Promise<void>;
   onUpdateJobDetails: (jobId: string, input: { company: string; title: string }) => Promise<void>;
 }) {
   const [mode, setMode] = useState<JobDetailMode>("structured");
   const [resumeTailorOpen, setResumeTailorOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [editDetailsOpen, setEditDetailsOpen] = useState(false);
+  const [reassessState, setReassessState] = useState<"idle" | "loading" | "success" | "error">(
+    "idle",
+  );
   const structuredPanelId = `job-${job.id}-structured-view`;
   const rawPanelId = `job-${job.id}-original-posting`;
   const matchPanelId = `job-${job.id}-match-details`;
@@ -678,10 +701,32 @@ function JobDetailsPanel({
         : "border-transparent font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
     }`;
 
+  async function handleReassessClick() {
+    setActionsOpen(false);
+    setReassessState("loading");
+
+    try {
+      await onReassessFit(job.id);
+      setReassessState("success");
+    } catch (error) {
+      console.error(error);
+      setReassessState("error");
+    }
+  }
+
   return (
     <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3">
-        <h3 className="text-sm font-semibold text-gray-900">Job Details</h3>
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Job Details</h3>
+          {reassessState === "loading" ? (
+            <p className="mt-1 text-xs text-gray-600">Re-assessing fit...</p>
+          ) : reassessState === "success" ? (
+            <p className="mt-1 text-xs text-green-700">Fit re-assessed.</p>
+          ) : reassessState === "error" ? (
+            <p className="mt-1 text-xs text-red-700">Unable to re-assess fit.</p>
+          ) : null}
+        </div>
         <div className="relative">
           <button
             type="button"
@@ -708,6 +753,17 @@ function JobDetailsPanel({
                 className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
                 Generate Tailored Resume
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={reassessState === "loading"}
+                onClick={() => {
+                  void handleReassessClick();
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {reassessState === "loading" ? "Re-assessing Fit..." : "Re-assess Fit"}
               </button>
               <button
                 type="button"
